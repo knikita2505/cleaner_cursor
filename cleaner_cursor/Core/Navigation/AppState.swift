@@ -12,7 +12,7 @@ final class AppState: ObservableObject {
     @Published var showOnboarding: Bool = true
     
     /// Текущий таб
-    @Published var selectedTab: AppTab = .dashboard
+    @Published var selectedTab: AppTab = .clean
     
     /// Показывать ли paywall
     @Published var showPaywall: Bool = false
@@ -71,16 +71,24 @@ final class AppState: ObservableObject {
     
     // MARK: - Navigation Helpers
     
-    func navigateToDashboard() {
-        selectedTab = .dashboard
+    func navigateToClean() {
+        selectedTab = .clean
     }
     
-    func navigateToPhotos() {
-        selectedTab = .photos
+    func navigateToSwipe() {
+        selectedTab = .swipe
     }
     
-    func navigateToSettings() {
-        selectedTab = .settings
+    func navigateToEmail() {
+        selectedTab = .email
+    }
+    
+    func navigateToHide() {
+        selectedTab = .hide
+    }
+    
+    func navigateToMore() {
+        selectedTab = .more
     }
     
     func presentPaywall() {
@@ -107,19 +115,21 @@ final class AppState: ObservableObject {
 // MARK: - App Tab
 
 enum AppTab: String, CaseIterable, Identifiable {
-    case dashboard = "Dashboard"
-    case photos = "Photos"
-    case storage = "Storage"
-    case settings = "Settings"
+    case clean = "Clean"
+    case swipe = "Swipe"
+    case email = "Email"
+    case hide = "Hide"
+    case more = "More"
     
     var id: String { rawValue }
     
     var icon: String {
         switch self {
-        case .dashboard: return "house.fill"
-        case .photos: return "photo.fill"
-        case .storage: return "externaldrive.fill"
-        case .settings: return "gearshape.fill"
+        case .clean: return "sparkles"
+        case .swipe: return "hand.draw"
+        case .email: return "envelope"
+        case .hide: return "lock.shield"
+        case .more: return "ellipsis.circle"
         }
     }
     

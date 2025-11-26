@@ -43,6 +43,7 @@
 		11205D302ED62451003AFFF9 /* StandardModal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D132ED62451003AFFF9 /* StandardModal.swift */; };
 		11205D312ED62451003AFFF9 /* GradientBackgrounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D152ED62451003AFFF9 /* GradientBackgrounds.swift */; };
 		11205D322ED62451003AFFF9 /* EmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D172ED62451003AFFF9 /* EmptyState.swift */; };
+		11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D362ED761BB003AFFF9 /* DashboardViewModel.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +104,7 @@
 		11205D152ED62451003AFFF9 /* GradientBackgrounds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = GradientBackgrounds.swift; sourceTree = "<group>"; };
 		11205D172ED62451003AFFF9 /* EmptyState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmptyState.swift; sourceTree = "<group>"; };
 		11205D332ED62BDA003AFFF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		11205D362ED761BB003AFFF9 /* DashboardViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -270,6 +272,7 @@
 		11205CFF2ED62451003AFFF9 /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				11205D352ED761BB003AFFF9 /* ViewModels */,
 				11205D002ED62451003AFFF9 /* Views */,
 			);
 			path = Dashboard;
@@ -390,6 +393,14 @@
 				11205D172ED62451003AFFF9 /* EmptyState.swift */,
 			);
 			path = Common;
+			sourceTree = "<group>";
+		};
+		11205D352ED761BB003AFFF9 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				11205D362ED761BB003AFFF9 /* DashboardViewModel.swift */,
+			);
+			path = ViewModels;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -529,6 +540,7 @@
 				11205D252ED62451003AFFF9 /* VideoService.swift in Sources */,
 				11205D1A2ED62451003AFFF9 /* String+Extensions.swift in Sources */,
 				11205D212ED62451003AFFF9 /* AppFonts.swift in Sources */,
+				11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */,
 				11205D1C2ED62451003AFFF9 /* Date+Extensions.swift in Sources */,
 				11205D1E2ED62451003AFFF9 /* AppSpacing.swift in Sources */,
 				11205D182ED62451003AFFF9 /* AppState.swift in Sources */,
