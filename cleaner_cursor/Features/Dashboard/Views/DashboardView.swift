@@ -8,11 +8,12 @@ struct DashboardView: View {
     
     // MARK: - Properties
     
-    @StateObject private var viewModel = DashboardViewModel()
+    @ObservedObject private var viewModel = DashboardViewModel.shared
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     @EnvironmentObject private var appState: AppState
     
     @State private var showPaywall: Bool = false
+    @State private var showSettings: Bool = false
     @State private var animateStorage: Bool = false
     
     private let columns = [
@@ -45,17 +46,15 @@ struct DashboardView: View {
                     .padding(.horizontal, AppSpacing.screenPadding)
                     .padding(.top, 8)
                 }
-                
-                // Scanning Overlay
-                if viewModel.isScanning {
-                    scanningOverlay
-                }
             }
             .navigationBarHidden(true)
             .withNavigationDestinations()
             .onAppear {
-                Task {
-                    await viewModel.scanMedia()
+                // Start background scan - non-blocking
+                viewModel.startScanIfNeeded()
+                
+                // Animate storage indicator
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     withAnimation(.easeOut(duration: 0.5)) {
                         animateStorage = true
                     }
@@ -63,6 +62,9 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
             }
         }
     }
@@ -111,6 +113,17 @@ struct DashboardView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
+            
+            // Settings Button
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(AppColors.textSecondary)
+                    .padding(8)
+            }
+            .buttonStyle(ScaleButtonStyle())
         }
         .padding(.top, 8)
     }
@@ -138,6 +151,7 @@ struct DashboardView: View {
                         .foregroundColor(AppColors.textPrimary)
                         .scaleEffect(animateStorage ? 1.0 : 0.8)
                         .opacity(animateStorage ? 1.0 : 0.5)
+                        .animation(.spring(response: 0.5), value: viewModel.spaceToClean)
                     
                     // Mini stats
                     VStack(alignment: .leading, spacing: 6) {
@@ -169,6 +183,7 @@ struct DashboardView: View {
                         .frame(width: 100, height: 100)
                         .rotationEffect(.degrees(-90))
                         .animation(.easeOut(duration: 1.0), value: animateStorage)
+                        .animation(.easeOut(duration: 0.5), value: viewModel.cleanablePercentage)
                     
                     // Center text
                     VStack(spacing: 2) {
@@ -211,9 +226,36 @@ struct DashboardView: View {
     
     private var categoriesGrid: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Categories")
-                .font(AppFonts.subtitleL)
-                .foregroundColor(AppColors.textPrimary)
+            HStack {
+                Text("Categories")
+                    .font(AppFonts.subtitleL)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Spacer()
+                
+                // Scanning indicator
+                if viewModel.isScanning {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
+                            .scaleEffect(0.7)
+                        
+                        Text(viewModel.scanProgress)
+                            .font(.system(size: 11))
+                            .foregroundColor(AppColors.textTertiary)
+                            .lineLimit(1)
+                    }
+                } else {
+                    // Refresh button
+                    Button {
+                        viewModel.forceRefresh()
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 16))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+            }
             
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.categories) { category in
@@ -228,49 +270,6 @@ struct DashboardView: View {
         }
     }
     
-    // MARK: - Scanning Overlay
-    
-    private var scanningOverlay: some View {
-        ZStack {
-            Color.black.opacity(0.6)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 20) {
-                // Animated scanning indicator
-                ZStack {
-                    Circle()
-                        .stroke(AppColors.progressInactive, lineWidth: 4)
-                        .frame(width: 80, height: 80)
-                    
-                    Circle()
-                        .trim(from: 0, to: viewModel.scanProgress)
-                        .stroke(
-                            AppGradients.ctaGradient,
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                        )
-                        .frame(width: 80, height: 80)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 0.3), value: viewModel.scanProgress)
-                    
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 28, weight: .medium))
-                        .foregroundColor(AppColors.accentBlue)
-                }
-                
-                Text("Scanning your media...")
-                    .font(AppFonts.subtitleM)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text("\(Int(viewModel.scanProgress * 100))%")
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            .padding(40)
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
-        }
-    }
-    
     // MARK: - Navigation
     
     private func navigateToCategory(_ category: MediaCategory) {
@@ -282,17 +281,36 @@ struct DashboardView: View {
         
         switch category.id {
         case "screenshots":
-            appState.dashboardPath.append(PhotosDestination.screenshots)
+            appState.dashboardPath.append(PhotoCategoryNav.screenshots)
+        case "duplicates":
+            appState.dashboardPath.append(PhotoCategoryNav.duplicates)
         case "similar":
-            appState.dashboardPath.append(PhotosDestination.similar)
-        case "videos":
-            appState.dashboardPath.append(DashboardDestination.videosCleaner)
+            appState.dashboardPath.append(PhotoCategoryNav.similar)
         case "live_photos":
-            appState.dashboardPath.append(PhotosDestination.livePhotos)
+            appState.dashboardPath.append(PhotoCategoryNav.livePhotos)
+        case "big_files":
+            appState.dashboardPath.append(PhotoCategoryNav.bigFiles)
+        case "videos":
+            appState.dashboardPath.append(PhotoCategoryNav.videos)
         default:
             break
         }
     }
+}
+
+// MARK: - Photo Category Navigation
+
+enum PhotoCategoryNav: String, Hashable {
+    case screenshots
+    case similar
+    case videos
+    case shortVideos
+    case livePhotos
+    case screenRecordings
+    case duplicates
+    case burst
+    case bigFiles
+    case highlights
 }
 
 // MARK: - Category Card

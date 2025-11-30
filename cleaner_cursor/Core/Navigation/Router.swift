@@ -100,37 +100,79 @@ struct NavigationDestinationModifier: ViewModifier {
             .navigationDestination(for: DashboardDestination.self) { destination in
                 switch destination {
                 case .photosCleaner:
-                    Text("Photos Cleaner") // Placeholder
+                    PhotosOverviewView()
                 case .videosCleaner:
-                    Text("Videos Cleaner") // Placeholder
+                    Text("Videos Cleaner") // TODO: Implement
                 case .contactsCleaner:
-                    Text("Contacts Cleaner") // Placeholder
+                    Text("Contacts Cleaner") // TODO: Implement
                 case .emailCleaner:
-                    Text("Email Cleaner") // Placeholder
+                    Text("Email Cleaner") // TODO: Implement
                 case .secretFolder:
-                    Text("Secret Folder") // Placeholder
+                    Text("Secret Folder") // TODO: Implement
                 case .storageOverview:
-                    Text("Storage Overview") // Placeholder
+                    Text("Storage Overview") // TODO: Implement
                 case .battery:
-                    Text("Battery") // Placeholder
+                    Text("Battery") // TODO: Implement
                 }
             }
             .navigationDestination(for: PhotosDestination.self) { destination in
                 switch destination {
                 case .duplicates:
-                    Text("Duplicates") // Placeholder
+                    DuplicatesView()
                 case .similar:
-                    Text("Similar Photos") // Placeholder
+                    SimilarPhotosView()
                 case .screenshots:
-                    Text("Screenshots") // Placeholder
+                    ScreenshotsView()
                 case .livePhotos:
-                    Text("Live Photos") // Placeholder
+                    LivePhotosView()
                 case .burst:
-                    Text("Burst Photos") // Placeholder
+                    BurstPhotosView()
                 case .bigFiles:
-                    Text("Big Files") // Placeholder
+                    BigFilesView()
                 case .swipeClean:
-                    Text("Swipe Clean") // Placeholder
+                    SwipeCleanView()
+                }
+            }
+            .navigationDestination(for: PhotoCategoryNav.self) { destination in
+                switch destination {
+                case .screenshots:
+                    ScreenshotsView()
+                case .similar:
+                    SimilarPhotosView()
+                case .videos:
+                    Text("Videos") // TODO: Implement
+                case .shortVideos:
+                    Text("Short Videos") // TODO: Implement
+                case .livePhotos:
+                    LivePhotosView()
+                case .screenRecordings:
+                    Text("Screen Recordings") // TODO: Implement
+                case .duplicates:
+                    DuplicatesView()
+                case .burst:
+                    BurstPhotosView()
+                case .bigFiles:
+                    BigFilesView()
+                case .highlights:
+                    HighlightsView()
+                }
+            }
+            .navigationDestination(for: PhotoCategory.self) { category in
+                switch category {
+                case .screenshots:
+                    ScreenshotsView()
+                case .similar:
+                    SimilarPhotosView()
+                case .duplicates:
+                    DuplicatesView()
+                case .livePhotos:
+                    LivePhotosView()
+                case .burst:
+                    BurstPhotosView()
+                case .bigFiles:
+                    BigFilesView()
+                case .highlights:
+                    HighlightsView()
                 }
             }
     }

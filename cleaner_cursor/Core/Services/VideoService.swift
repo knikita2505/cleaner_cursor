@@ -28,7 +28,7 @@ final class VideoService: ObservableObject {
     // MARK: - Fetch Videos
     
     /// Получить все видео
-    func fetchAllVideos() -> PHFetchResult<PHAsset> {
+    nonisolated func fetchAllVideos() -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
