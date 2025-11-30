@@ -26,6 +26,9 @@ final class AppState: ObservableObject {
     /// Навигационный путь для photos
     @Published var photosPath = NavigationPath()
     
+    /// Навигационный путь для more (tools)
+    @Published var morePath = NavigationPath()
+    
     /// Показывать ли модальное окно разрешений
     @Published var showPermissionModal: Bool = false
     @Published var currentPermissionType: PermissionType?

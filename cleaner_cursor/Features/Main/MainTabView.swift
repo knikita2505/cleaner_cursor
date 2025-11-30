@@ -21,7 +21,7 @@ struct MainTabView: View {
                 .tag(AppTab.clean)
             
             // Swipe Tab
-            SwipeCleanPlaceholder()
+            SwipeCleanTab()
                 .tabItem {
                     Label(AppTab.swipe.title, systemImage: AppTab.swipe.icon)
                 }
@@ -82,32 +82,10 @@ struct MainTabView: View {
 
 // MARK: - Placeholder Views
 
-struct SwipeCleanPlaceholder: View {
+struct SwipeCleanTab: View {
     var body: some View {
-        ZStack {
-            AppColors.backgroundPrimary
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.accentPurple.opacity(0.15))
-                        .frame(width: 100, height: 100)
-                    
-                    Image(systemName: "hand.draw.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(AppColors.accentPurple)
-                }
-                
-                Text("Swipe to Clean")
-                    .font(AppFonts.titleL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text("Swipe left to delete, right to keep\nComing soon...")
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
+        NavigationStack {
+            SwipeCleanView()
         }
     }
 }
@@ -172,7 +150,197 @@ struct SecretFolderPlaceholder: View {
     }
 }
 
+// MARK: - More View (Tools Tab)
+/// Вкладка "More" - дополнительные инструменты
+
 struct MoreView: View {
+    @EnvironmentObject private var appState: AppState
+    @ObservedObject private var subscriptionService = SubscriptionService.shared
+    
+    var body: some View {
+        NavigationStack(path: $appState.morePath) {
+            ZStack {
+                AppColors.backgroundPrimary
+                    .ignoresSafeArea()
+                
+                ScrollView {
+                    VStack(spacing: 16) {
+                        // Premium Banner
+                        if !subscriptionService.isPremium {
+                            premiumBanner
+                        }
+                        
+                        // Tools Section
+                        toolsSection
+                        
+                        // Coming Soon
+                        comingSoonSection
+                    }
+                    .padding(AppSpacing.screenPadding)
+                }
+            }
+            .navigationTitle("Tools")
+            .navigationBarTitleDisplayMode(.inline)
+            .withNavigationDestinations()
+        }
+    }
+    
+    private var premiumBanner: some View {
+        Button {
+            appState.presentPaywall()
+        } label: {
+            HStack(spacing: 16) {
+                ZStack {
+                    Circle()
+                        .fill(AppGradients.ctaGradient)
+                        .frame(width: 48, height: 48)
+                    
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 22))
+                        .foregroundColor(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Unlock Premium")
+                        .font(AppFonts.subtitleL)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text("Get unlimited access")
+                        .font(AppFonts.bodyM)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            .padding(AppSpacing.containerPadding)
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(AppSpacing.cardRadius)
+        }
+        .buttonStyle(ScaleButtonStyle(scale: 0.98))
+    }
+    
+    private var toolsSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Storage Tools")
+                .font(AppFonts.subtitleL)
+                .foregroundColor(AppColors.textPrimary)
+            
+            VStack(spacing: 2) {
+                // Big Files
+                Button {
+                    appState.morePath.append(PhotoCategoryNav.bigFiles)
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(AppColors.accentLilac.opacity(0.15))
+                                .frame(width: 44, height: 44)
+                            
+                            Image(systemName: "doc.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(AppColors.accentLilac)
+                        }
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Big Files")
+                                .font(AppFonts.subtitleM)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            Text("Find and delete large files")
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.textTertiary)
+                        }
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(AppColors.textTertiary.opacity(0.5))
+                    }
+                    .padding(AppSpacing.containerPadding)
+                }
+            }
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(AppSpacing.cardRadius)
+        }
+    }
+    
+    private var comingSoonSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Coming Soon")
+                .font(AppFonts.subtitleL)
+                .foregroundColor(AppColors.textPrimary)
+            
+            VStack(spacing: 2) {
+                comingSoonRow(
+                    icon: "person.2.fill",
+                    title: "Contacts Cleaner",
+                    description: "Find and merge duplicates"
+                )
+                
+                comingSoonRow(
+                    icon: "calendar",
+                    title: "Calendar Cleaner",
+                    description: "Remove old events"
+                )
+                
+                comingSoonRow(
+                    icon: "externaldrive.fill",
+                    title: "Storage Analysis",
+                    description: "Detailed storage breakdown"
+                )
+            }
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(AppSpacing.cardRadius)
+        }
+    }
+    
+    private func comingSoonRow(icon: String, title: String, description: String) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(AppColors.textTertiary.opacity(0.1))
+                    .frame(width: 44, height: 44)
+                
+                Image(systemName: icon)
+                    .font(.system(size: 20))
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(AppFonts.subtitleM)
+                    .foregroundColor(AppColors.textSecondary)
+                
+                Text(description)
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.textTertiary)
+            }
+            
+            Spacer()
+            
+            Text("Soon")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(AppColors.textTertiary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(AppColors.textTertiary.opacity(0.1))
+                .cornerRadius(6)
+        }
+        .padding(AppSpacing.containerPadding)
+        .opacity(0.6)
+    }
+}
+
+// MARK: - Settings View (Sheet from Dashboard)
+/// Настройки приложения
+
+struct SettingsView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     
@@ -193,7 +361,9 @@ struct MoreView: View {
                         settingsList
                         
                         // Debug Section
+                        #if DEBUG
                         debugSection
+                        #endif
                         
                         // App Info
                         appInfo
@@ -201,14 +371,23 @@ struct MoreView: View {
                     .padding(AppSpacing.screenPadding)
                 }
             }
-            .navigationTitle("More")
+            .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                    .foregroundColor(AppColors.accentBlue)
+                }
+            }
         }
     }
     
     private var premiumBanner: some View {
         Button {
             appState.presentPaywall()
+            dismiss()
         } label: {
             HStack(spacing: 16) {
                 ZStack {
@@ -284,47 +463,56 @@ struct MoreView: View {
     }
     
     private var debugSection: some View {
-        VStack(spacing: 2) {
-            Button {
-                appState.resetOnboarding()
-            } label: {
-                HStack {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.system(size: 18))
-                        .foregroundColor(AppColors.statusWarning)
-                        .frame(width: 28)
-                    
-                    Text("Reset Onboarding")
-                        .font(AppFonts.bodyL)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Spacer()
-                }
-                .padding(.horizontal, AppSpacing.containerPadding)
-                .padding(.vertical, 14)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Debug")
+                .font(AppFonts.caption)
+                .foregroundColor(AppColors.textTertiary)
+                .padding(.horizontal, 4)
             
-            Button {
-                appState.presentPaywall()
-            } label: {
-                HStack {
-                    Image(systemName: "creditcard")
-                        .font(.system(size: 18))
-                        .foregroundColor(AppColors.accentPurple)
-                        .frame(width: 28)
-                    
-                    Text("Show Paywall")
-                        .font(AppFonts.bodyL)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Spacer()
+            VStack(spacing: 2) {
+                Button {
+                    appState.resetOnboarding()
+                    dismiss()
+                } label: {
+                    HStack {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppColors.statusWarning)
+                            .frame(width: 28)
+                        
+                        Text("Reset Onboarding")
+                            .font(AppFonts.bodyL)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, AppSpacing.containerPadding)
+                    .padding(.vertical, 14)
                 }
-                .padding(.horizontal, AppSpacing.containerPadding)
-                .padding(.vertical, 14)
+                
+                Button {
+                    appState.presentPaywall()
+                    dismiss()
+                } label: {
+                    HStack {
+                        Image(systemName: "creditcard")
+                            .font(.system(size: 18))
+                            .foregroundColor(AppColors.accentPurple)
+                            .frame(width: 28)
+                        
+                        Text("Show Paywall")
+                            .font(AppFonts.bodyL)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal, AppSpacing.containerPadding)
+                    .padding(.vertical, 14)
+                }
             }
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(AppSpacing.cardRadius)
         }
-        .background(AppColors.backgroundSecondary)
-        .cornerRadius(AppSpacing.cardRadius)
     }
     
     private var appInfo: some View {

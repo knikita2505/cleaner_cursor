@@ -74,11 +74,19 @@ struct RootView: View {
         let photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
         
         if photoStatus == .authorized || photoStatus == .limited {
-            // Already have permissions
+            // Already have permissions - start background scan immediately
             permissionsCompleted = true
+            startBackgroundScan()
         } else {
             // Need to request permissions
             showPermissions = true
+        }
+    }
+    
+    private func startBackgroundScan() {
+        // Start scan in background immediately after permissions granted
+        Task {
+            DashboardViewModel.shared.startScanIfNeeded()
         }
     }
 }
@@ -216,7 +224,11 @@ struct PermissionsRequestView: View {
     
     private func requestCurrentPermission() async {
         if currentStep == 0 {
-            _ = await photoService.requestAuthorization()
+            let granted = await photoService.requestAuthorization()
+            if granted {
+                // Start background scan immediately after photo access granted
+                DashboardViewModel.shared.startScanIfNeeded()
+            }
         } else {
             _ = await contactsService.requestAuthorization()
         }

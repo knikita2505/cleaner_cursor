@@ -44,6 +44,16 @@
 		11205D312ED62451003AFFF9 /* GradientBackgrounds.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D152ED62451003AFFF9 /* GradientBackgrounds.swift */; };
 		11205D322ED62451003AFFF9 /* EmptyState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D172ED62451003AFFF9 /* EmptyState.swift */; };
 		11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D362ED761BB003AFFF9 /* DashboardViewModel.swift */; };
+		11205D412ED797FC003AFFF9 /* LivePhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D3A2ED797FC003AFFF9 /* LivePhotosView.swift */; };
+		11205D422ED797FC003AFFF9 /* SwipeCleanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D3B2ED797FC003AFFF9 /* SwipeCleanView.swift */; };
+		11205D432ED797FC003AFFF9 /* PhotoCategoryViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D3C2ED797FC003AFFF9 /* PhotoCategoryViews.swift */; };
+		11205D442ED797FC003AFFF9 /* PhotosOverviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D3D2ED797FC003AFFF9 /* PhotosOverviewView.swift */; };
+		11205D452ED797FD003AFFF9 /* BigFilesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D3E2ED797FC003AFFF9 /* BigFilesView.swift */; };
+		11205D462ED797FD003AFFF9 /* ScreenshotsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D3F2ED797FC003AFFF9 /* ScreenshotsView.swift */; };
+		11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D482ED79C0D003AFFF9 /* DuplicatesView.swift */; };
+		11205D4D2ED79C0D003AFFF9 /* HighlightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D492ED79C0D003AFFF9 /* HighlightsView.swift */; };
+		11205D4E2ED79C0D003AFFF9 /* BurstPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */; };
+		11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +115,16 @@
 		11205D172ED62451003AFFF9 /* EmptyState.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = EmptyState.swift; sourceTree = "<group>"; };
 		11205D332ED62BDA003AFFF9 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		11205D362ED761BB003AFFF9 /* DashboardViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		11205D3A2ED797FC003AFFF9 /* LivePhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LivePhotosView.swift; sourceTree = "<group>"; };
+		11205D3B2ED797FC003AFFF9 /* SwipeCleanView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SwipeCleanView.swift; sourceTree = "<group>"; };
+		11205D3C2ED797FC003AFFF9 /* PhotoCategoryViews.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotoCategoryViews.swift; sourceTree = "<group>"; };
+		11205D3D2ED797FC003AFFF9 /* PhotosOverviewView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PhotosOverviewView.swift; sourceTree = "<group>"; };
+		11205D3E2ED797FC003AFFF9 /* BigFilesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BigFilesView.swift; sourceTree = "<group>"; };
+		11205D3F2ED797FC003AFFF9 /* ScreenshotsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScreenshotsView.swift; sourceTree = "<group>"; };
+		11205D482ED79C0D003AFFF9 /* DuplicatesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DuplicatesView.swift; sourceTree = "<group>"; };
+		11205D492ED79C0D003AFFF9 /* HighlightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightsView.swift; sourceTree = "<group>"; };
+		11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BurstPhotosView.swift; sourceTree = "<group>"; };
+		11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimilarPhotosView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -261,6 +281,7 @@
 		11205CFE2ED62451003AFFF9 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				11205D382ED797FC003AFFF9 /* Photos */,
 				11205CFF2ED62451003AFFF9 /* Dashboard */,
 				11205D022ED62451003AFFF9 /* Main */,
 				11205D042ED62451003AFFF9 /* Paywall */,
@@ -403,6 +424,31 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		11205D382ED797FC003AFFF9 /* Photos */ = {
+			isa = PBXGroup;
+			children = (
+				11205D392ED797FC003AFFF9 /* Views */,
+			);
+			path = Photos;
+			sourceTree = "<group>";
+		};
+		11205D392ED797FC003AFFF9 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */,
+				11205D482ED79C0D003AFFF9 /* DuplicatesView.swift */,
+				11205D492ED79C0D003AFFF9 /* HighlightsView.swift */,
+				11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */,
+				11205D3A2ED797FC003AFFF9 /* LivePhotosView.swift */,
+				11205D3B2ED797FC003AFFF9 /* SwipeCleanView.swift */,
+				11205D3C2ED797FC003AFFF9 /* PhotoCategoryViews.swift */,
+				11205D3D2ED797FC003AFFF9 /* PhotosOverviewView.swift */,
+				11205D3E2ED797FC003AFFF9 /* BigFilesView.swift */,
+				11205D3F2ED797FC003AFFF9 /* ScreenshotsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -534,12 +580,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				11205D272ED62451003AFFF9 /* PhotoService.swift in Sources */,
+				11205D452ED797FD003AFFF9 /* BigFilesView.swift in Sources */,
 				11205D2B2ED62451003AFFF9 /* PaywallView.swift in Sources */,
 				11205BEC2ED4D7A3003AFFF9 /* Persistence.swift in Sources */,
+				11205D4E2ED79C0D003AFFF9 /* BurstPhotosView.swift in Sources */,
+				11205D462ED797FD003AFFF9 /* ScreenshotsView.swift in Sources */,
 				11205D2E2ED62451003AFFF9 /* ProgressBars.swift in Sources */,
 				11205D252ED62451003AFFF9 /* VideoService.swift in Sources */,
 				11205D1A2ED62451003AFFF9 /* String+Extensions.swift in Sources */,
 				11205D212ED62451003AFFF9 /* AppFonts.swift in Sources */,
+				11205D4D2ED79C0D003AFFF9 /* HighlightsView.swift in Sources */,
 				11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */,
 				11205D1C2ED62451003AFFF9 /* Date+Extensions.swift in Sources */,
 				11205D1E2ED62451003AFFF9 /* AppSpacing.swift in Sources */,
@@ -551,16 +601,22 @@
 				11205D322ED62451003AFFF9 /* EmptyState.swift in Sources */,
 				11205D262ED62451003AFFF9 /* SecretFolderService.swift in Sources */,
 				11205D1D2ED62451003AFFF9 /* HapticManager.swift in Sources */,
+				11205D442ED797FC003AFFF9 /* PhotosOverviewView.swift in Sources */,
 				11205D192ED62451003AFFF9 /* Router.swift in Sources */,
 				11205D232ED62451003AFFF9 /* SubscriptionService.swift in Sources */,
 				11205D2F2ED62451003AFFF9 /* PrimaryCard.swift in Sources */,
+				11205D422ED797FC003AFFF9 /* SwipeCleanView.swift in Sources */,
 				11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */,
 				11205D2D2ED62451003AFFF9 /* PrimaryButton.swift in Sources */,
 				11205D2C2ED62451003AFFF9 /* OnboardingView.swift in Sources */,
 				11205D242ED62451003AFFF9 /* StorageService.swift in Sources */,
 				11205D292ED62451003AFFF9 /* DashboardView.swift in Sources */,
 				11205D222ED62451003AFFF9 /* BatteryService.swift in Sources */,
+				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
+				11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */,
+				11205D432ED797FC003AFFF9 /* PhotoCategoryViews.swift in Sources */,
 				11205D312ED62451003AFFF9 /* GradientBackgrounds.swift in Sources */,
+				11205D412ED797FC003AFFF9 /* LivePhotosView.swift in Sources */,
 				11205D302ED62451003AFFF9 /* StandardModal.swift in Sources */,
 				11205D1F2ED62451003AFFF9 /* AppColors.swift in Sources */,
 				11205D1B2ED62451003AFFF9 /* View+Extensions.swift in Sources */,

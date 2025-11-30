@@ -1,6 +1,7 @@
 import Foundation
 import Photos
 import UIKit
+import CoreImage
 
 // MARK: - Photo Service
 /// Сервис для работы с фотографиями через PhotoKit
@@ -14,6 +15,18 @@ final class PhotoService: ObservableObject {
     @Published var isScanning: Bool = false
     @Published var scanProgress: Double = 0
     
+    // MARK: - Cached Results
+    
+    @Published var cachedDuplicates: [DuplicateGroup] = []
+    @Published var cachedSimilarPhotos: [SimilarGroup] = []
+    @Published var duplicatesScanned: Bool = false
+    @Published var similarScanned: Bool = false
+    
+    // Quick counts (no size calculation)
+    @Published var screenshotsCount: Int = 0
+    @Published var livePhotosCount: Int = 0
+    @Published var videosCount: Int = 0
+    
     // MARK: - Singleton
     
     static let shared = PhotoService()
@@ -21,6 +34,8 @@ final class PhotoService: ObservableObject {
     // MARK: - Private Properties
     
     private let imageManager = PHCachingImageManager()
+    private var lastScanTime: Date?
+    private let cacheValidityMinutes: Double = 10
     
     // MARK: - Init
     
@@ -36,9 +51,7 @@ final class PhotoService: ObservableObject {
     
     func requestAuthorization() async -> Bool {
         let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
-        await MainActor.run {
-            authorizationStatus = status
-        }
+        authorizationStatus = status
         return status == .authorized || status == .limited
     }
     
@@ -46,18 +59,91 @@ final class PhotoService: ObservableObject {
         authorizationStatus == .authorized || authorizationStatus == .limited
     }
     
-    // MARK: - Fetch Photos
+    // MARK: - Quick Counts (System folders - instant)
     
-    /// Получить все фото
-    func fetchAllPhotos() -> PHFetchResult<PHAsset> {
+    func updateQuickCounts() {
+        guard isAuthorized else { return }
+        
+        // These are instant - just counting from system folders
+        let screenshotsFetch = fetchScreenshots()
+        screenshotsCount = screenshotsFetch.count
+        
+        let livePhotosFetch = fetchLivePhotos()
+        livePhotosCount = livePhotosFetch.count
+        
+        let videosFetch = VideoService.shared.fetchAllVideos()
+        videosCount = videosFetch.count
+    }
+    
+    // MARK: - Scan Duplicates & Similar (with caching)
+    
+    func scanDuplicatesIfNeeded() async {
+        guard !duplicatesScanned else { return }
+        
+        isScanning = true
+        
+        let groups = await Task.detached(priority: .userInitiated) {
+            self.findDuplicatesInternal()
+        }.value
+        
+        cachedDuplicates = groups
+        duplicatesScanned = true
+        isScanning = false
+    }
+    
+    func scanSimilarIfNeeded() async {
+        guard !similarScanned else { return }
+        
+        isScanning = true
+        
+        let groups = await Task.detached(priority: .userInitiated) {
+            self.findSimilarPhotosInternal()
+        }.value
+        
+        cachedSimilarPhotos = groups
+        similarScanned = true
+        isScanning = false
+    }
+    
+    func invalidateCache() {
+        duplicatesScanned = false
+        similarScanned = false
+        cachedDuplicates = []
+        cachedSimilarPhotos = []
+    }
+    
+    // MARK: - Duplicates Stats (from cache)
+    
+    var duplicatesCount: Int {
+        cachedDuplicates.reduce(0) { $0 + $1.assets.count - 1 }
+    }
+    
+    var duplicatesSavingsSize: Int64 {
+        cachedDuplicates.reduce(Int64(0)) { $0 + $1.savingsSize }
+    }
+    
+    // MARK: - Similar Stats (from cache)
+    
+    var similarCount: Int {
+        cachedSimilarPhotos.reduce(0) { $0 + max(0, $1.assets.count - 1) }
+    }
+    
+    var similarSavingsSize: Int64 {
+        cachedSimilarPhotos.reduce(Int64(0)) { $0 + $1.savingsSize }
+    }
+    
+    // MARK: - Fetch All Photos
+    
+    nonisolated func fetchAllPhotos() -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
         return PHAsset.fetchAssets(with: options)
     }
     
-    /// Получить скриншоты
-    func fetchScreenshots() -> PHFetchResult<PHAsset> {
+    // MARK: - Fetch Screenshots
+    
+    nonisolated func fetchScreenshots() -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.predicate = NSPredicate(
@@ -68,8 +154,22 @@ final class PhotoService: ObservableObject {
         return PHAsset.fetchAssets(with: options)
     }
     
-    /// Получить Live Photos
-    func fetchLivePhotos() -> PHFetchResult<PHAsset> {
+    /// Получить скриншоты как PhotoAsset массив
+    func fetchScreenshotsAsAssets() -> [PhotoAsset] {
+        guard isAuthorized else { return [] }
+        let fetchResult = fetchScreenshots()
+        var assets: [PhotoAsset] = []
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(PhotoAsset(asset: asset))
+        }
+        
+        return assets
+    }
+    
+    // MARK: - Fetch Live Photos
+    
+    nonisolated func fetchLivePhotos() -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.predicate = NSPredicate(
@@ -80,7 +180,20 @@ final class PhotoService: ObservableObject {
         return PHAsset.fetchAssets(with: options)
     }
     
-    /// Получить Burst Photos
+    func fetchLivePhotosAsAssets() -> [PhotoAsset] {
+        guard isAuthorized else { return [] }
+        let fetchResult = fetchLivePhotos()
+        var assets: [PhotoAsset] = []
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(PhotoAsset(asset: asset))
+        }
+        
+        return assets
+    }
+    
+    // MARK: - Fetch Burst Photos
+    
     func fetchBurstPhotos() -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
@@ -88,9 +201,280 @@ final class PhotoService: ObservableObject {
         return PHAsset.fetchAssets(with: options)
     }
     
+    func fetchBurstGroups() -> [BurstGroup] {
+        guard isAuthorized else { return [] }
+        
+        var burstGroups: [String: BurstGroup] = [:]
+        let fetchResult = fetchBurstPhotos()
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            guard let burstIdentifier = asset.burstIdentifier else { return }
+            
+            if var group = burstGroups[burstIdentifier] {
+                group.assets.append(PhotoAsset(asset: asset))
+                burstGroups[burstIdentifier] = group
+            } else {
+                burstGroups[burstIdentifier] = BurstGroup(
+                    id: burstIdentifier,
+                    assets: [PhotoAsset(asset: asset)],
+                    date: asset.creationDate
+                )
+            }
+        }
+        
+        return Array(burstGroups.values).sorted { ($0.date ?? .distantPast) > ($1.date ?? .distantPast) }
+    }
+    
+    // MARK: - Fetch Big Files
+    
+    func fetchBigPhotos(minSize: Int64 = 20_000_000) -> [PhotoAsset] {
+        guard isAuthorized else { return [] }
+        
+        let fetchResult = fetchAllPhotos()
+        var bigPhotos: [PhotoAsset] = []
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            let photoAsset = PhotoAsset(asset: asset)
+            if photoAsset.fileSize >= minSize {
+                bigPhotos.append(photoAsset)
+            }
+        }
+        
+        return bigPhotos.sorted { $0.fileSize > $1.fileSize }
+    }
+    
+    // MARK: - Find Duplicates (Internal - for caching)
+    
+    private nonisolated func findDuplicatesInternal() -> [DuplicateGroup] {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        // Limit to 3000 most recent for performance
+        fetchOptions.fetchLimit = 3000
+        
+        let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+        
+        // Group by: file size + resolution
+        var compositeGroups: [String: [PhotoAsset]] = [:]
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            // Skip screenshots
+            if asset.mediaSubtypes.contains(.photoScreenshot) { return }
+            
+            let photoAsset = PhotoAsset(asset: asset)
+            
+            // Key: size + resolution
+            let sizeKey = "\(photoAsset.fileSize)_\(asset.pixelWidth)x\(asset.pixelHeight)"
+            
+            if compositeGroups[sizeKey] != nil {
+                compositeGroups[sizeKey]?.append(photoAsset)
+            } else {
+                compositeGroups[sizeKey] = [photoAsset]
+            }
+        }
+        
+        var duplicateGroups: [DuplicateGroup] = []
+        
+        for (_, assets) in compositeGroups where assets.count > 1 {
+            // Additional check: creation time within 60 seconds
+            let sortedByDate = assets.sorted { 
+                ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) 
+            }
+            
+            var currentGroup: [PhotoAsset] = []
+            
+            for asset in sortedByDate {
+                if currentGroup.isEmpty {
+                    currentGroup.append(asset)
+                } else if let lastDate = currentGroup.last?.creationDate,
+                          let currentDate = asset.creationDate,
+                          abs(currentDate.timeIntervalSince(lastDate)) <= 60 {
+                    currentGroup.append(asset)
+                } else if currentGroup.count > 1 {
+                    duplicateGroups.append(createDuplicateGroup(from: currentGroup))
+                    currentGroup = [asset]
+                } else {
+                    currentGroup = [asset]
+                }
+            }
+            
+            if currentGroup.count > 1 {
+                duplicateGroups.append(createDuplicateGroup(from: currentGroup))
+            }
+        }
+        
+        return duplicateGroups.sorted { $0.savingsSize > $1.savingsSize }
+    }
+    
+    private nonisolated func createDuplicateGroup(from assets: [PhotoAsset]) -> DuplicateGroup {
+        let sortedByQuality = assets.sorted { $0.fileSize > $1.fileSize }
+        let totalSize = assets.reduce(Int64(0)) { $0 + $1.fileSize }
+        let bestAsset = sortedByQuality.first
+        let savingsSize = totalSize - (bestAsset?.fileSize ?? 0)
+        
+        return DuplicateGroup(
+            id: UUID().uuidString,
+            assets: sortedByQuality,
+            totalSize: totalSize,
+            savingsSize: savingsSize,
+            bestAssetIndex: 0
+        )
+    }
+    
+    // MARK: - Find Similar Photos (Internal - for caching)
+    
+    private nonisolated func findSimilarPhotosInternal() -> [SimilarGroup] {
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        // Limit to 3000 most recent for performance
+        fetchOptions.fetchLimit = 3000
+        
+        let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
+        var burstGroups: [String: [PhotoAsset]] = [:]
+        var timeGroups: [[PhotoAsset]] = []
+        var processedIds: Set<String> = []
+        
+        // 1. First find burst series
+        fetchResult.enumerateObjects { asset, _, _ in
+            if asset.mediaSubtypes.contains(.photoScreenshot) { return }
+            
+            if let burstId = asset.burstIdentifier {
+                let photoAsset = PhotoAsset(asset: asset)
+                if burstGroups[burstId] != nil {
+                    burstGroups[burstId]?.append(photoAsset)
+                } else {
+                    burstGroups[burstId] = [photoAsset]
+                }
+                processedIds.insert(asset.localIdentifier)
+            }
+        }
+        
+        // 2. Group remaining by time (3 seconds)
+        var remainingPhotos: [PhotoAsset] = []
+        fetchResult.enumerateObjects { asset, _, _ in
+            if asset.mediaSubtypes.contains(.photoScreenshot) { return }
+            if processedIds.contains(asset.localIdentifier) { return }
+            
+            remainingPhotos.append(PhotoAsset(asset: asset))
+        }
+        
+        remainingPhotos.sort { 
+            ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) 
+        }
+        
+        var currentTimeGroup: [PhotoAsset] = []
+        for photo in remainingPhotos {
+            if currentTimeGroup.isEmpty {
+                currentTimeGroup.append(photo)
+            } else if let lastDate = currentTimeGroup.last?.creationDate,
+                      let currentDate = photo.creationDate,
+                      abs(currentDate.timeIntervalSince(lastDate)) <= 3 {
+                currentTimeGroup.append(photo)
+            } else {
+                if currentTimeGroup.count >= 2 {
+                    timeGroups.append(currentTimeGroup)
+                }
+                currentTimeGroup = [photo]
+            }
+        }
+        if currentTimeGroup.count >= 2 {
+            timeGroups.append(currentTimeGroup)
+        }
+        
+        var similarGroups: [SimilarGroup] = []
+        
+        // Add burst groups
+        for (_, assets) in burstGroups where assets.count >= 2 {
+            similarGroups.append(createSimilarGroup(from: assets, isBurst: true))
+        }
+        
+        // Add time groups
+        for assets in timeGroups {
+            similarGroups.append(createSimilarGroup(from: assets, isBurst: false))
+        }
+        
+        return similarGroups.sorted { $0.savingsSize > $1.savingsSize }
+    }
+    
+    private nonisolated func createSimilarGroup(from assets: [PhotoAsset], isBurst: Bool) -> SimilarGroup {
+        let sortedByQuality = assets.sorted { $0.fileSize > $1.fileSize }
+        
+        let totalSize = assets.reduce(Int64(0)) { $0 + $1.fileSize }
+        let bestAsset = sortedByQuality.first
+        let savingsSize = totalSize - (bestAsset?.fileSize ?? 0)
+        
+        return SimilarGroup(
+            id: UUID().uuidString,
+            assets: sortedByQuality,
+            totalSize: totalSize,
+            savingsSize: savingsSize,
+            recommendedKeepCount: 1,
+            bestAssetIndex: 0,
+            isBurstGroup: isBurst
+        )
+    }
+    
+    // MARK: - Public API (use cache)
+    
+    nonisolated func findDuplicates() -> [DuplicateGroup] {
+        // This is called from background - returns fresh scan
+        return findDuplicatesInternal()
+    }
+    
+    nonisolated func findSimilarPhotos() -> [SimilarGroup] {
+        // This is called from background - returns fresh scan
+        return findSimilarPhotosInternal()
+    }
+    
+    // MARK: - Highlights (AI-lite)
+    
+    func findHighlights(limit: Int = 50) -> [PhotoAsset] {
+        guard isAuthorized else { return [] }
+        
+        let fetchResult = fetchAllPhotos()
+        var candidates: [(asset: PhotoAsset, score: Double)] = []
+        
+        fetchResult.enumerateObjects { asset, index, stop in
+            if index >= 500 { stop.pointee = true; return }
+            
+            var score: Double = 0
+            let photoAsset = PhotoAsset(asset: asset)
+            
+            if !asset.mediaSubtypes.contains(.photoScreenshot) {
+                score += 1.0
+            }
+            
+            if !asset.mediaSubtypes.contains(.photoLive) {
+                score += 0.5
+            }
+            
+            let megapixels = Double(asset.pixelWidth * asset.pixelHeight) / 1_000_000
+            if megapixels > 8 {
+                score += 1.0
+            }
+            
+            if asset.location != nil {
+                score += 0.5
+            }
+            
+            if asset.isFavorite {
+                score += 2.0
+            }
+            
+            if photoAsset.fileSize > 2_000_000 {
+                score += 0.5
+            }
+            
+            candidates.append((photoAsset, score))
+        }
+        
+        return candidates
+            .sorted { $0.score > $1.score }
+            .prefix(limit)
+            .map { $0.asset }
+    }
+    
     // MARK: - Load Image
     
-    /// Загрузить thumbnail
     func loadThumbnail(for asset: PHAsset, size: CGSize, completion: @escaping (UIImage?) -> Void) {
         let options = PHImageRequestOptions()
         options.deliveryMode = .opportunistic
@@ -107,7 +491,6 @@ final class PhotoService: ObservableObject {
         }
     }
     
-    /// Загрузить полное изображение
     func loadFullImage(for asset: PHAsset, completion: @escaping (UIImage?) -> Void) {
         let options = PHImageRequestOptions()
         options.deliveryMode = .highQualityFormat
@@ -126,37 +509,143 @@ final class PhotoService: ObservableObject {
     
     // MARK: - Delete Photos
     
-    /// Удалить фотографии
     func deletePhotos(_ assets: [PHAsset]) async throws {
         try await PHPhotoLibrary.shared().performChanges {
             PHAssetChangeRequest.deleteAssets(assets as NSFastEnumeration)
         }
+        // Invalidate cache after deletion
+        invalidateCache()
     }
     
-    // MARK: - Statistics
-    
-    /// Общее количество фото
-    var totalPhotosCount: Int {
-        guard isAuthorized else { return 0 }
-        return fetchAllPhotos().count
+    func deletePhotoAssets(_ assets: [PhotoAsset]) async throws {
+        let phAssets = assets.map { $0.asset }
+        try await deletePhotos(phAssets)
     }
     
-    /// Количество скриншотов
-    var screenshotsCount: Int {
-        guard isAuthorized else { return 0 }
-        return fetchScreenshots().count
+    // MARK: - Convert Live Photo to Still
+    
+    func convertLivePhotoToStill(_ asset: PHAsset) async throws {
+        guard asset.mediaSubtypes.contains(.photoLive) else { return }
+        
+        let options = PHImageRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+        options.isSynchronous = true
+        
+        var stillImage: UIImage?
+        
+        imageManager.requestImage(
+            for: asset,
+            targetSize: PHImageManagerMaximumSize,
+            contentMode: .aspectFit,
+            options: options
+        ) { image, _ in
+            stillImage = image
+        }
+        
+        guard let image = stillImage, let imageData = image.jpegData(compressionQuality: 0.9) else {
+            throw PhotoServiceError.conversionFailed
+        }
+        
+        try await PHPhotoLibrary.shared().performChanges {
+            let request = PHAssetCreationRequest.forAsset()
+            request.addResource(with: .photo, data: imageData, options: nil)
+            request.creationDate = asset.creationDate
+            request.location = asset.location
+        }
+        
+        try await deletePhotos([asset])
     }
     
-    /// Количество Live Photos
-    var livePhotosCount: Int {
-        guard isAuthorized else { return 0 }
-        return fetchLivePhotos().count
+    // MARK: - Fetch Live Photos as Models
+    
+    func fetchLivePhotosAsModels() -> [LivePhotoAsset] {
+        guard isAuthorized else { return [] }
+        
+        let fetchResult = fetchLivePhotos()
+        var result: [LivePhotoAsset] = []
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            
+            var photoSize: Int64 = 0
+            var videoSize: Int64 = 0
+            
+            for resource in resources {
+                let size = (resource.value(forKey: "fileSize") as? Int64) ?? 0
+                
+                switch resource.type {
+                case .photo, .fullSizePhoto:
+                    photoSize += size
+                case .pairedVideo, .fullSizePairedVideo:
+                    videoSize += size
+                default:
+                    break
+                }
+            }
+            
+            result.append(LivePhotoAsset(
+                asset: asset,
+                photoSize: photoSize,
+                videoSize: videoSize
+            ))
+        }
+        
+        return result
     }
     
-    /// Количество Burst Photos
-    var burstPhotosCount: Int {
-        guard isAuthorized else { return 0 }
-        return fetchBurstPhotos().count
+    // MARK: - Create Album
+    
+    func createAlbum(name: String, with assets: [PHAsset]) async throws {
+        guard isAuthorized else {
+            throw PhotoServiceError.notAuthorized
+        }
+        
+        var albumPlaceholder: PHObjectPlaceholder?
+        
+        try await PHPhotoLibrary.shared().performChanges {
+            let createAlbumRequest = PHAssetCollectionChangeRequest.creationRequestForAssetCollection(withTitle: name)
+            albumPlaceholder = createAlbumRequest.placeholderForCreatedAssetCollection
+        }
+        
+        guard let placeholder = albumPlaceholder else {
+            throw PhotoServiceError.albumCreationFailed
+        }
+        
+        let fetchResult = PHAssetCollection.fetchAssetCollections(
+            withLocalIdentifiers: [placeholder.localIdentifier],
+            options: nil
+        )
+        
+        guard let album = fetchResult.firstObject else {
+            throw PhotoServiceError.albumCreationFailed
+        }
+        
+        try await PHPhotoLibrary.shared().performChanges {
+            guard let addAssetRequest = PHAssetCollectionChangeRequest(for: album) else { return }
+            addAssetRequest.addAssets(assets as NSFastEnumeration)
+        }
+    }
+    
+    // MARK: - Add to Existing Album
+    
+    func addToAlbum(_ albumName: String, assets: [PHAsset]) async throws {
+        guard isAuthorized else {
+            throw PhotoServiceError.notAuthorized
+        }
+        
+        let fetchOptions = PHFetchOptions()
+        fetchOptions.predicate = NSPredicate(format: "title = %@", albumName)
+        let albums = PHAssetCollection.fetchAssetCollections(with: .album, subtype: .any, options: fetchOptions)
+        
+        if let existingAlbum = albums.firstObject {
+            try await PHPhotoLibrary.shared().performChanges {
+                guard let request = PHAssetCollectionChangeRequest(for: existingAlbum) else { return }
+                request.addAssets(assets as NSFastEnumeration)
+            }
+        } else {
+            try await createAlbum(name: albumName, with: assets)
+        }
     }
 }
 
@@ -174,11 +663,30 @@ struct PhotoAsset: Identifiable, Hashable {
         self.asset = asset
         self.creationDate = asset.creationDate
         
-        // Get file size
         let resources = PHAssetResource.assetResources(for: asset)
         self.fileSize = resources.first.flatMap { resource in
             (resource.value(forKey: "fileSize") as? Int64)
         } ?? 0
+    }
+    
+    var formattedSize: String {
+        ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+    }
+    
+    var formattedDate: String {
+        guard let date = creationDate else { return "Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+    
+    var isScreenshot: Bool {
+        asset.mediaSubtypes.contains(.photoScreenshot)
+    }
+    
+    var isLivePhoto: Bool {
+        asset.mediaSubtypes.contains(.photoLive)
     }
     
     func hash(into hasher: inout Hasher) {
@@ -190,40 +698,155 @@ struct PhotoAsset: Identifiable, Hashable {
     }
 }
 
-// MARK: - Photo Category
+// MARK: - Duplicate Group Model
 
-enum PhotoCategory: String, CaseIterable, Identifiable {
-    case duplicates = "Duplicates"
-    case similar = "Similar"
-    case screenshots = "Screenshots"
-    case livePhotos = "Live Photos"
-    case burst = "Burst"
-    case bigFiles = "Big Files"
+struct DuplicateGroup: Identifiable {
+    let id: String
+    var assets: [PhotoAsset]
+    let totalSize: Int64
+    let savingsSize: Int64
+    var bestAssetIndex: Int = 0
     
-    var id: String { rawValue }
-    
-    var icon: String {
-        switch self {
-        case .duplicates: return "photo.stack"
-        case .similar: return "square.on.square"
-        case .screenshots: return "camera.viewfinder"
-        case .livePhotos: return "livephoto"
-        case .burst: return "square.stack.3d.up"
-        case .bigFiles: return "doc.fill"
-        }
+    var formattedSavings: String {
+        ByteCountFormatter.string(fromByteCount: savingsSize, countStyle: .file)
     }
     
-    var color: Color {
-        switch self {
-        case .duplicates: return AppColors.accentBlue
-        case .similar: return AppColors.accentPurple
-        case .screenshots: return AppColors.statusSuccess
-        case .livePhotos: return AppColors.statusWarning
-        case .burst: return AppColors.accentLilac
-        case .bigFiles: return AppColors.statusError
-        }
+    var formattedTotalSize: String {
+        ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+    }
+    
+    var count: Int {
+        assets.count
+    }
+    
+    var deleteIndices: Set<Int> {
+        Set(assets.indices.filter { $0 != bestAssetIndex })
+    }
+    
+    var deleteCount: Int {
+        assets.count - 1
     }
 }
 
-import SwiftUI
+// MARK: - Similar Group Model
 
+struct SimilarGroup: Identifiable {
+    let id: String
+    var assets: [PhotoAsset]
+    let totalSize: Int64
+    let savingsSize: Int64
+    let recommendedKeepCount: Int
+    var bestAssetIndex: Int = 0
+    let isBurstGroup: Bool
+    
+    var formattedSavings: String {
+        ByteCountFormatter.string(fromByteCount: savingsSize, countStyle: .file)
+    }
+    
+    var formattedTotalSize: String {
+        ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+    }
+    
+    var count: Int {
+        assets.count
+    }
+}
+
+// MARK: - Burst Group Model
+
+struct BurstGroup: Identifiable {
+    let id: String
+    var assets: [PhotoAsset]
+    let date: Date?
+    
+    var count: Int {
+        assets.count
+    }
+    
+    var formattedDate: String {
+        guard let date = date else { return "Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+// MARK: - Live Photo Asset Model
+
+struct LivePhotoAsset: Identifiable {
+    let id: String
+    let asset: PHAsset
+    let photoSize: Int64
+    let videoSize: Int64
+    var action: LivePhotoAction = .keepLive
+    
+    init(asset: PHAsset, photoSize: Int64, videoSize: Int64) {
+        self.id = asset.localIdentifier
+        self.asset = asset
+        self.photoSize = photoSize
+        self.videoSize = videoSize
+    }
+    
+    var totalSize: Int64 {
+        photoSize + videoSize
+    }
+    
+    var formattedVideoSize: String {
+        ByteCountFormatter.string(fromByteCount: videoSize, countStyle: .file)
+    }
+    
+    var formattedTotalSize: String {
+        ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
+    }
+    
+    var formattedSavings: String {
+        // Savings = video size (what we remove when converting)
+        ByteCountFormatter.string(fromByteCount: videoSize, countStyle: .file)
+    }
+    
+    var creationDate: Date? {
+        asset.creationDate
+    }
+    
+    var formattedDate: String {
+        guard let date = creationDate else { return "Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+    
+    // MARK: - Action Enum
+    
+    enum LivePhotoAction: String, CaseIterable {
+        case keepLive = "Keep"
+        case convert = "Convert"
+        case delete = "Delete"
+    }
+}
+
+// MARK: - Errors
+
+enum PhotoServiceError: Error, LocalizedError {
+    case notAuthorized
+    case fetchFailed
+    case deleteFailed
+    case conversionFailed
+    case albumCreationFailed
+    
+    var errorDescription: String? {
+        switch self {
+        case .notAuthorized:
+            return "Photo library access not authorized"
+        case .fetchFailed:
+            return "Failed to fetch photos"
+        case .deleteFailed:
+            return "Failed to delete photos"
+        case .conversionFailed:
+            return "Failed to convert Live Photo"
+        case .albumCreationFailed:
+            return "Failed to create album"
+        }
+    }
+}
