@@ -50,8 +50,8 @@ final class VideoService: ObservableObject {
         return largeVideos.sorted { $0.fileSize > $1.fileSize }
     }
     
-    /// Получить короткие видео (< 60 сек)
-    nonisolated func fetchShortVideos(maxDuration: TimeInterval = 60) -> PHFetchResult<PHAsset> {
+    /// Получить короткие видео (< 10 сек)
+    nonisolated func fetchShortVideos(maxDuration: TimeInterval = 10) -> PHFetchResult<PHAsset> {
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         options.predicate = NSPredicate(format: "mediaType = %d AND duration < %f", PHAssetMediaType.video.rawValue, maxDuration)
@@ -60,14 +60,24 @@ final class VideoService: ObservableObject {
     
     /// Получить записи экрана
     nonisolated func fetchScreenRecordings() -> PHFetchResult<PHAsset> {
+        // Сначала получаем все видео, потом фильтруем по subtype
+        // Это более надёжный способ чем predicate
         let options = PHFetchOptions()
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        // Screen recordings: PHAssetMediaSubtype raw value = 8192 (1 << 13)
-        let screenRecordingSubtype: UInt = 1 << 13
-        options.predicate = NSPredicate(format: "mediaType = %d AND (mediaSubtypes & %d) != 0", 
-                                         PHAssetMediaType.video.rawValue,
-                                         screenRecordingSubtype)
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
         return PHAsset.fetchAssets(with: options)
+    }
+    
+    /// Фильтрация записей экрана из всех видео
+    nonisolated func filterScreenRecordings(from fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
+        var screenRecordings: [PHAsset] = []
+        fetchResult.enumerateObjects { asset, _, _ in
+            // PHAssetMediaSubtype.videoScreenRecording = 8192 (1 << 13)
+            if asset.mediaSubtypes.rawValue & 8192 != 0 {
+                screenRecordings.append(asset)
+            }
+        }
+        return screenRecordings
     }
     
     // MARK: - Counts
@@ -79,7 +89,8 @@ final class VideoService: ObservableObject {
     
     var screenRecordingsCount: Int {
         guard isAuthorized else { return 0 }
-        return fetchScreenRecordings().count
+        let allVideos = fetchScreenRecordings()
+        return filterScreenRecordings(from: allVideos).count
     }
     
     // MARK: - Load Thumbnail

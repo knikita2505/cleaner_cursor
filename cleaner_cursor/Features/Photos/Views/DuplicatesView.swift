@@ -77,7 +77,21 @@ struct DuplicatesView: View {
     // MARK: - Summary Bar
     
     private var summaryBar: some View {
-        HStack(spacing: 20) {
+        HStack(spacing: 16) {
+            // Photos count
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Photos")
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.textTertiary)
+                
+                Text("\(viewModel.totalPhotosCount)")
+                    .font(AppFonts.subtitleL)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            
+            Divider()
+                .frame(height: 30)
+            
             // Groups count
             VStack(alignment: .leading, spacing: 2) {
                 Text("Groups")
@@ -94,7 +108,7 @@ struct DuplicatesView: View {
             
             // Potential savings
             VStack(alignment: .leading, spacing: 2) {
-                Text("Potential savings")
+                Text("Savings")
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.textTertiary)
                 
@@ -513,6 +527,10 @@ final class DuplicatesViewModel: ObservableObject {
     private let photoService = PhotoService.shared
     
     // MARK: - Computed Properties
+    
+    var totalPhotosCount: Int {
+        groups.reduce(0) { $0 + $1.assets.count }
+    }
     
     var totalToDelete: Int {
         groups.reduce(0) { $0 + $1.deleteCount }

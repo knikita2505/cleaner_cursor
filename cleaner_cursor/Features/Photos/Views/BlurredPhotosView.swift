@@ -1,14 +1,14 @@
 import SwiftUI
 import Photos
 
-// MARK: - Screen Recordings View
-/// Экран для управления записями экрана
+// MARK: - Blurred Photos View
+/// Экран для управления размытыми фотографиями
 
-struct ScreenRecordingsView: View {
+struct BlurredPhotosView: View {
     
     // MARK: - Properties
     
-    @StateObject private var viewModel = ScreenRecordingsViewModel()
+    @StateObject private var viewModel = BlurredPhotosViewModel()
     @Environment(\.dismiss) private var dismiss
     @State private var showDeleteConfirmation = false
     
@@ -27,17 +27,17 @@ struct ScreenRecordingsView: View {
             
             if viewModel.isLoading {
                 loadingView
-            } else if viewModel.recordings.isEmpty {
+            } else if viewModel.photos.isEmpty {
                 emptyStateView
             } else {
                 contentView
             }
         }
-        .navigationTitle("Screen recordings")
+        .navigationTitle("Blurred photos")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                if !viewModel.recordings.isEmpty {
+                if !viewModel.photos.isEmpty {
                     Button(viewModel.isSelectionMode ? "Done" : "Select") {
                         withAnimation {
                             viewModel.isSelectionMode.toggle()
@@ -53,7 +53,7 @@ struct ScreenRecordingsView: View {
         .onAppear {
             viewModel.load()
         }
-        .alert("Delete Recordings", isPresented: $showDeleteConfirmation) {
+        .alert("Delete Photos", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete", role: .destructive) {
                 Task {
@@ -61,7 +61,7 @@ struct ScreenRecordingsView: View {
                 }
             }
         } message: {
-            Text("Delete \(viewModel.selectedCount) screen recordings? This action cannot be undone.")
+            Text("Delete \(viewModel.selectedCount) blurred photos? This action cannot be undone.")
         }
     }
     
@@ -73,7 +73,7 @@ struct ScreenRecordingsView: View {
                 .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
                 .scaleEffect(1.2)
             
-            Text("Loading screen recordings...")
+            Text("Analyzing photos for blur...")
                 .font(AppFonts.bodyM)
                 .foregroundColor(AppColors.textSecondary)
         }
@@ -83,15 +83,15 @@ struct ScreenRecordingsView: View {
     
     private var emptyStateView: some View {
         VStack(spacing: 20) {
-            Image(systemName: "rectangle.dashed.badge.record")
+            Image(systemName: "camera.metering.unknown")
                 .font(.system(size: 60))
                 .foregroundColor(AppColors.textTertiary)
             
-            Text("No screen recordings")
+            Text("No blurred photos")
                 .font(AppFonts.titleM)
                 .foregroundColor(AppColors.textPrimary)
             
-            Text("Screen recordings will appear here")
+            Text("All your photos are sharp and clear!")
                 .font(AppFonts.bodyM)
                 .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -106,17 +106,17 @@ struct ScreenRecordingsView: View {
             // Summary header
             summaryHeader
             
-            // Recordings grid
+            // Photos grid
             ScrollView {
                 LazyVGrid(columns: columns, spacing: 2) {
-                    ForEach(viewModel.recordings) { recording in
-                        ScreenRecordingCell(
-                            recording: recording,
-                            isSelected: viewModel.isSelected(recording),
+                    ForEach(viewModel.photos) { photo in
+                        BlurredPhotoCell(
+                            photo: photo,
+                            isSelected: viewModel.isSelected(photo),
                             isSelectionMode: viewModel.isSelectionMode
                         ) {
                             if viewModel.isSelectionMode {
-                                viewModel.toggleSelection(recording)
+                                viewModel.toggleSelection(photo)
                             }
                         }
                     }
@@ -137,7 +137,7 @@ struct ScreenRecordingsView: View {
     private var summaryHeader: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(viewModel.recordings.count) screen recordings")
+                Text("\(viewModel.photos.count) blurred photos")
                     .font(AppFonts.subtitleL)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -204,10 +204,10 @@ struct ScreenRecordingsView: View {
     }
 }
 
-// MARK: - Screen Recording Cell
+// MARK: - Blurred Photo Cell
 
-struct ScreenRecordingCell: View {
-    let recording: VideoAsset
+struct BlurredPhotoCell: View {
+    let photo: PhotoAsset
     let isSelected: Bool
     let isSelectionMode: Bool
     let onTap: () -> Void
@@ -229,45 +229,39 @@ struct ScreenRecordingCell: View {
                     Rectangle()
                         .fill(AppColors.backgroundCard)
                         .frame(height: 130)
+                        .overlay(
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: AppColors.textTertiary))
+                                .scaleEffect(0.6)
+                        )
                 }
                 
-                // Duration badge
+                // Blur indicator badge
                 VStack {
                     Spacer()
                     HStack {
-                        Spacer()
-                        Text(recording.formattedDuration)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Color.black.opacity(0.6))
-                            .cornerRadius(4)
-                            .padding(6)
-                    }
-                }
-                
-                // Screen recording badge
-                VStack {
-                    HStack {
-                        if !isSelectionMode {
-                            Image(systemName: "rectangle.dashed.badge.record")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
-                                .padding(6)
-                                .background(Color.red.opacity(0.8))
-                                .cornerRadius(6)
-                                .padding(6)
+                        HStack(spacing: 4) {
+                            Image(systemName: "camera.metering.unknown")
+                                .font(.system(size: 10))
+                            Text("Blurred")
+                                .font(.system(size: 10, weight: .medium))
                         }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(Color.black.opacity(0.6))
+                        .cornerRadius(4)
+                        .padding(6)
+                        
                         Spacer()
                     }
-                    Spacer()
                 }
                 
                 // Selection indicator
                 if isSelectionMode {
                     VStack {
                         HStack {
+                            Spacer()
                             ZStack {
                                 Circle()
                                     .fill(isSelected ? AppColors.accentBlue : Color.white.opacity(0.3))
@@ -280,8 +274,6 @@ struct ScreenRecordingCell: View {
                                 }
                             }
                             .padding(8)
-                            
-                            Spacer()
                         }
                         Spacer()
                     }
@@ -300,66 +292,63 @@ struct ScreenRecordingCell: View {
     
     @MainActor
     private func loadThumbnail() {
-        VideoService.shared.loadThumbnail(for: recording.asset, size: CGSize(width: 200, height: 200)) { image in
+        PhotoService.shared.loadThumbnail(for: photo.asset, size: CGSize(width: 200, height: 200)) { image in
             self.thumbnail = image
         }
     }
 }
 
-// MARK: - Screen Recordings View Model
+// MARK: - Blurred Photos View Model
 
 @MainActor
-class ScreenRecordingsViewModel: ObservableObject {
-    @Published var recordings: [VideoAsset] = []
+class BlurredPhotosViewModel: ObservableObject {
+    @Published var photos: [PhotoAsset] = []
     @Published var isLoading = true
     @Published var isSelectionMode = false
     @Published var selectedIds: Set<String> = []
     
-    private let videoService = VideoService.shared
+    private let photoService = PhotoService.shared
     
     var selectedCount: Int {
         selectedIds.count
     }
     
     var isAllSelected: Bool {
-        selectedIds.count == recordings.count && !recordings.isEmpty
+        selectedIds.count == photos.count && !photos.isEmpty
     }
     
     var formattedTotalSize: String {
-        let totalSize = recordings.reduce(Int64(0)) { $0 + $1.fileSize }
+        let totalSize = photos.reduce(Int64(0)) { $0 + $1.fileSize }
         return ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
     }
     
     var formattedSelectedSize: String {
-        let selectedSize = recordings.filter { selectedIds.contains($0.id) }.reduce(Int64(0)) { $0 + $1.fileSize }
+        let selectedSize = photos.filter { selectedIds.contains($0.id) }.reduce(Int64(0)) { $0 + $1.fileSize }
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
-    @MainActor
     func load() {
         isLoading = true
         
         Task {
-            let result = await Task.detached(priority: .userInitiated) {
-                let allVideos = VideoService.shared.fetchScreenRecordings()
-                let screenRecordings = VideoService.shared.filterScreenRecordings(from: allVideos)
-                return screenRecordings.map { VideoAsset(asset: $0) }
+            let blurredPhotos = await Task.detached(priority: .userInitiated) {
+                self.photoService.findBlurredPhotos(limit: 500)
             }.value
             
-            self.recordings = result
+            self.photos = blurredPhotos
             self.isLoading = false
         }
     }
     
-    func isSelected(_ recording: VideoAsset) -> Bool {
-        selectedIds.contains(recording.id)
+    func isSelected(_ photo: PhotoAsset) -> Bool {
+        selectedIds.contains(photo.id)
     }
     
-    func toggleSelection(_ recording: VideoAsset) {
-        if selectedIds.contains(recording.id) {
-            selectedIds.remove(recording.id)
+    func toggleSelection(_ photo: PhotoAsset) {
+        if selectedIds.contains(photo.id) {
+            selectedIds.remove(photo.id)
         } else {
-            selectedIds.insert(recording.id)
+            selectedIds.insert(photo.id)
         }
     }
     
@@ -367,7 +356,7 @@ class ScreenRecordingsViewModel: ObservableObject {
         if isAllSelected {
             selectedIds.removeAll()
         } else {
-            selectedIds = Set(recordings.map { $0.id })
+            selectedIds = Set(photos.map { $0.id })
         }
     }
     
@@ -376,15 +365,15 @@ class ScreenRecordingsViewModel: ObservableObject {
     }
     
     func deleteSelected() async {
-        let assetsToDelete = recordings.filter { selectedIds.contains($0.id) }.map { $0.asset }
+        let assetsToDelete = photos.filter { selectedIds.contains($0.id) }.map { $0.asset }
         
         do {
-            try await videoService.deleteVideos(assetsToDelete)
-            recordings.removeAll { selectedIds.contains($0.id) }
+            try await photoService.deletePhotos(assetsToDelete)
+            photos.removeAll { selectedIds.contains($0.id) }
             selectedIds.removeAll()
             isSelectionMode = false
         } catch {
-            print("Error deleting recordings: \(error)")
+            print("Error deleting photos: \(error)")
         }
     }
 }

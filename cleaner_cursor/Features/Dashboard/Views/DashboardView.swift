@@ -163,32 +163,41 @@ struct DashboardView: View {
                             .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
                     }
                     
-                    // Mini stats
+                    // Mini stats: Clutter, Photo & Video, Total
                     VStack(alignment: .leading, spacing: 6) {
-                        miniStatRow(label: "Clutter", value: viewModel.formattedClutter, color: AppColors.statusWarning, isLoading: viewModel.isScanning && viewModel.clutterSize == 0)
-                        miniStatRow(label: "Apps & data", value: viewModel.formattedAppsData, color: AppColors.accentBlue, isLoading: viewModel.isScanning && viewModel.appsDataSize == 0)
-                        miniStatRow(label: "Total used", value: viewModel.formattedTotal, color: AppColors.textTertiary, isLoading: viewModel.totalStorageUsed == 0)
+                        miniStatRow(label: "Clutter", value: viewModel.formattedClutter, color: Color(hex: "FF496C"), isLoading: viewModel.isScanning && viewModel.clutterSize == 0)
+                        miniStatRow(label: "Photo & Video", value: viewModel.formattedPhotoVideoSize, color: Color(hex: "87CEFA"), isLoading: viewModel.isScanning && viewModel.photoVideoSize == 0)
+                        miniStatRow(label: "Total", value: viewModel.formattedTotal, color: AppColors.textSecondary, isLoading: viewModel.totalStorage == 0)
                     }
                 }
                 
                 Spacer()
                 
-                // Right side - Circular Progress
+                // Right side - Double Ring Progress
                 ZStack {
-                    // Background ring
+                    // Background ring (Total capacity)
                     Circle()
-                        .stroke(AppColors.progressInactive, lineWidth: 12)
+                        .stroke(AppColors.progressInactive, lineWidth: 14)
                         .frame(width: 100, height: 100)
                     
-                    // Progress ring
+                    // Photo & Video ring (outer)
+                    Circle()
+                        .trim(from: 0, to: animateStorage ? viewModel.photoVideoPercentage : 0)
+                        .stroke(
+                            Color(hex: "87CEFA"),
+                            style: StrokeStyle(lineWidth: 14, lineCap: .round)
+                        )
+                        .frame(width: 100, height: 100)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 1.2), value: animateStorage)
+                        .animation(.easeOut(duration: 0.8), value: viewModel.photoVideoPercentage)
+                    
+                    // Clutter ring (over Photo & Video)
                     Circle()
                         .trim(from: 0, to: animateStorage ? viewModel.cleanablePercentage : 0)
                         .stroke(
-                            AngularGradient(
-                                colors: [AppColors.accentBlue, AppColors.accentPurple, AppColors.accentBlue],
-                                center: .center
-                            ),
-                            style: StrokeStyle(lineWidth: 12, lineCap: .round)
+                            Color(hex: "FF496C"),
+                            style: StrokeStyle(lineWidth: 14, lineCap: .round)
                         )
                         .frame(width: 100, height: 100)
                         .rotationEffect(.degrees(-90))
@@ -199,18 +208,18 @@ struct DashboardView: View {
                     VStack(spacing: 2) {
                         if viewModel.isScanning && viewModel.spaceToClean == 0 {
                             ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
+                                .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "87CEFA")))
                                 .scaleEffect(0.8)
                         } else {
                             Text("\(Int(viewModel.cleanablePercentage * 100))%")
-                                .font(.system(size: 20, weight: .bold, design: .rounded))
-                                .foregroundColor(AppColors.textPrimary)
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(Color(hex: "FF496C"))
                                 .contentTransition(.numericText())
                                 .animation(.easeInOut(duration: 0.5), value: viewModel.cleanablePercentage)
                         }
                         
                         Text("clutter")
-                            .font(.system(size: 10, weight: .medium))
+                            .font(.system(size: 9, weight: .medium))
                             .foregroundColor(AppColors.textTertiary)
                     }
                 }
@@ -311,6 +320,8 @@ struct DashboardView: View {
             appState.dashboardPath.append(PhotoCategoryNav.duplicates)
         case "similar":
             appState.dashboardPath.append(PhotoCategoryNav.similar)
+        case "blurred":
+            appState.dashboardPath.append(PhotoCategoryNav.blurred)
         case "screenshots":
             appState.dashboardPath.append(PhotoCategoryNav.screenshots)
         case "live_photos":
@@ -332,6 +343,7 @@ struct DashboardView: View {
 enum PhotoCategoryNav: String, Hashable {
     case screenshots
     case similar
+    case blurred
     case videos
     case shortVideos
     case livePhotos
@@ -351,104 +363,84 @@ struct CategoryCard: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Thumbnail area
-                ZStack {
-                    // Background gradient
+            ZStack(alignment: .bottomLeading) {
+                // Background - full card is thumbnail or gradient
+                if let thumbnail = category.thumbnail {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 140)
+                        .clipped()
+                        .opacity(isLocked ? 0.5 : 1.0)
+                } else {
+                    // Gradient placeholder
                     LinearGradient(
                         colors: [
-                            category.color.opacity(0.3),
-                            category.color.opacity(0.1)
+                            category.color.opacity(0.4),
+                            category.color.opacity(0.2)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
                     
-                    // Thumbnail or icon
-                    if let thumbnail = category.thumbnail {
-                        Image(uiImage: thumbnail)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .opacity(isLocked ? 0.5 : 1.0)
-                            .transition(.opacity)
+                    // Loading or icon
+                    if category.isLoading {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(1.0)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        // Icon or loading
-                        if category.isLoading {
-                            VStack(spacing: 8) {
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: category.color))
-                                    .scaleEffect(0.8)
-                            }
-                        } else {
-                            Image(systemName: category.icon)
-                                .font(.system(size: 32, weight: .medium))
-                                .foregroundColor(category.color)
-                        }
-                    }
-                    
-                    // Lock overlay
-                    if isLocked && !category.isLoading {
-                        Color.black.opacity(0.4)
-                        
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                    }
-                    
-                    // Count badge
-                    if category.count > 0 && !isLocked && !category.isLoading {
-                        VStack {
-                            HStack {
-                                Spacer()
-                                
-                                Text("\(category.count)")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(category.color)
-                                    .cornerRadius(10)
-                                    .padding(8)
-                            }
-                            Spacer()
-                        }
-                        .transition(.scale.combined(with: .opacity))
+                        Image(systemName: category.icon)
+                            .font(.system(size: 40, weight: .medium))
+                            .foregroundColor(.white.opacity(0.5))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
-                .frame(height: 100)
-                .clipped()
-                .animation(.easeInOut(duration: 0.3), value: category.thumbnail != nil)
                 
-                // Info section
+                // Dark gradient overlay for text readability
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0),
+                        Color.black.opacity(0.6)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                
+                // Lock overlay
+                if isLocked && !category.isLoading {
+                    Color.black.opacity(0.5)
+                    
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                
+                // Text content at bottom
                 VStack(alignment: .leading, spacing: 4) {
                     Text(category.title)
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(AppColors.textPrimary)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
                         .lineLimit(1)
                     
                     if category.isLoading && category.size == 0 {
-                        HStack(spacing: 6) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: category.color))
-                                .scaleEffect(0.5)
-                            Text("Scanning...")
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.textTertiary)
-                        }
+                        Text("Scanning...")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white.opacity(0.7))
                     } else {
                         Text(category.formattedSize)
-                            .font(AppFonts.caption)
-                            .foregroundColor(category.isEmpty ? AppColors.textTertiary : category.color)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
                     }
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppColors.backgroundCard)
-                .animation(.easeInOut(duration: 0.3), value: category.isLoading)
+                .padding(14)
             }
-            .cornerRadius(18)
-            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-            .opacity(category.isEmpty && !category.isLoading ? 0.6 : 1.0)
+            .frame(height: 140)
+            .cornerRadius(16)
+            .contentShape(Rectangle())
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .opacity(category.isEmpty && !category.isLoading ? 0.5 : 1.0)
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.97))
         .disabled(category.isEmpty && !category.isLoading)

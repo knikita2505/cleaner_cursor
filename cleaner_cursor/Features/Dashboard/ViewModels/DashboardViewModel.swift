@@ -50,10 +50,11 @@ final class DashboardViewModel: ObservableObject {
     }
     
     private func setupCategories() {
-        // Порядок согласно requirements/4_dashboard.md
+        // Порядок согласно requirements/4_dashboard.md + Blurred
         categories = [
             MediaCategory(id: "duplicates", title: "Duplicate photos", icon: "square.on.square", color: AppColors.statusError, countsTowardsCleanup: true),
             MediaCategory(id: "similar", title: "Similar photos", icon: "square.stack.3d.down.right", color: AppColors.accentPurple, countsTowardsCleanup: true),
+            MediaCategory(id: "blurred", title: "Blurred", icon: "camera.metering.unknown", color: Color(hex: "9CA3AF"), countsTowardsCleanup: true),
             MediaCategory(id: "screenshots", title: "Screenshots", icon: "camera.viewfinder", color: AppColors.accentBlue, countsTowardsCleanup: true),
             MediaCategory(id: "live_photos", title: "Live Photos", icon: "livephoto", color: AppColors.statusWarning, countsTowardsCleanup: true),
             MediaCategory(id: "videos", title: "Videos", icon: "video.fill", color: AppColors.statusSuccess, countsTowardsCleanup: false),
@@ -65,17 +66,19 @@ final class DashboardViewModel: ObservableObject {
     // MARK: - Observe PhotoService Cache
     
     private func observePhotoServiceCache() {
+        // Наблюдаем за кешем дубликатов
         photoService.$cachedDuplicates
             .receive(on: DispatchQueue.main)
             .sink { [weak self] groups in
                 guard let self = self, !groups.isEmpty else { return }
-                let count = groups.reduce(0) { $0 + $1.assets.count - 1 }
+                let count = groups.reduce(0) { $0 + $1.assets.count }
                 let size = groups.reduce(Int64(0)) { $0 + $1.savingsSize }
                 self.animateUpdateCategory(id: "duplicates", count: count, size: size)
                 self.loadThumbnailForDuplicates(groups: groups)
             }
             .store(in: &cancellables)
         
+        // Наблюдаем за кешем похожих фото
         photoService.$cachedSimilarPhotos
             .receive(on: DispatchQueue.main)
             .sink { [weak self] groups in
@@ -147,15 +150,36 @@ final class DashboardViewModel: ObservableObject {
     // MARK: - Fast Categories (Screenshots, Live Photos, Videos)
     
     private func scanFastCategoriesInBackground() async {
-        await MainActor.run { scanProgress = "Scanning photos..." }
+        await MainActor.run { scanProgress = "Scanning media..." }
         
-        // Запускаем все быстрые категории параллельно
+        // Запускаем быстрые категории параллельно (системные папки)
         await withTaskGroup(of: Void.self) { group in
             group.addTask { await self.scanScreenshotsBackground() }
             group.addTask { await self.scanLivePhotosBackground() }
             group.addTask { await self.scanVideosBackground() }
             group.addTask { await self.scanShortVideosBackground() }
             group.addTask { await self.scanScreenRecordingsBackground() }
+        }
+    }
+    
+    // MARK: - Blurred Photos
+    
+    private func scanBlurredBackground() async {
+        await MainActor.run { scanProgress = "Finding blurred photos..." }
+        
+        let (photos, thumbnail) = await Task.detached(priority: .utility) {
+            let blurred = self.photoService.findBlurredPhotos(limit: 300)
+            let firstAsset = blurred.first?.asset
+            return (blurred, firstAsset)
+        }.value
+        
+        let totalSize = photos.reduce(Int64(0)) { $0 + $1.fileSize }
+        
+        await MainActor.run {
+            animateUpdateCategory(id: "blurred", count: photos.count, size: totalSize)
+            if let asset = thumbnail {
+                loadThumbnail(for: "blurred", asset: asset)
+            }
         }
     }
     
@@ -270,17 +294,18 @@ final class DashboardViewModel: ObservableObject {
     
     private func scanScreenRecordingsBackground() async {
         let (count, size, thumbnail) = await Task.detached(priority: .utility) {
-            let fetchResult = self.videoService.fetchScreenRecordings()
-            let count = fetchResult.count
+            let allVideos = self.videoService.fetchScreenRecordings()
+            let screenRecordings = self.videoService.filterScreenRecordings(from: allVideos)
+            let count = screenRecordings.count
             var totalSize: Int64 = 0
             var firstAsset: PHAsset?
             
-            fetchResult.enumerateObjects { asset, index, _ in
+            for (index, asset) in screenRecordings.enumerated() {
                 if index == 0 { firstAsset = asset }
                 let resources = PHAssetResource.assetResources(for: asset)
                 if let resource = resources.first,
-                   let size = resource.value(forKey: "fileSize") as? Int64 {
-                    totalSize += size
+                   let fileSize = resource.value(forKey: "fileSize") as? Int64 {
+                    totalSize += fileSize
                 }
             }
             
@@ -295,16 +320,25 @@ final class DashboardViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Heavy Categories (Duplicates, Similar)
+    // MARK: - Heavy Categories (Duplicates, Similar, Blurred)
     
     private func scanHeavyCategoriesInBackground() async {
+        guard !Task.isCancelled else { return }
+        
+        // Дубликаты - наш алгоритм
         await MainActor.run { scanProgress = "Finding duplicates..." }
         await photoService.scanDuplicatesIfNeeded()
         
         guard !Task.isCancelled else { return }
         
+        // Похожие фото
         await MainActor.run { scanProgress = "Finding similar photos..." }
         await photoService.scanSimilarIfNeeded()
+        
+        guard !Task.isCancelled else { return }
+        
+        // Размытые фото
+        await scanBlurredBackground()
     }
     
     // MARK: - Thumbnails
@@ -356,21 +390,63 @@ final class DashboardViewModel: ObservableObject {
             categories[index].isLoading = false
         }
         
-        // Пересчитываем totals
+        // Пересчитываем totals и сортируем
         calculateTotals()
+        sortCategories()
     }
     
     private func calculateTotals() {
         let newClutter = categories.filter { $0.countsTowardsCleanup }.reduce(Int64(0)) { $0 + $1.size }
+        let allPhotoVideo = categories.reduce(Int64(0)) { $0 + $1.size }
         
         withAnimation(.easeInOut(duration: 0.4)) {
             clutterSize = newClutter
             spaceToClean = newClutter
-            
-            if let info = storageService.storageInfo {
-                appsDataSize = max(0, info.usedSpace - newClutter)
+            photoVideoSize = allPhotoVideo
+        }
+    }
+    
+    private func sortCategories() {
+        // Определяем какие категории относятся к фото, а какие к видео
+        let photoCategories = Set(["duplicates", "similar", "blurred", "screenshots", "live_photos"])
+        let videoCategories = Set(["videos", "short_videos", "screen_recordings"])
+        
+        withAnimation(.easeInOut(duration: 0.3)) {
+            categories.sort { cat1, cat2 in
+                let cat1HasContent = cat1.count > 0 || cat1.isLoading
+                let cat2HasContent = cat2.count > 0 || cat2.isLoading
+                let cat1IsPhoto = photoCategories.contains(cat1.id)
+                let cat2IsPhoto = photoCategories.contains(cat2.id)
+                let cat1IsVideo = videoCategories.contains(cat1.id)
+                let cat2IsVideo = videoCategories.contains(cat2.id)
+                
+                // 1. Пустые категории в конец
+                if cat1HasContent && !cat2HasContent { return true }
+                if !cat1HasContent && cat2HasContent { return false }
+                
+                // 2. Оба пустые - сохраняем порядок: фото, потом видео
+                if !cat1HasContent && !cat2HasContent {
+                    if cat1IsPhoto && cat2IsVideo { return true }
+                    if cat1IsVideo && cat2IsPhoto { return false }
+                    return false
+                }
+                
+                // 3. Оба с контентом: фото категории сначала
+                if cat1IsPhoto && cat2IsVideo { return true }
+                if cat1IsVideo && cat2IsPhoto { return false }
+                
+                // 4. В рамках одного типа - по размеру (убывание)
+                return cat1.size > cat2.size
             }
         }
+    }
+    
+    // MARK: - Photo & Video Size
+    
+    @Published var photoVideoSize: Int64 = 0
+    
+    var formattedPhotoVideoSize: String {
+        ByteCountFormatter.string(fromByteCount: photoVideoSize, countStyle: .file)
     }
     
     // MARK: - Formatted Values
@@ -388,7 +464,7 @@ final class DashboardViewModel: ObservableObject {
     }
     
     var formattedTotal: String {
-        ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file)
+        ByteCountFormatter.string(fromByteCount: totalStorage, countStyle: .file)
     }
     
     var storageUsagePercentage: Double {
@@ -397,8 +473,13 @@ final class DashboardViewModel: ObservableObject {
     }
     
     var cleanablePercentage: Double {
-        guard totalStorageUsed > 0 else { return 0 }
-        return min(1.0, Double(spaceToClean) / Double(totalStorageUsed))
+        guard totalStorage > 0 else { return 0 }
+        return min(1.0, Double(spaceToClean) / Double(totalStorage))
+    }
+    
+    var photoVideoPercentage: Double {
+        guard totalStorage > 0 else { return 0 }
+        return min(1.0, Double(photoVideoSize) / Double(totalStorage))
     }
 }
 

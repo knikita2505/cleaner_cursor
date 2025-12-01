@@ -139,6 +139,8 @@ struct NavigationDestinationModifier: ViewModifier {
                     ScreenshotsView()
                 case .similar:
                     SimilarPhotosView()
+                case .blurred:
+                    BlurredPhotosView()
                 case .videos:
                     VideosView()
                 case .shortVideos:

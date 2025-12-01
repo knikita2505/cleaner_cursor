@@ -192,6 +192,120 @@ final class PhotoService: ObservableObject {
         return assets
     }
     
+    // MARK: - Fetch Screen Recordings
+    
+    nonisolated func fetchScreenRecordings() -> [PHAsset] {
+        // Получаем все видео и фильтруем по subtype
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
+        let allVideos = PHAsset.fetchAssets(with: options)
+        
+        var screenRecordings: [PHAsset] = []
+        allVideos.enumerateObjects { asset, _, _ in
+            // PHAssetMediaSubtype.videoScreenRecording = 8192 (1 << 13)
+            if asset.mediaSubtypes.rawValue & 8192 != 0 {
+                screenRecordings.append(asset)
+            }
+        }
+        return screenRecordings
+    }
+    
+    // MARK: - Fetch Blurred Photos
+    
+    nonisolated func findBlurredPhotos(limit: Int = 500) -> [PhotoAsset] {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
+        options.fetchLimit = limit
+        
+        let fetchResult = PHAsset.fetchAssets(with: options)
+        var blurredPhotos: [PhotoAsset] = []
+        
+        let imageManager = PHImageManager.default()
+        let requestOptions = PHImageRequestOptions()
+        requestOptions.isSynchronous = true
+        requestOptions.deliveryMode = .fastFormat
+        requestOptions.resizeMode = .fast
+        
+        fetchResult.enumerateObjects { asset, _, stop in
+            // Request small image for blur detection
+            imageManager.requestImage(
+                for: asset,
+                targetSize: CGSize(width: 200, height: 200),
+                contentMode: .aspectFit,
+                options: requestOptions
+            ) { image, _ in
+                guard let image = image,
+                      let ciImage = CIImage(image: image) else { return }
+                
+                if self.isBlurred(ciImage) {
+                    blurredPhotos.append(PhotoAsset(asset: asset))
+                }
+            }
+            
+            // Stop if we found enough
+            if blurredPhotos.count >= 100 {
+                stop.pointee = true
+            }
+        }
+        
+        return blurredPhotos
+    }
+    
+    private nonisolated func isBlurred(_ image: CIImage) -> Bool {
+        // Use Laplacian variance to detect blur
+        // Lower variance = more blurred
+        let context = CIContext()
+        
+        // Apply edge detection filter
+        guard let filter = CIFilter(name: "CILaplacian") else { return false }
+        filter.setValue(image, forKey: kCIInputImageKey)
+        
+        guard let outputImage = filter.outputImage,
+              let cgImage = context.createCGImage(outputImage, from: outputImage.extent) else { return false }
+        
+        // Calculate variance of the Laplacian
+        let width = cgImage.width
+        let height = cgImage.height
+        let bytesPerPixel = 4
+        let bytesPerRow = bytesPerPixel * width
+        let bitsPerComponent = 8
+        
+        guard let colorSpace = cgImage.colorSpace,
+              let contextRef = CGContext(
+                data: nil,
+                width: width,
+                height: height,
+                bitsPerComponent: bitsPerComponent,
+                bytesPerRow: bytesPerRow,
+                space: colorSpace,
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+              ) else { return false }
+        
+        contextRef.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        
+        guard let data = contextRef.data else { return false }
+        let buffer = data.bindMemory(to: UInt8.self, capacity: width * height * bytesPerPixel)
+        
+        var sum: Double = 0
+        var sumSq: Double = 0
+        let pixelCount = Double(width * height)
+        
+        for i in stride(from: 0, to: width * height * bytesPerPixel, by: bytesPerPixel) {
+            let gray = Double(buffer[i]) // Red channel as grayscale approximation
+            sum += gray
+            sumSq += gray * gray
+        }
+        
+        let mean = sum / pixelCount
+        let variance = (sumSq / pixelCount) - (mean * mean)
+        
+        // Threshold: lower variance indicates blur
+        // Typical threshold is around 100-500 depending on image
+        return variance < 100
+    }
+    
     // MARK: - Fetch Burst Photos
     
     func fetchBurstPhotos() -> PHFetchResult<PHAsset> {
@@ -245,24 +359,27 @@ final class PhotoService: ObservableObject {
     
     // MARK: - Find Duplicates (Internal - for caching)
     
+    /// Поиск точных дубликатов
+    /// Дубликат = фото с ТОЧНО одинаковым размером файла + разрешением + близкой датой создания
     private nonisolated func findDuplicatesInternal() -> [DuplicateGroup] {
         let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        // Limit to 3000 most recent for performance
-        fetchOptions.fetchLimit = 3000
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
         
         let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
         
-        // Group by: file size + resolution
+        // Группируем по: размер файла (в байтах) + разрешение
         var compositeGroups: [String: [PhotoAsset]] = [:]
         
         fetchResult.enumerateObjects { asset, _, _ in
-            // Skip screenshots
+            // Пропускаем скриншоты
             if asset.mediaSubtypes.contains(.photoScreenshot) { return }
             
             let photoAsset = PhotoAsset(asset: asset)
             
-            // Key: size + resolution
+            // Используем только файлы с ненулевым размером
+            guard photoAsset.fileSize > 0 else { return }
+            
+            // Ключ: точный размер файла + разрешение
             let sizeKey = "\(photoAsset.fileSize)_\(asset.pixelWidth)x\(asset.pixelHeight)"
             
             if compositeGroups[sizeKey] != nil {
@@ -274,8 +391,10 @@ final class PhotoService: ObservableObject {
         
         var duplicateGroups: [DuplicateGroup] = []
         
+        // Для каждой группы с одинаковым размером и разрешением
+        // дополнительно проверяем близость по времени создания
         for (_, assets) in compositeGroups where assets.count > 1 {
-            // Additional check: creation time within 60 seconds
+            // Сортируем по дате создания
             let sortedByDate = assets.sorted { 
                 ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) 
             }
@@ -288,15 +407,18 @@ final class PhotoService: ObservableObject {
                 } else if let lastDate = currentGroup.last?.creationDate,
                           let currentDate = asset.creationDate,
                           abs(currentDate.timeIntervalSince(lastDate)) <= 60 {
+                    // В пределах 60 секунд - это дубликат
                     currentGroup.append(asset)
-                } else if currentGroup.count > 1 {
-                    duplicateGroups.append(createDuplicateGroup(from: currentGroup))
-                    currentGroup = [asset]
                 } else {
+                    // Время разное - сохраняем текущую группу если >= 2 фото
+                    if currentGroup.count > 1 {
+                        duplicateGroups.append(createDuplicateGroup(from: currentGroup))
+                    }
                     currentGroup = [asset]
                 }
             }
             
+            // Последняя группа
             if currentGroup.count > 1 {
                 duplicateGroups.append(createDuplicateGroup(from: currentGroup))
             }
@@ -322,18 +444,19 @@ final class PhotoService: ObservableObject {
     
     // MARK: - Find Similar Photos (Internal - for caching)
     
+    /// Поиск похожих фото:
+    /// 1. Burst-серии (фото с одинаковым burstIdentifier)
+    /// 2. Фото, сделанные в течение 5 секунд друг от друга
     private nonisolated func findSimilarPhotosInternal() -> [SimilarGroup] {
         let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        // Limit to 3000 most recent for performance
-        fetchOptions.fetchLimit = 3000
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        // Сканируем ВСЕ фото без лимита
         
         let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
         var burstGroups: [String: [PhotoAsset]] = [:]
-        var timeGroups: [[PhotoAsset]] = []
         var processedIds: Set<String> = []
         
-        // 1. First find burst series
+        // 1. Находим burst-серии (они точно похожи)
         fetchResult.enumerateObjects { asset, _, _ in
             if asset.mediaSubtypes.contains(.photoScreenshot) { return }
             
@@ -348,7 +471,7 @@ final class PhotoService: ObservableObject {
             }
         }
         
-        // 2. Group remaining by time (3 seconds)
+        // 2. Группируем остальные по времени (5 секунд между фото)
         var remainingPhotos: [PhotoAsset] = []
         fetchResult.enumerateObjects { asset, _, _ in
             if asset.mediaSubtypes.contains(.photoScreenshot) { return }
@@ -357,17 +480,16 @@ final class PhotoService: ObservableObject {
             remainingPhotos.append(PhotoAsset(asset: asset))
         }
         
-        remainingPhotos.sort { 
-            ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) 
-        }
-        
+        // Уже отсортированы по дате (ascending)
+        var timeGroups: [[PhotoAsset]] = []
         var currentTimeGroup: [PhotoAsset] = []
+        
         for photo in remainingPhotos {
             if currentTimeGroup.isEmpty {
                 currentTimeGroup.append(photo)
             } else if let lastDate = currentTimeGroup.last?.creationDate,
                       let currentDate = photo.creationDate,
-                      abs(currentDate.timeIntervalSince(lastDate)) <= 3 {
+                      abs(currentDate.timeIntervalSince(lastDate)) <= 5 {
                 currentTimeGroup.append(photo)
             } else {
                 if currentTimeGroup.count >= 2 {
@@ -382,12 +504,12 @@ final class PhotoService: ObservableObject {
         
         var similarGroups: [SimilarGroup] = []
         
-        // Add burst groups
+        // Добавляем burst-группы
         for (_, assets) in burstGroups where assets.count >= 2 {
             similarGroups.append(createSimilarGroup(from: assets, isBurst: true))
         }
         
-        // Add time groups
+        // Добавляем группы по времени
         for assets in timeGroups {
             similarGroups.append(createSimilarGroup(from: assets, isBurst: false))
         }

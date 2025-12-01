@@ -318,18 +318,21 @@ class ShortVideosViewModel: ObservableObject {
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
+    @MainActor
     func load() {
         isLoading = true
         
         Task {
-            let fetchResult = videoService.fetchShortVideos()
-            var loadedVideos: [VideoAsset] = []
+            let result = await Task.detached(priority: .userInitiated) {
+                let fetchResult = VideoService.shared.fetchShortVideos()
+                var videos: [VideoAsset] = []
+                fetchResult.enumerateObjects { asset, _, _ in
+                    videos.append(VideoAsset(asset: asset))
+                }
+                return videos
+            }.value
             
-            fetchResult.enumerateObjects { asset, _, _ in
-                loadedVideos.append(VideoAsset(asset: asset))
-            }
-            
-            self.videos = loadedVideos
+            self.videos = result
             self.isLoading = false
         }
     }
