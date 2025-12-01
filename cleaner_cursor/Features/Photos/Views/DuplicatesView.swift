@@ -267,9 +267,9 @@ struct DuplicateGroupSection: View {
     let onKeepPhoto: (Int) -> Void
     
     private let expandedColumns = [
-        GridItem(.flexible(), spacing: 4),
-        GridItem(.flexible(), spacing: 4),
-        GridItem(.flexible(), spacing: 4)
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
     ]
     
     var body: some View {
@@ -343,7 +343,7 @@ struct DuplicateGroupSection: View {
                 Divider()
                     .padding(.horizontal, AppSpacing.containerPadding)
                 
-                LazyVGrid(columns: expandedColumns, spacing: 4) {
+                LazyVGrid(columns: expandedColumns, spacing: 8) {
                     ForEach(group.assets.indices, id: \.self) { index in
                         DuplicatePhotoItem(
                             asset: group.assets[index],
@@ -352,7 +352,8 @@ struct DuplicateGroupSection: View {
                         )
                     }
                 }
-                .padding(AppSpacing.containerPadding)
+                .padding(.horizontal, AppSpacing.containerPadding)
+                .padding(.vertical, 12)
             }
         }
         .background(AppColors.backgroundSecondary)
@@ -369,39 +370,44 @@ struct DuplicatePhotoItem: View {
     
     var body: some View {
         Button(action: onTap) {
-            ZStack(alignment: .topLeading) {
-                DuplicateThumbnail(asset: asset, size: nil)
-                    .aspectRatio(1, contentMode: .fill)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(isKept ? AppColors.statusSuccess : AppColors.statusError.opacity(0.5), lineWidth: 2)
-                    )
-                
-                // Badge
-                if isKept {
-                    Text("Keep")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(AppColors.statusSuccess)
-                        .cornerRadius(4)
-                        .padding(4)
-                } else {
-                    // Delete checkbox
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.statusError)
-                            .frame(width: 20, height: 20)
-                        
-                        Image(systemName: "checkmark")
+            GeometryReader { geometry in
+                ZStack(alignment: .topLeading) {
+                    // Thumbnail
+                    DuplicateThumbnail(asset: asset, size: geometry.size.width)
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .clipped()
+                    
+                    // Border overlay
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(isKept ? AppColors.statusSuccess : AppColors.statusError.opacity(0.5), lineWidth: 2)
+                    
+                    // Badge
+                    if isKept {
+                        Text("Keep")
                             .font(.system(size: 10, weight: .bold))
                             .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(AppColors.statusSuccess)
+                            .cornerRadius(4)
+                            .padding(6)
+                    } else {
+                        // Delete checkbox
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.statusError)
+                                .frame(width: 22, height: 22)
+                            
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(6)
                     }
-                    .padding(4)
                 }
+                .cornerRadius(8)
             }
+            .aspectRatio(1, contentMode: .fit)
         }
         .buttonStyle(.plain)
     }
@@ -416,24 +422,25 @@ struct DuplicateThumbnail: View {
     @State private var image: UIImage?
     
     var body: some View {
-        Group {
+        ZStack {
             if let image = image {
                 Image(uiImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipped()
             } else {
                 Rectangle()
                     .fill(AppColors.backgroundCard)
+                    .frame(width: size, height: size)
                     .overlay(
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: AppColors.textTertiary))
-                            .scaleEffect(0.5)
+                            .scaleEffect(0.6)
                     )
             }
         }
-        .frame(width: size, height: size)
         .cornerRadius(8)
-        .clipped()
         .onAppear {
             loadThumbnail()
         }
@@ -441,9 +448,10 @@ struct DuplicateThumbnail: View {
     
     @MainActor
     private func loadThumbnail() {
+        let targetSize = CGFloat(max(size ?? 100, 100) * 2) // Retina
         PhotoService.shared.loadThumbnail(
             for: asset.asset,
-            size: CGSize(width: 200, height: 200)
+            size: CGSize(width: targetSize, height: targetSize)
         ) { img in
             self.image = img
         }
