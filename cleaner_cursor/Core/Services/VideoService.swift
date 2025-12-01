@@ -50,6 +50,38 @@ final class VideoService: ObservableObject {
         return largeVideos.sorted { $0.fileSize > $1.fileSize }
     }
     
+    /// Получить короткие видео (< 60 сек)
+    nonisolated func fetchShortVideos(maxDuration: TimeInterval = 60) -> PHFetchResult<PHAsset> {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType = %d AND duration < %f", PHAssetMediaType.video.rawValue, maxDuration)
+        return PHAsset.fetchAssets(with: options)
+    }
+    
+    /// Получить записи экрана
+    nonisolated func fetchScreenRecordings() -> PHFetchResult<PHAsset> {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        // Screen recordings: PHAssetMediaSubtype raw value = 8192 (1 << 13)
+        let screenRecordingSubtype: UInt = 1 << 13
+        options.predicate = NSPredicate(format: "mediaType = %d AND (mediaSubtypes & %d) != 0", 
+                                         PHAssetMediaType.video.rawValue,
+                                         screenRecordingSubtype)
+        return PHAsset.fetchAssets(with: options)
+    }
+    
+    // MARK: - Counts
+    
+    var shortVideosCount: Int {
+        guard isAuthorized else { return 0 }
+        return fetchShortVideos().count
+    }
+    
+    var screenRecordingsCount: Int {
+        guard isAuthorized else { return 0 }
+        return fetchScreenRecordings().count
+    }
+    
     // MARK: - Load Thumbnail
     
     func loadThumbnail(for asset: PHAsset, size: CGSize, completion: @escaping (UIImage?) -> Void) {

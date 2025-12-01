@@ -149,9 +149,8 @@ struct DashboardView: View {
                     Text(viewModel.formattedSpaceToClean)
                         .font(.system(size: 42, weight: .bold, design: .rounded))
                         .foregroundColor(AppColors.textPrimary)
-                        .scaleEffect(animateStorage ? 1.0 : 0.8)
-                        .opacity(animateStorage ? 1.0 : 0.5)
-                        .animation(.spring(response: 0.5), value: viewModel.spaceToClean)
+                        .contentTransition(.numericText())
+                        .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
                     
                     // Mini stats
                     VStack(alignment: .leading, spacing: 6) {
@@ -159,6 +158,7 @@ struct DashboardView: View {
                         miniStatRow(label: "Apps & data", value: viewModel.formattedAppsData, color: AppColors.accentBlue)
                         miniStatRow(label: "Total used", value: viewModel.formattedTotal, color: AppColors.textTertiary)
                     }
+                    .animation(.easeInOut(duration: 0.3), value: viewModel.clutterSize)
                 }
                 
                 Spacer()
@@ -280,18 +280,20 @@ struct DashboardView: View {
         }
         
         switch category.id {
-        case "screenshots":
-            appState.dashboardPath.append(PhotoCategoryNav.screenshots)
         case "duplicates":
             appState.dashboardPath.append(PhotoCategoryNav.duplicates)
         case "similar":
             appState.dashboardPath.append(PhotoCategoryNav.similar)
+        case "screenshots":
+            appState.dashboardPath.append(PhotoCategoryNav.screenshots)
         case "live_photos":
             appState.dashboardPath.append(PhotoCategoryNav.livePhotos)
-        case "big_files":
-            appState.dashboardPath.append(PhotoCategoryNav.bigFiles)
         case "videos":
             appState.dashboardPath.append(PhotoCategoryNav.videos)
+        case "short_videos":
+            appState.dashboardPath.append(PhotoCategoryNav.shortVideos)
+        case "screen_recordings":
+            appState.dashboardPath.append(PhotoCategoryNav.screenRecordings)
         default:
             break
         }
@@ -370,9 +372,12 @@ struct CategoryCard: View {
                                     .background(category.color)
                                     .cornerRadius(10)
                                     .padding(8)
+                                    .contentTransition(.numericText())
+                                    .animation(.easeInOut(duration: 0.3), value: category.count)
                             }
                             Spacer()
                         }
+                        .transition(.scale.combined(with: .opacity))
                     }
                 }
                 .frame(height: 100)
@@ -388,6 +393,8 @@ struct CategoryCard: View {
                     Text(category.formattedSize)
                         .font(AppFonts.caption)
                         .foregroundColor(category.isEmpty ? AppColors.textTertiary : category.color)
+                        .contentTransition(.numericText())
+                        .animation(.easeInOut(duration: 0.3), value: category.size)
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)

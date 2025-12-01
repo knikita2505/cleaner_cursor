@@ -54,6 +54,9 @@
 		11205D4D2ED79C0D003AFFF9 /* HighlightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D492ED79C0D003AFFF9 /* HighlightsView.swift */; };
 		11205D4E2ED79C0D003AFFF9 /* BurstPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */; };
 		11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */; };
+		116799452EDDF16400C73344 /* VideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799422EDDF16400C73344 /* VideosView.swift */; };
+		116799462EDDF16400C73344 /* ScreenRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799432EDDF16400C73344 /* ScreenRecordingsView.swift */; };
+		116799472EDDF16400C73344 /* ShortVideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799442EDDF16400C73344 /* ShortVideosView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -125,6 +128,9 @@
 		11205D492ED79C0D003AFFF9 /* HighlightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HighlightsView.swift; sourceTree = "<group>"; };
 		11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BurstPhotosView.swift; sourceTree = "<group>"; };
 		11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimilarPhotosView.swift; sourceTree = "<group>"; };
+		116799422EDDF16400C73344 /* VideosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideosView.swift; sourceTree = "<group>"; };
+		116799432EDDF16400C73344 /* ScreenRecordingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScreenRecordingsView.swift; sourceTree = "<group>"; };
+		116799442EDDF16400C73344 /* ShortVideosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShortVideosView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -281,6 +287,7 @@
 		11205CFE2ED62451003AFFF9 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				116799402EDDF16400C73344 /* Videos */,
 				11205D382ED797FC003AFFF9 /* Photos */,
 				11205CFF2ED62451003AFFF9 /* Dashboard */,
 				11205D022ED62451003AFFF9 /* Main */,
@@ -449,6 +456,24 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		116799402EDDF16400C73344 /* Videos */ = {
+			isa = PBXGroup;
+			children = (
+				116799412EDDF16400C73344 /* Views */,
+			);
+			path = Videos;
+			sourceTree = "<group>";
+		};
+		116799412EDDF16400C73344 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				116799422EDDF16400C73344 /* VideosView.swift */,
+				116799432EDDF16400C73344 /* ScreenRecordingsView.swift */,
+				116799442EDDF16400C73344 /* ShortVideosView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -587,9 +612,11 @@
 				11205D462ED797FD003AFFF9 /* ScreenshotsView.swift in Sources */,
 				11205D2E2ED62451003AFFF9 /* ProgressBars.swift in Sources */,
 				11205D252ED62451003AFFF9 /* VideoService.swift in Sources */,
+				116799452EDDF16400C73344 /* VideosView.swift in Sources */,
 				11205D1A2ED62451003AFFF9 /* String+Extensions.swift in Sources */,
 				11205D212ED62451003AFFF9 /* AppFonts.swift in Sources */,
 				11205D4D2ED79C0D003AFFF9 /* HighlightsView.swift in Sources */,
+				116799462EDDF16400C73344 /* ScreenRecordingsView.swift in Sources */,
 				11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */,
 				11205D1C2ED62451003AFFF9 /* Date+Extensions.swift in Sources */,
 				11205D1E2ED62451003AFFF9 /* AppSpacing.swift in Sources */,
@@ -620,6 +647,7 @@
 				11205D302ED62451003AFFF9 /* StandardModal.swift in Sources */,
 				11205D1F2ED62451003AFFF9 /* AppColors.swift in Sources */,
 				11205D1B2ED62451003AFFF9 /* View+Extensions.swift in Sources */,
+				116799472EDDF16400C73344 /* ShortVideosView.swift in Sources */,
 				11205BE32ED4D7A2003AFFF9 /* cleaner_cursorApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

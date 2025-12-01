@@ -45,12 +45,17 @@ final class DashboardViewModel: ObservableObject {
     }
     
     private func setupCategories() {
+        // Порядок согласно requirements/4_dashboard.md:
+        // 1. Duplicate photos, 2. Similar photos, 3. Screenshots, 4. Live Photos, 
+        // 5. Videos, 6. Short videos, 7. Screen recordings
         categories = [
+            MediaCategory(id: "duplicates", title: "Duplicate photos", icon: "square.on.square", color: AppColors.statusError, countsTowardsCleanup: true),
+            MediaCategory(id: "similar", title: "Similar photos", icon: "square.stack.3d.down.right", color: AppColors.accentPurple, countsTowardsCleanup: true),
             MediaCategory(id: "screenshots", title: "Screenshots", icon: "camera.viewfinder", color: AppColors.accentBlue, countsTowardsCleanup: true),
             MediaCategory(id: "live_photos", title: "Live Photos", icon: "livephoto", color: AppColors.statusWarning, countsTowardsCleanup: true),
-            MediaCategory(id: "duplicates", title: "Duplicates", icon: "square.on.square", color: AppColors.statusError, countsTowardsCleanup: true),
-            MediaCategory(id: "similar", title: "Similar Photos", icon: "square.stack.3d.down.right", color: AppColors.accentPurple, countsTowardsCleanup: true),
-            MediaCategory(id: "videos", title: "Videos", icon: "video.fill", color: AppColors.statusSuccess, countsTowardsCleanup: false)
+            MediaCategory(id: "videos", title: "Videos", icon: "video.fill", color: AppColors.statusSuccess, countsTowardsCleanup: false),
+            MediaCategory(id: "short_videos", title: "Short videos", icon: "bolt.fill", color: AppColors.accentBlue.opacity(0.8), countsTowardsCleanup: false),
+            MediaCategory(id: "screen_recordings", title: "Screen recordings", icon: "rectangle.dashed.badge.record", color: AppColors.statusError.opacity(0.8), countsTowardsCleanup: false)
         ]
     }
     
@@ -85,82 +90,188 @@ final class DashboardViewModel: ObservableObject {
     // MARK: - Start Scan
     
     func startScanIfNeeded() {
-        // Already scanned?
-        if photoService.duplicatesScanned && photoService.similarScanned {
-            // Just update quick counts
-            updateQuickCounts()
-            return
-        }
+        guard photoService.isAuthorized else { return }
         
-        startFullScan()
+        // Always update quick counts first (fast)
+        scanProgress = "Loading..."
+        isScanning = true
+        
+        Task {
+            // Quick counts for fast categories
+            await scanQuickCategories()
+            
+            // Then scan duplicates and similar if needed
+            if !photoService.duplicatesScanned || !photoService.similarScanned {
+                await scanHeavyCategories()
+            }
+            
+            isScanning = false
+            scanProgress = ""
+        }
     }
     
     func forceRefresh() {
         photoService.invalidateCache()
-        startFullScan()
-    }
-    
-    private func startFullScan() {
-        scanTask?.cancel()
-        
-        guard photoService.isAuthorized else { return }
         
         isScanning = true
-        scanProgress = "Starting scan..."
+        scanProgress = "Refreshing..."
         
-        scanTask = Task {
-            await performFullScan()
+        Task {
+            await scanQuickCategories()
+            await scanHeavyCategories()
+            
+            isScanning = false
+            scanProgress = ""
         }
     }
     
-    // MARK: - Full Scan
+    // MARK: - Scan Quick Categories
     
-    private func performFullScan() async {
-        // 1. Quick counts (instant - just counting)
-        updateQuickCounts()
+    private func scanQuickCategories() async {
+        scanProgress = "Scanning screenshots..."
         
-        // 2. Storage info
+        // Screenshots
+        let screenshotsSize = calculateScreenshotsSize()
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                updateCategory(id: "screenshots", count: photoService.screenshotsCount, size: screenshotsSize)
+            }
+        }
+        
+        scanProgress = "Scanning Live Photos..."
+        
+        // Live Photos
+        let livePhotosSize = calculateLivePhotosSize()
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                updateCategory(id: "live_photos", count: photoService.livePhotosCount, size: livePhotosSize)
+            }
+        }
+        
+        scanProgress = "Scanning videos..."
+        
+        // Videos (не считаются в cleanup)
+        let videosSize = calculateVideosSize()
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                updateCategory(id: "videos", count: videoService.totalVideosCount, size: videosSize)
+            }
+        }
+        
+        // Short Videos (не считаются в cleanup)
+        let shortVideosSize = calculateShortVideosSize()
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                updateCategory(id: "short_videos", count: videoService.shortVideosCount, size: shortVideosSize)
+            }
+        }
+        
+        // Screen Recordings (не считаются в cleanup)
+        let screenRecordingsSize = calculateScreenRecordingsSize()
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                updateCategory(id: "screen_recordings", count: videoService.screenRecordingsCount, size: screenRecordingsSize)
+            }
+        }
+        
+        // Load thumbnails
+        loadQuickThumbnails()
+        
+        // Update storage info
         await updateStorageInfo()
-        
-        // 3. PRIORITY: Duplicates & Similar - this is the main feature!
+    }
+    
+    // MARK: - Scan Heavy Categories (Duplicates & Similar)
+    
+    private func scanHeavyCategories() async {
         scanProgress = "Finding duplicates..."
         await photoService.scanDuplicatesIfNeeded()
         
-        if !Task.isCancelled {
-            scanProgress = "Finding similar photos..."
-            await photoService.scanSimilarIfNeeded()
-        }
+        guard !Task.isCancelled else { return }
         
-        // Done
-        isScanning = false
-        scanProgress = ""
-        calculateTotals()
+        scanProgress = "Finding similar photos..."
+        await photoService.scanSimilarIfNeeded()
+        
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                calculateTotals()
+            }
+        }
     }
     
     // MARK: - Quick Counts (Instant)
     
     private func updateQuickCounts() {
-        // These are instant - just counting from system smart albums
+        // Update counts from photo service cache
         photoService.updateQuickCounts()
-        
-        // Update categories with counts (no size for quick scan)
-        updateCategory(id: "screenshots", count: photoService.screenshotsCount, size: estimateScreenshotsSize())
-        updateCategory(id: "live_photos", count: photoService.livePhotosCount, size: estimateLivePhotosSize())
-        updateCategory(id: "videos", count: photoService.videosCount, size: 0)
-        
-        // Load thumbnails
-        loadQuickThumbnails()
     }
     
-    // Rough size estimates (average sizes)
-    private func estimateScreenshotsSize() -> Int64 {
-        // Average screenshot ~500KB
-        return Int64(photoService.screenshotsCount) * 500_000
+    // MARK: - Size Calculations
+    
+    private func calculateScreenshotsSize() -> Int64 {
+        let fetchResult = photoService.fetchScreenshots()
+        var totalSize: Int64 = 0
+        fetchResult.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            if let resource = resources.first,
+               let size = resource.value(forKey: "fileSize") as? Int64 {
+                totalSize += size
+            }
+        }
+        return totalSize
     }
     
-    private func estimateLivePhotosSize() -> Int64 {
-        // Average Live Photo ~3MB (photo + video)
-        return Int64(photoService.livePhotosCount) * 3_000_000
+    private func calculateLivePhotosSize() -> Int64 {
+        let fetchResult = photoService.fetchLivePhotos()
+        var totalSize: Int64 = 0
+        fetchResult.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            for resource in resources {
+                if let size = resource.value(forKey: "fileSize") as? Int64 {
+                    totalSize += size
+                }
+            }
+        }
+        return totalSize
+    }
+    
+    private func calculateVideosSize() -> Int64 {
+        let fetchResult = videoService.fetchAllVideos()
+        var totalSize: Int64 = 0
+        fetchResult.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            if let resource = resources.first,
+               let size = resource.value(forKey: "fileSize") as? Int64 {
+                totalSize += size
+            }
+        }
+        return totalSize
+    }
+    
+    private func calculateShortVideosSize() -> Int64 {
+        let fetchResult = videoService.fetchShortVideos()
+        var totalSize: Int64 = 0
+        fetchResult.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            if let resource = resources.first,
+               let size = resource.value(forKey: "fileSize") as? Int64 {
+                totalSize += size
+            }
+        }
+        return totalSize
+    }
+    
+    private func calculateScreenRecordingsSize() -> Int64 {
+        let fetchResult = videoService.fetchScreenRecordings()
+        var totalSize: Int64 = 0
+        fetchResult.enumerateObjects { asset, _, _ in
+            let resources = PHAssetResource.assetResources(for: asset)
+            if let resource = resources.first,
+               let size = resource.value(forKey: "fileSize") as? Int64 {
+                totalSize += size
+            }
+        }
+        return totalSize
     }
     
     // MARK: - Load Thumbnails
@@ -182,6 +293,18 @@ final class DashboardViewModel: ObservableObject {
         let videos = videoService.fetchAllVideos()
         if let first = videos.firstObject {
             loadThumbnail(for: "videos", asset: first)
+        }
+        
+        // Short Videos
+        let shortVideos = videoService.fetchShortVideos()
+        if let first = shortVideos.firstObject {
+            loadThumbnail(for: "short_videos", asset: first)
+        }
+        
+        // Screen Recordings
+        let screenRecordings = videoService.fetchScreenRecordings()
+        if let first = screenRecordings.firstObject {
+            loadThumbnail(for: "screen_recordings", asset: first)
         }
     }
     
