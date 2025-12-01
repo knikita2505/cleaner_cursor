@@ -50,14 +50,14 @@ struct DashboardView: View {
             .navigationBarHidden(true)
             .withNavigationDestinations()
             .onAppear {
-                // Start background scan - non-blocking
-                viewModel.startScanIfNeeded()
+                // Animate storage indicator first
+                withAnimation(.easeOut(duration: 0.5)) {
+                    animateStorage = true
+                }
                 
-                // Animate storage indicator
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        animateStorage = true
-                    }
+                // Start background scan AFTER UI is rendered (не блокирует UI)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    viewModel.startScanIfNeeded()
                 }
             }
             .sheet(isPresented: $showPaywall) {
@@ -146,19 +146,29 @@ struct DashboardView: View {
                         .foregroundColor(AppColors.textTertiary)
                     
                     // Big number with animation
-                    Text(viewModel.formattedSpaceToClean)
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
-                        .foregroundColor(AppColors.textPrimary)
-                        .contentTransition(.numericText())
-                        .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
+                    if viewModel.isScanning && viewModel.spaceToClean == 0 {
+                        HStack(spacing: 12) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
+                            Text("Scanning...")
+                                .font(.system(size: 24, weight: .semibold, design: .rounded))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
+                        .frame(height: 50)
+                    } else {
+                        Text(viewModel.formattedSpaceToClean)
+                            .font(.system(size: 42, weight: .bold, design: .rounded))
+                            .foregroundColor(AppColors.textPrimary)
+                            .contentTransition(.numericText())
+                            .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
+                    }
                     
                     // Mini stats
                     VStack(alignment: .leading, spacing: 6) {
-                        miniStatRow(label: "Clutter", value: viewModel.formattedClutter, color: AppColors.statusWarning)
-                        miniStatRow(label: "Apps & data", value: viewModel.formattedAppsData, color: AppColors.accentBlue)
-                        miniStatRow(label: "Total used", value: viewModel.formattedTotal, color: AppColors.textTertiary)
+                        miniStatRow(label: "Clutter", value: viewModel.formattedClutter, color: AppColors.statusWarning, isLoading: viewModel.isScanning && viewModel.clutterSize == 0)
+                        miniStatRow(label: "Apps & data", value: viewModel.formattedAppsData, color: AppColors.accentBlue, isLoading: viewModel.isScanning && viewModel.appsDataSize == 0)
+                        miniStatRow(label: "Total used", value: viewModel.formattedTotal, color: AppColors.textTertiary, isLoading: viewModel.totalStorageUsed == 0)
                     }
-                    .animation(.easeInOut(duration: 0.3), value: viewModel.clutterSize)
                 }
                 
                 Spacer()
@@ -183,13 +193,21 @@ struct DashboardView: View {
                         .frame(width: 100, height: 100)
                         .rotationEffect(.degrees(-90))
                         .animation(.easeOut(duration: 1.0), value: animateStorage)
-                        .animation(.easeOut(duration: 0.5), value: viewModel.cleanablePercentage)
+                        .animation(.easeOut(duration: 0.8), value: viewModel.cleanablePercentage)
                     
                     // Center text
                     VStack(spacing: 2) {
-                        Text("\(Int(viewModel.cleanablePercentage * 100))%")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(AppColors.textPrimary)
+                        if viewModel.isScanning && viewModel.spaceToClean == 0 {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
+                                .scaleEffect(0.8)
+                        } else {
+                            Text("\(Int(viewModel.cleanablePercentage * 100))%")
+                                .font(.system(size: 20, weight: .bold, design: .rounded))
+                                .foregroundColor(AppColors.textPrimary)
+                                .contentTransition(.numericText())
+                                .animation(.easeInOut(duration: 0.5), value: viewModel.cleanablePercentage)
+                        }
                         
                         Text("clutter")
                             .font(.system(size: 10, weight: .medium))
@@ -204,7 +222,7 @@ struct DashboardView: View {
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
     }
     
-    private func miniStatRow(label: String, value: String, color: Color) -> some View {
+    private func miniStatRow(label: String, value: String, color: Color, isLoading: Bool = false) -> some View {
         HStack(spacing: 8) {
             Circle()
                 .fill(color)
@@ -216,9 +234,18 @@ struct DashboardView: View {
             
             Spacer()
             
-            Text(value)
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textSecondary)
+            if isLoading {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: color))
+                    .scaleEffect(0.4)
+                    .frame(width: 16, height: 16)
+            } else {
+                Text(value)
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.textSecondary)
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.3), value: value)
+            }
         }
     }
     
@@ -343,14 +370,24 @@ struct CategoryCard: View {
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .opacity(isLocked ? 0.5 : 1.0)
+                            .transition(.opacity)
                     } else {
-                        Image(systemName: category.icon)
-                            .font(.system(size: 32, weight: .medium))
-                            .foregroundColor(category.color)
+                        // Icon or loading
+                        if category.isLoading {
+                            VStack(spacing: 8) {
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: category.color))
+                                    .scaleEffect(0.8)
+                            }
+                        } else {
+                            Image(systemName: category.icon)
+                                .font(.system(size: 32, weight: .medium))
+                                .foregroundColor(category.color)
+                        }
                     }
                     
                     // Lock overlay
-                    if isLocked {
+                    if isLocked && !category.isLoading {
                         Color.black.opacity(0.4)
                         
                         Image(systemName: "lock.fill")
@@ -359,7 +396,7 @@ struct CategoryCard: View {
                     }
                     
                     // Count badge
-                    if category.count > 0 && !isLocked {
+                    if category.count > 0 && !isLocked && !category.isLoading {
                         VStack {
                             HStack {
                                 Spacer()
@@ -372,8 +409,6 @@ struct CategoryCard: View {
                                     .background(category.color)
                                     .cornerRadius(10)
                                     .padding(8)
-                                    .contentTransition(.numericText())
-                                    .animation(.easeInOut(duration: 0.3), value: category.count)
                             }
                             Spacer()
                         }
@@ -382,6 +417,7 @@ struct CategoryCard: View {
                 }
                 .frame(height: 100)
                 .clipped()
+                .animation(.easeInOut(duration: 0.3), value: category.thumbnail != nil)
                 
                 // Info section
                 VStack(alignment: .leading, spacing: 4) {
@@ -390,22 +426,32 @@ struct CategoryCard: View {
                         .foregroundColor(AppColors.textPrimary)
                         .lineLimit(1)
                     
-                    Text(category.formattedSize)
-                        .font(AppFonts.caption)
-                        .foregroundColor(category.isEmpty ? AppColors.textTertiary : category.color)
-                        .contentTransition(.numericText())
-                        .animation(.easeInOut(duration: 0.3), value: category.size)
+                    if category.isLoading && category.size == 0 {
+                        HStack(spacing: 6) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: category.color))
+                                .scaleEffect(0.5)
+                            Text("Scanning...")
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.textTertiary)
+                        }
+                    } else {
+                        Text(category.formattedSize)
+                            .font(AppFonts.caption)
+                            .foregroundColor(category.isEmpty ? AppColors.textTertiary : category.color)
+                    }
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(AppColors.backgroundCard)
+                .animation(.easeInOut(duration: 0.3), value: category.isLoading)
             }
             .cornerRadius(18)
             .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-            .opacity(category.isEmpty ? 0.6 : 1.0)
+            .opacity(category.isEmpty && !category.isLoading ? 0.6 : 1.0)
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.97))
-        .disabled(category.isEmpty)
+        .disabled(category.isEmpty && !category.isLoading)
     }
 }
 
