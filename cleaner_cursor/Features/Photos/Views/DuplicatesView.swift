@@ -128,8 +128,8 @@ struct DuplicatesView: View {
                                 }
                             }
                         },
-                        onKeepPhoto: { assetIndex in
-                            viewModel.setKeepPhoto(groupIndex: groupIndex, assetIndex: assetIndex)
+                        onToggleKeep: { assetIndex in
+                            viewModel.toggleKeepPhoto(groupIndex: groupIndex, assetIndex: assetIndex)
                         }
                     )
                 }
@@ -264,7 +264,7 @@ struct DuplicateGroupSection: View {
     @Binding var group: DuplicateGroupItem
     let isExpanded: Bool
     let onToggleExpand: () -> Void
-    let onKeepPhoto: (Int) -> Void
+    let onToggleKeep: (Int) -> Void
     
     private let expandedColumns = [
         GridItem(.flexible(), spacing: 8),
@@ -292,30 +292,72 @@ struct DuplicateGroupSection: View {
                         
                         Spacer()
                         
-                        // Auto-selected badge
-                        Text("Auto-selected: \(group.deleteCount)")
-                            .font(.system(size: 11))
-                            .foregroundColor(AppColors.accentBlue)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(AppColors.accentBlue.opacity(0.15))
-                            .cornerRadius(8)
+                        // Status badges
+                        HStack(spacing: 8) {
+                            // Keep count
+                            HStack(spacing: 4) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.system(size: 10))
+                                Text("\(group.keepCount)")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundColor(AppColors.statusSuccess)
+                            
+                            // Delete count
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash.fill")
+                                    .font(.system(size: 10))
+                                Text("\(group.deleteCount)")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundColor(AppColors.statusError)
+                        }
                         
                         Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                             .font(.system(size: 14))
                             .foregroundColor(AppColors.textTertiary)
                     }
                     
-                    // Stacked preview (collapsed)
+                    // Stacked preview (collapsed) with status indicators
                     if !isExpanded {
-                        HStack(spacing: -12) {
+                        HStack(spacing: -8) {
                             ForEach(Array(group.assets.prefix(6).enumerated()), id: \.element.id) { index, asset in
-                                DuplicateThumbnail(asset: asset, size: 56)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(AppColors.backgroundSecondary, lineWidth: 2)
-                                    )
-                                    .zIndex(Double(6 - index))
+                                ZStack(alignment: .topLeading) {
+                                    DuplicateThumbnail(asset: asset, size: 56)
+                                    
+                                    // Status indicator
+                                    if group.isKept(index) {
+                                        // Green checkmark for Keep
+                                        Circle()
+                                            .fill(AppColors.statusSuccess)
+                                            .frame(width: 18, height: 18)
+                                            .overlay(
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 9, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                            .offset(x: -2, y: -2)
+                                    } else {
+                                        // Red X for Delete
+                                        Circle()
+                                            .fill(AppColors.statusError)
+                                            .frame(width: 18, height: 18)
+                                            .overlay(
+                                                Image(systemName: "xmark")
+                                                    .font(.system(size: 9, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                            .offset(x: -2, y: -2)
+                                    }
+                                }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(
+                                            group.isKept(index) ? AppColors.statusSuccess : AppColors.statusError.opacity(0.5),
+                                            lineWidth: 2
+                                        )
+                                )
+                                .zIndex(Double(6 - index))
                             }
                             
                             if group.assets.count > 6 {
@@ -347,8 +389,8 @@ struct DuplicateGroupSection: View {
                     ForEach(group.assets.indices, id: \.self) { index in
                         DuplicatePhotoItem(
                             asset: group.assets[index],
-                            isKept: group.keepIndex == index,
-                            onTap: { onKeepPhoto(index) }
+                            isKept: group.isKept(index),
+                            onTap: { onToggleKeep(index) }
                         )
                     }
                 }
@@ -485,12 +527,7 @@ final class DuplicatesViewModel: ObservableObject {
     }
     
     var selectedSize: Int64 {
-        groups.reduce(Int64(0)) { result, group in
-            let deleteSize = group.assets.enumerated()
-                .filter { $0.offset != group.keepIndex }
-                .reduce(Int64(0)) { $0 + $1.element.fileSize }
-            return result + deleteSize
-        }
+        groups.reduce(Int64(0)) { $0 + $1.savingsSize }
     }
     
     var formattedSelectedSize: String {
@@ -498,8 +535,8 @@ final class DuplicatesViewModel: ObservableObject {
     }
     
     var isAllSelected: Bool {
-        // All groups have keepIndex = 0 (default auto-selection)
-        groups.allSatisfy { $0.keepIndex == 0 }
+        // Все группы имеют только одну фото для сохранения (best)
+        groups.allSatisfy { $0.keepIndices.count == 1 && $0.keepIndices.contains(0) }
     }
     
     // MARK: - Actions
@@ -513,7 +550,7 @@ final class DuplicatesViewModel: ObservableObject {
                 DuplicateGroupItem(
                     id: group.id,
                     assets: group.assets,
-                    keepIndex: group.bestAssetIndex
+                    keepIndices: Set([group.bestAssetIndex])  // По умолчанию сохраняем лучшую
                 )
             }
             isLoading = false
@@ -527,29 +564,44 @@ final class DuplicatesViewModel: ObservableObject {
             DuplicateGroupItem(
                 id: group.id,
                 assets: group.assets,
-                keepIndex: group.bestAssetIndex
+                keepIndices: Set([group.bestAssetIndex])
             )
         }
         
         isLoading = false
     }
     
-    func setKeepPhoto(groupIndex: Int, assetIndex: Int) {
+    func toggleKeepPhoto(groupIndex: Int, assetIndex: Int) {
         guard groupIndex < groups.count else { return }
-        groups[groupIndex].keepIndex = assetIndex
-        HapticManager.lightImpact()
+        
+        let group = groups[groupIndex]
+        
+        if group.keepIndices.contains(assetIndex) {
+            // Нельзя убрать последнюю "Keep" фото
+            if group.keepIndices.count > 1 {
+                groups[groupIndex].keepIndices.remove(assetIndex)
+                HapticManager.lightImpact()
+            } else {
+                // Показать что нельзя убрать последнюю
+                HapticManager.error()
+            }
+        } else {
+            // Добавить в Keep
+            groups[groupIndex].keepIndices.insert(assetIndex)
+            HapticManager.lightImpact()
+        }
     }
     
     func toggleSelectAll() {
         if isAllSelected {
-            // Deselect all - keep last photo in each group
+            // Deselect all - оставить все фото в каждой группе
             for i in groups.indices {
-                groups[i].keepIndex = groups[i].assets.count - 1
+                groups[i].keepIndices = Set(groups[i].assets.indices)
             }
         } else {
-            // Select all - reset to auto (best photo)
+            // Select all - оставить только лучшую фото
             for i in groups.indices {
-                groups[i].keepIndex = 0
+                groups[i].keepIndices = Set([0])
             }
         }
         HapticManager.mediumImpact()
@@ -560,7 +612,7 @@ final class DuplicatesViewModel: ObservableObject {
         
         for group in groups {
             for (index, asset) in group.assets.enumerated() {
-                if index != group.keepIndex {
+                if !group.keepIndices.contains(index) {
                     allAssetsToDelete.append(asset.asset)
                 }
             }
@@ -606,15 +658,19 @@ final class DuplicatesViewModel: ObservableObject {
 struct DuplicateGroupItem: Identifiable {
     let id: String
     var assets: [PhotoAsset]
-    var keepIndex: Int
+    var keepIndices: Set<Int>  // Множество индексов фото для сохранения
     
     var deleteCount: Int {
-        assets.count - 1
+        assets.count - keepIndices.count
+    }
+    
+    var keepCount: Int {
+        keepIndices.count
     }
     
     var savingsSize: Int64 {
         assets.enumerated()
-            .filter { $0.offset != keepIndex }
+            .filter { !keepIndices.contains($0.offset) }
             .reduce(Int64(0)) { $0 + $1.element.fileSize }
     }
     
@@ -625,6 +681,10 @@ struct DuplicateGroupItem: Identifiable {
     var formattedTotalSize: String {
         let total = assets.reduce(Int64(0)) { $0 + $1.fileSize }
         return ByteCountFormatter.string(fromByteCount: total, countStyle: .file)
+    }
+    
+    func isKept(_ index: Int) -> Bool {
+        keepIndices.contains(index)
     }
 }
 
