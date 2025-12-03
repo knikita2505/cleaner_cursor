@@ -52,18 +52,11 @@ struct SimilarPhotosView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    viewModel.smartSelect()
-                    HapticManager.mediumImpact()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 14))
-                        Text("Smart select")
-                    }
-                    .font(AppFonts.bodyM)
-                    .foregroundColor(AppColors.accentPurple)
+                Button(viewModel.isAllSelected ? "Deselect All" : "Select All") {
+                    viewModel.toggleSelectAll()
                 }
+                .font(AppFonts.bodyM)
+                .foregroundColor(AppColors.accentBlue)
             }
         }
         .alert("Delete \(viewModel.totalToDelete) photos?", isPresented: $showDeleteConfirmation) {
@@ -288,9 +281,9 @@ struct SimilarGroupSection: View {
     let onToggleDelete: (Int) -> Void
     
     private let expandedColumns = [
-        GridItem(.flexible(), spacing: 4),
-        GridItem(.flexible(), spacing: 4),
-        GridItem(.flexible(), spacing: 4)
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
     ]
     
     var body: some View {
@@ -340,37 +333,57 @@ struct SimilarGroupSection: View {
                             .padding(.leading, 8)
                     }
                     
-                    // Preview (collapsed)
+                    // Preview (collapsed) with status indicators
                     if !isExpanded {
-                        HStack(spacing: 6) {
-                            // Best photos preview
-                            ForEach(Array(group.assets.prefix(3).enumerated()), id: \.element.id) { index, asset in
+                        HStack(spacing: -8) {
+                            ForEach(Array(group.assets.prefix(6).enumerated()), id: \.element.id) { index, asset in
                                 ZStack(alignment: .topLeading) {
-                                    SimilarThumbnail(asset: asset.photoAsset, size: 64)
+                                    SimilarThumbnail(asset: asset.photoAsset, size: 56)
                                     
-                                    if index == 0 && group.bestAssetIndex == 0 {
-                                        Text("Best")
-                                            .font(.system(size: 8, weight: .bold))
-                                            .foregroundColor(.white)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 2)
-                                            .background(AppColors.statusSuccess)
-                                            .cornerRadius(4)
-                                            .padding(3)
+                                    // Status indicator
+                                    if !asset.isMarkedForDeletion {
+                                        // Green checkmark for Keep
+                                        Circle()
+                                            .fill(AppColors.statusSuccess)
+                                            .frame(width: 18, height: 18)
+                                            .overlay(
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 9, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                            .offset(x: -2, y: -2)
+                                    } else {
+                                        // Red X for Delete
+                                        Circle()
+                                            .fill(AppColors.statusError)
+                                            .frame(width: 18, height: 18)
+                                            .overlay(
+                                                Image(systemName: "xmark")
+                                                    .font(.system(size: 9, weight: .bold))
+                                                    .foregroundColor(.white)
+                                            )
+                                            .offset(x: -2, y: -2)
                                     }
                                 }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(
+                                            asset.isMarkedForDeletion ? AppColors.statusError.opacity(0.5) : AppColors.statusSuccess,
+                                            lineWidth: 2
+                                        )
+                                )
+                                .zIndex(Double(6 - index))
                             }
                             
-                            if group.assets.count > 3 {
+                            if group.assets.count > 6 {
                                 ZStack {
-                                    RoundedRectangle(cornerRadius: 8)
+                                    Circle()
                                         .fill(AppColors.backgroundCard)
-                                        .frame(width: 64, height: 64)
+                                        .frame(width: 48, height: 48)
                                     
-                                    Text("+\(group.assets.count - 3) more")
-                                        .font(.system(size: 11))
+                                    Text("+\(group.assets.count - 6)")
+                                        .font(.system(size: 13, weight: .semibold))
                                         .foregroundColor(AppColors.textSecondary)
-                                        .multilineTextAlignment(.center)
                                 }
                             }
                             
@@ -387,7 +400,7 @@ struct SimilarGroupSection: View {
                 Divider()
                     .padding(.horizontal, AppSpacing.containerPadding)
                 
-                LazyVGrid(columns: expandedColumns, spacing: 4) {
+                LazyVGrid(columns: expandedColumns, spacing: 8) {
                     ForEach(group.assets.indices, id: \.self) { index in
                         SimilarPhotoItem(
                             asset: group.assets[index],
@@ -396,7 +409,8 @@ struct SimilarGroupSection: View {
                         )
                     }
                 }
-                .padding(AppSpacing.containerPadding)
+                .padding(.horizontal, AppSpacing.containerPadding)
+                .padding(.vertical, 12)
             }
         }
         .background(AppColors.backgroundSecondary)
@@ -413,43 +427,47 @@ struct SimilarPhotoItem: View {
     
     var body: some View {
         Button(action: onTap) {
-            ZStack(alignment: .topLeading) {
-                SimilarThumbnail(asset: asset.photoAsset, size: nil)
-                    .aspectRatio(1, contentMode: .fill)
-                    .cornerRadius(8)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(
-                                asset.isMarkedForDeletion ? AppColors.statusError : 
-                                    (isBest ? AppColors.statusSuccess : Color.clear),
-                                lineWidth: 2
-                            )
-                    )
-                    .opacity(asset.isMarkedForDeletion ? 0.6 : 1.0)
-                
-                // Badges
-                if isBest && !asset.isMarkedForDeletion {
-                    Text("Best")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(AppColors.statusSuccess)
-                        .cornerRadius(4)
-                        .padding(4)
-                } else if asset.isMarkedForDeletion {
-                    ZStack {
-                        Circle()
-                            .fill(AppColors.statusError)
-                            .frame(width: 20, height: 20)
-                        
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .bold))
+            GeometryReader { geometry in
+                ZStack(alignment: .topLeading) {
+                    SimilarThumbnail(asset: asset.photoAsset, size: geometry.size.width)
+                        .frame(width: geometry.size.width, height: geometry.size.width)
+                        .clipped()
+                        .cornerRadius(8)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(
+                                    asset.isMarkedForDeletion ? AppColors.statusError : 
+                                        (isBest ? AppColors.statusSuccess : Color.clear),
+                                    lineWidth: 2
+                                )
+                        )
+                        .opacity(asset.isMarkedForDeletion ? 0.6 : 1.0)
+                    
+                    // Badges
+                    if isBest && !asset.isMarkedForDeletion {
+                        Text("Best")
+                            .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.white)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(AppColors.statusSuccess)
+                            .cornerRadius(4)
+                            .padding(4)
+                    } else if asset.isMarkedForDeletion {
+                        ZStack {
+                            Circle()
+                                .fill(AppColors.statusError)
+                                .frame(width: 20, height: 20)
+                            
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .padding(4)
                     }
-                    .padding(4)
                 }
             }
+            .aspectRatio(1, contentMode: .fit)
         }
         .buttonStyle(.plain)
     }
@@ -480,8 +498,8 @@ struct SimilarThumbnail: View {
             }
         }
         .frame(width: size, height: size)
-        .cornerRadius(8)
         .clipped()
+        .cornerRadius(8)
         .onAppear {
             loadThumbnail()
         }
@@ -489,9 +507,10 @@ struct SimilarThumbnail: View {
     
     @MainActor
     private func loadThumbnail() {
+        let requestSize = size ?? 200
         PhotoService.shared.loadThumbnail(
             for: asset.asset,
-            size: CGSize(width: 200, height: 200)
+            size: CGSize(width: requestSize, height: requestSize)
         ) { img in
             self.image = img
         }
@@ -509,9 +528,6 @@ final class SimilarPhotosViewModel: ObservableObject {
     @Published var deleteProgress: Double = 0
     
     private let photoService = PhotoService.shared
-    
-    // Track if user manually changed selection in a group
-    private var userModifiedGroups: Set<String> = []
     
     // MARK: - Computed Properties
     
@@ -544,6 +560,14 @@ final class SimilarPhotosViewModel: ObservableObject {
     
     var formattedSelectedSize: String {
         ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
+    }
+    
+    var isAllSelected: Bool {
+        // Все группы имеют выбранными все фото кроме лучшей (bestAssetIndex)
+        groups.allSatisfy { group in
+            let expectedDeleteCount = group.assets.count - 1
+            return group.deleteCount == expectedDeleteCount
+        }
     }
     
     // MARK: - Actions
@@ -609,21 +633,26 @@ final class SimilarPhotosViewModel: ObservableObject {
         }
         
         groups[groupIndex].assets[assetIndex].isMarkedForDeletion.toggle()
-        userModifiedGroups.insert(groups[groupIndex].id)
-        
         HapticManager.lightImpact()
     }
     
-    func smartSelect() {
-        for i in groups.indices {
-            // Пропускаем группы, которые пользователь уже модифицировал
-            if userModifiedGroups.contains(groups[i].id) { continue }
-            
-            // Автовыбор: оставляем лучшее фото (первое после сортировки по качеству)
-            for j in groups[i].assets.indices {
-                groups[i].assets[j].isMarkedForDeletion = j != groups[i].bestAssetIndex
+    func toggleSelectAll() {
+        if isAllSelected {
+            // Deselect all - снять отметку удаления со всех фото
+            for i in groups.indices {
+                for j in groups[i].assets.indices {
+                    groups[i].assets[j].isMarkedForDeletion = false
+                }
+            }
+        } else {
+            // Select all - отметить все кроме лучшей для удаления
+            for i in groups.indices {
+                for j in groups[i].assets.indices {
+                    groups[i].assets[j].isMarkedForDeletion = j != groups[i].bestAssetIndex
+                }
             }
         }
+        HapticManager.mediumImpact()
     }
     
     func deleteSelected() async {
@@ -657,7 +686,6 @@ final class SimilarPhotosViewModel: ObservableObject {
             HapticManager.success()
             SubscriptionService.shared.recordCleaning(count: allAssetsToDelete.count)
             
-            userModifiedGroups.removeAll()
             await load()
             
         } catch {
