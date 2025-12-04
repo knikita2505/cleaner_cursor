@@ -89,23 +89,19 @@ final class ScanResultsCache {
     func isCacheValid() -> Bool {
         guard let cached = cachedData else { return false }
         
-        // Получаем текущее состояние библиотеки
+        // Быстрая проверка - только количество
         let options = PHFetchOptions()
         options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.image.rawValue)
         let result = PHAsset.fetchAssets(with: options)
         
-        // Проверяем количество фото
+        // Если количество отличается - кэш невалиден
         if result.count != cached.photoCount {
             return false
         }
         
-        // Быстрая проверка - сравниваем идентификаторы
-        var currentIds = Set<String>()
-        result.enumerateObjects { asset, _, _ in
-            currentIds.insert(asset.localIdentifier)
-        }
-        
-        return currentIds == cached.assetIdentifiers
+        // Количество совпало - доверяем кэшу
+        // (полная проверка идентификаторов слишком медленная)
+        return true
     }
     
     // MARK: - Get Cached Results

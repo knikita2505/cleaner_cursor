@@ -84,17 +84,14 @@ final class PhotoService: ObservableObject {
         
         isScanning = true
         
-        // Проверяем persistent кэш
-        if resultsCache.isCacheValid(), let cached = resultsCache.getCachedDuplicates() {
-            cachedDuplicates = cached
-            duplicatesScanned = true
-            isScanning = false
-            return
-        }
-        
-        // Кэш невалиден - сканируем
-        let groups = await Task.detached(priority: .userInitiated) {
-            self.findDuplicatesInternal()
+        // Всё выполняем в background чтобы не блокировать UI
+        let groups = await Task.detached(priority: .userInitiated) { [resultsCache] in
+            // Проверяем persistent кэш (в background!)
+            if resultsCache.isCacheValid(), let cached = resultsCache.getCachedDuplicates() {
+                return cached
+            }
+            // Кэш невалиден - сканируем
+            return self.findDuplicatesInternal()
         }.value
         
         cachedDuplicates = groups
@@ -107,25 +104,24 @@ final class PhotoService: ObservableObject {
         
         isScanning = true
         
-        // Проверяем persistent кэш
-        if resultsCache.isCacheValid(), let cached = resultsCache.getCachedSimilar() {
-            cachedSimilarPhotos = cached
-            similarScanned = true
-            isScanning = false
-            return
-        }
-        
-        // Кэш невалиден - сканируем
-        let groups = await Task.detached(priority: .userInitiated) {
-            self.findSimilarPhotosInternal()
+        // Всё выполняем в background чтобы не блокировать UI
+        let (groups, shouldSaveCache) = await Task.detached(priority: .userInitiated) { [resultsCache] in
+            // Проверяем persistent кэш (в background!)
+            if resultsCache.isCacheValid(), let cached = resultsCache.getCachedSimilar() {
+                return (cached, false)
+            }
+            // Кэш невалиден - сканируем
+            return (self.findSimilarPhotosInternal(), true)
         }.value
         
         cachedSimilarPhotos = groups
         similarScanned = true
         isScanning = false
         
-        // Сохраняем оба результата в persistent кэш
-        resultsCache.saveResults(duplicates: cachedDuplicates, similar: cachedSimilarPhotos)
+        // Сохраняем оба результата в persistent кэш (если сканировали)
+        if shouldSaveCache {
+            resultsCache.saveResults(duplicates: cachedDuplicates, similar: cachedSimilarPhotos)
+        }
     }
     
     func invalidateCache() {
