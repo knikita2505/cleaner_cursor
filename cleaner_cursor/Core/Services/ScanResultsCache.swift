@@ -11,9 +11,14 @@ final class ScanResultsCache {
     
     // MARK: - Cache Models
     
+    private struct CachedAsset: Codable {
+        let id: String
+        let fileSize: Int64
+    }
+    
     private struct CachedDuplicateGroup: Codable {
         let id: String
-        let assetIds: [String]
+        let assets: [CachedAsset]  // Теперь храним fileSize
         let totalSize: Int64
         let savingsSize: Int64
         let bestAssetIndex: Int
@@ -21,7 +26,7 @@ final class ScanResultsCache {
     
     private struct CachedSimilarGroup: Codable {
         let id: String
-        let assetIds: [String]
+        let assets: [CachedAsset]  // Теперь храним fileSize
         let totalSize: Int64
         let savingsSize: Int64
         let recommendedKeepCount: Int
@@ -110,26 +115,35 @@ final class ScanResultsCache {
     func getCachedDuplicates() -> [DuplicateGroup]? {
         guard let cached = cachedData, !cached.duplicateGroups.isEmpty else { return nil }
         
+        // Собираем ВСЕ идентификаторы и fileSize из кэша
+        var allAssetIds: [String] = []
+        var fileSizeMap: [String: Int64] = [:]
+        for group in cached.duplicateGroups {
+            for asset in group.assets {
+                allAssetIds.append(asset.id)
+                fileSizeMap[asset.id] = asset.fileSize
+            }
+        }
+        
+        // Один запрос для всех PHAssets
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: allAssetIds, options: nil)
+        var assetMap: [String: PHAsset] = [:]
+        fetchResult.enumerateObjects { asset, _, _ in
+            assetMap[asset.localIdentifier] = asset
+        }
+        
+        // Восстанавливаем группы
         var groups: [DuplicateGroup] = []
         
         for cachedGroup in cached.duplicateGroups {
-            // Загружаем assets по идентификаторам
-            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: cachedGroup.assetIds, options: nil)
-            var assets: [PhotoAsset] = []
-            
-            fetchResult.enumerateObjects { asset, _, _ in
-                assets.append(PhotoAsset(asset: asset))
+            var orderedAssets: [PhotoAsset] = []
+            for cachedAsset in cachedGroup.assets {
+                guard let phAsset = assetMap[cachedAsset.id] else { continue }
+                // Используем fileSize из кэша - НЕ вычисляем заново!
+                orderedAssets.append(PhotoAsset(asset: phAsset, cachedFileSize: cachedAsset.fileSize))
             }
             
-            // Пропускаем группу если не все фото найдены
-            guard assets.count == cachedGroup.assetIds.count, assets.count > 1 else { continue }
-            
-            // Восстанавливаем порядок
-            let orderedAssets = cachedGroup.assetIds.compactMap { id in
-                assets.first { $0.id == id }
-            }
-            
-            guard orderedAssets.count == assets.count else { continue }
+            guard orderedAssets.count == cachedGroup.assets.count, orderedAssets.count > 1 else { continue }
             
             groups.append(DuplicateGroup(
                 id: cachedGroup.id,
@@ -147,23 +161,35 @@ final class ScanResultsCache {
     func getCachedSimilar() -> [SimilarGroup]? {
         guard let cached = cachedData, !cached.similarGroups.isEmpty else { return nil }
         
+        // Собираем ВСЕ идентификаторы и fileSize из кэша
+        var allAssetIds: [String] = []
+        var fileSizeMap: [String: Int64] = [:]
+        for group in cached.similarGroups {
+            for asset in group.assets {
+                allAssetIds.append(asset.id)
+                fileSizeMap[asset.id] = asset.fileSize
+            }
+        }
+        
+        // Один запрос для всех PHAssets
+        let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: allAssetIds, options: nil)
+        var assetMap: [String: PHAsset] = [:]
+        fetchResult.enumerateObjects { asset, _, _ in
+            assetMap[asset.localIdentifier] = asset
+        }
+        
+        // Восстанавливаем группы
         var groups: [SimilarGroup] = []
         
         for cachedGroup in cached.similarGroups {
-            let fetchResult = PHAsset.fetchAssets(withLocalIdentifiers: cachedGroup.assetIds, options: nil)
-            var assets: [PhotoAsset] = []
-            
-            fetchResult.enumerateObjects { asset, _, _ in
-                assets.append(PhotoAsset(asset: asset))
+            var orderedAssets: [PhotoAsset] = []
+            for cachedAsset in cachedGroup.assets {
+                guard let phAsset = assetMap[cachedAsset.id] else { continue }
+                // Используем fileSize из кэша - НЕ вычисляем заново!
+                orderedAssets.append(PhotoAsset(asset: phAsset, cachedFileSize: cachedAsset.fileSize))
             }
             
-            guard assets.count == cachedGroup.assetIds.count, assets.count > 1 else { continue }
-            
-            let orderedAssets = cachedGroup.assetIds.compactMap { id in
-                assets.first { $0.id == id }
-            }
-            
-            guard orderedAssets.count == assets.count else { continue }
+            guard orderedAssets.count == cachedGroup.assets.count, orderedAssets.count > 1 else { continue }
             
             groups.append(SimilarGroup(
                 id: cachedGroup.id,
@@ -193,11 +219,11 @@ final class ScanResultsCache {
             assetIds.insert(asset.localIdentifier)
         }
         
-        // Конвертируем группы для сохранения
+        // Конвертируем группы для сохранения (включая fileSize!)
         let cachedDuplicates = duplicates.map { group in
             CachedDuplicateGroup(
                 id: group.id,
-                assetIds: group.assets.map { $0.id },
+                assets: group.assets.map { CachedAsset(id: $0.id, fileSize: $0.fileSize) },
                 totalSize: group.totalSize,
                 savingsSize: group.savingsSize,
                 bestAssetIndex: group.bestAssetIndex
@@ -207,7 +233,7 @@ final class ScanResultsCache {
         let cachedSimilar = similar.map { group in
             CachedSimilarGroup(
                 id: group.id,
-                assetIds: group.assets.map { $0.id },
+                assets: group.assets.map { CachedAsset(id: $0.id, fileSize: $0.fileSize) },
                 totalSize: group.totalSize,
                 savingsSize: group.savingsSize,
                 recommendedKeepCount: group.recommendedKeepCount,

@@ -104,15 +104,33 @@ final class PhotoService: ObservableObject {
         
         isScanning = true
         
+        let startTime = CFAbsoluteTimeGetCurrent()
+        
         // Всё выполняем в background чтобы не блокировать UI
         let (groups, shouldSaveCache) = await Task.detached(priority: .userInitiated) { [resultsCache] in
+            let t1 = CFAbsoluteTimeGetCurrent()
+            
             // Проверяем persistent кэш (в background!)
-            if resultsCache.isCacheValid(), let cached = resultsCache.getCachedSimilar() {
-                return (cached, false)
+            let isValid = resultsCache.isCacheValid()
+            print("📊 Similar: isCacheValid = \(isValid), took \(CFAbsoluteTimeGetCurrent() - t1)s")
+            
+            if isValid {
+                let t2 = CFAbsoluteTimeGetCurrent()
+                if let cached = resultsCache.getCachedSimilar() {
+                    print("📊 Similar: loaded \(cached.count) groups from cache, took \(CFAbsoluteTimeGetCurrent() - t2)s")
+                    return (cached, false)
+                }
+                print("📊 Similar: cache returned nil")
             }
+            
             // Кэш невалиден - сканируем
-            return (self.findSimilarPhotosInternal(), true)
+            let t3 = CFAbsoluteTimeGetCurrent()
+            let result = self.findSimilarPhotosInternal()
+            print("📊 Similar: scanned \(result.count) groups, took \(CFAbsoluteTimeGetCurrent() - t3)s")
+            return (result, true)
         }.value
+        
+        print("📊 Similar: total time \(CFAbsoluteTimeGetCurrent() - startTime)s")
         
         cachedSimilarPhotos = groups
         similarScanned = true
@@ -805,10 +823,19 @@ struct PhotoAsset: Identifiable, Hashable {
         self.asset = asset
         self.creationDate = asset.creationDate
         
+        // Медленная операция - вычисляем fileSize
         let resources = PHAssetResource.assetResources(for: asset)
         self.fileSize = resources.first.flatMap { resource in
             (resource.value(forKey: "fileSize") as? Int64)
         } ?? 0
+    }
+    
+    /// Быстрый init с кэшированным fileSize (не вызывает PHAssetResource)
+    init(asset: PHAsset, cachedFileSize: Int64) {
+        self.id = asset.localIdentifier
+        self.asset = asset
+        self.creationDate = asset.creationDate
+        self.fileSize = cachedFileSize
     }
     
     var formattedSize: String {
