@@ -75,13 +75,24 @@ final class PhotoService: ObservableObject {
         videosCount = videosFetch.count
     }
     
-    // MARK: - Scan Duplicates & Similar (with caching)
+    // MARK: - Scan Duplicates & Similar (with persistent caching)
+    
+    private let resultsCache = ScanResultsCache.shared
     
     func scanDuplicatesIfNeeded() async {
         guard !duplicatesScanned else { return }
         
         isScanning = true
         
+        // Проверяем persistent кэш
+        if resultsCache.isCacheValid(), let cached = resultsCache.getCachedDuplicates() {
+            cachedDuplicates = cached
+            duplicatesScanned = true
+            isScanning = false
+            return
+        }
+        
+        // Кэш невалиден - сканируем
         let groups = await Task.detached(priority: .userInitiated) {
             self.findDuplicatesInternal()
         }.value
@@ -96,6 +107,15 @@ final class PhotoService: ObservableObject {
         
         isScanning = true
         
+        // Проверяем persistent кэш
+        if resultsCache.isCacheValid(), let cached = resultsCache.getCachedSimilar() {
+            cachedSimilarPhotos = cached
+            similarScanned = true
+            isScanning = false
+            return
+        }
+        
+        // Кэш невалиден - сканируем
         let groups = await Task.detached(priority: .userInitiated) {
             self.findSimilarPhotosInternal()
         }.value
@@ -103,6 +123,9 @@ final class PhotoService: ObservableObject {
         cachedSimilarPhotos = groups
         similarScanned = true
         isScanning = false
+        
+        // Сохраняем оба результата в persistent кэш
+        resultsCache.saveResults(duplicates: cachedDuplicates, similar: cachedSimilarPhotos)
     }
     
     func invalidateCache() {
@@ -110,6 +133,7 @@ final class PhotoService: ObservableObject {
         similarScanned = false
         cachedDuplicates = []
         cachedSimilarPhotos = []
+        resultsCache.clear()
     }
     
     // MARK: - Duplicates Stats (from cache)

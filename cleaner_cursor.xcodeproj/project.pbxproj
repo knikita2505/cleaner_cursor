@@ -58,6 +58,7 @@
 		116799462EDDF16400C73344 /* ScreenRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799432EDDF16400C73344 /* ScreenRecordingsView.swift */; };
 		116799472EDDF16400C73344 /* ShortVideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799442EDDF16400C73344 /* ShortVideosView.swift */; };
 		116799492EDE521A00C73344 /* BlurredPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799482EDE521A00C73344 /* BlurredPhotosView.swift */; };
+		116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799522EE2052C00C73344 /* ScanResultsCache.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -133,6 +134,7 @@
 		116799432EDDF16400C73344 /* ScreenRecordingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScreenRecordingsView.swift; sourceTree = "<group>"; };
 		116799442EDDF16400C73344 /* ShortVideosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShortVideosView.swift; sourceTree = "<group>"; };
 		116799482EDE521A00C73344 /* BlurredPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlurredPhotosView.swift; sourceTree = "<group>"; };
+		116799522EE2052C00C73344 /* ScanResultsCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScanResultsCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -275,6 +277,7 @@
 		11205CF62ED62451003AFFF9 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				116799522EE2052C00C73344 /* ScanResultsCache.swift */,
 				11205CF72ED62451003AFFF9 /* BatteryService.swift */,
 				11205CF82ED62451003AFFF9 /* SubscriptionService.swift */,
 				11205CF92ED62451003AFFF9 /* StorageService.swift */,
@@ -638,6 +641,7 @@
 				11205D2F2ED62451003AFFF9 /* PrimaryCard.swift in Sources */,
 				11205D422ED797FC003AFFF9 /* SwipeCleanView.swift in Sources */,
 				11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */,
+				116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */,
 				11205D2D2ED62451003AFFF9 /* PrimaryButton.swift in Sources */,
 				11205D2C2ED62451003AFFF9 /* OnboardingView.swift in Sources */,
 				11205D242ED62451003AFFF9 /* StorageService.swift in Sources */,
