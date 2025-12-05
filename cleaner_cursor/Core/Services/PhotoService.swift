@@ -104,33 +104,15 @@ final class PhotoService: ObservableObject {
         
         isScanning = true
         
-        let startTime = CFAbsoluteTimeGetCurrent()
-        
         // Всё выполняем в background чтобы не блокировать UI
         let (groups, shouldSaveCache) = await Task.detached(priority: .userInitiated) { [resultsCache] in
-            let t1 = CFAbsoluteTimeGetCurrent()
-            
             // Проверяем persistent кэш (в background!)
-            let isValid = resultsCache.isCacheValid()
-            print("📊 Similar: isCacheValid = \(isValid), took \(CFAbsoluteTimeGetCurrent() - t1)s")
-            
-            if isValid {
-                let t2 = CFAbsoluteTimeGetCurrent()
-                if let cached = resultsCache.getCachedSimilar() {
-                    print("📊 Similar: loaded \(cached.count) groups from cache, took \(CFAbsoluteTimeGetCurrent() - t2)s")
-                    return (cached, false)
-                }
-                print("📊 Similar: cache returned nil")
+            if resultsCache.isCacheValid(), let cached = resultsCache.getCachedSimilar() {
+                return (cached, false)
             }
-            
             // Кэш невалиден - сканируем
-            let t3 = CFAbsoluteTimeGetCurrent()
-            let result = self.findSimilarPhotosInternal()
-            print("📊 Similar: scanned \(result.count) groups, took \(CFAbsoluteTimeGetCurrent() - t3)s")
-            return (result, true)
+            return (self.findSimilarPhotosInternal(), true)
         }.value
-        
-        print("📊 Similar: total time \(CFAbsoluteTimeGetCurrent() - startTime)s")
         
         cachedSimilarPhotos = groups
         similarScanned = true

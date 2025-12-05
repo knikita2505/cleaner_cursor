@@ -130,12 +130,21 @@ final class DashboardViewModel: ObservableObject {
         // 1. Storage info (быстро)
         await updateStorageInfo()
         
-        // 2. Быстрые категории (параллельно, в background)
-        await scanFastCategoriesInBackground()
+        // 2. ВСЕ категории параллельно!
+        await MainActor.run { scanProgress = "Scanning media..." }
         
-        // 3. Тяжёлые категории (дубликаты, похожие)
-        if !Task.isCancelled {
-            await scanHeavyCategoriesInBackground()
+        await withTaskGroup(of: Void.self) { group in
+            // Быстрые категории (системные папки)
+            group.addTask { await self.scanScreenshotsBackground() }
+            group.addTask { await self.scanLivePhotosBackground() }
+            group.addTask { await self.scanVideosBackground() }
+            group.addTask { await self.scanShortVideosBackground() }
+            group.addTask { await self.scanScreenRecordingsBackground() }
+            
+            // Тяжёлые категории (тоже параллельно!)
+            group.addTask { await self.scanDuplicatesBackground() }
+            group.addTask { await self.scanSimilarBackground() }
+            group.addTask { await self.scanBlurredBackground() }
         }
         
         // Завершено
@@ -144,21 +153,6 @@ final class DashboardViewModel: ObservableObject {
             self.scanProgress = ""
             self.hasScannedOnce = true
             self.lastScanTime = Date()
-        }
-    }
-    
-    // MARK: - Fast Categories (Screenshots, Live Photos, Videos)
-    
-    private func scanFastCategoriesInBackground() async {
-        await MainActor.run { scanProgress = "Scanning media..." }
-        
-        // Запускаем быстрые категории параллельно (системные папки)
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await self.scanScreenshotsBackground() }
-            group.addTask { await self.scanLivePhotosBackground() }
-            group.addTask { await self.scanVideosBackground() }
-            group.addTask { await self.scanShortVideosBackground() }
-            group.addTask { await self.scanScreenRecordingsBackground() }
         }
     }
     
@@ -322,23 +316,14 @@ final class DashboardViewModel: ObservableObject {
     
     // MARK: - Heavy Categories (Duplicates, Similar, Blurred)
     
-    private func scanHeavyCategoriesInBackground() async {
+    private func scanDuplicatesBackground() async {
         guard !Task.isCancelled else { return }
-        
-        // Дубликаты - наш алгоритм
-        await MainActor.run { scanProgress = "Finding duplicates..." }
         await photoService.scanDuplicatesIfNeeded()
-        
+    }
+    
+    private func scanSimilarBackground() async {
         guard !Task.isCancelled else { return }
-        
-        // Похожие фото
-        await MainActor.run { scanProgress = "Finding similar photos..." }
         await photoService.scanSimilarIfNeeded()
-        
-        guard !Task.isCancelled else { return }
-        
-        // Размытые фото
-        await scanBlurredBackground()
     }
     
     // MARK: - Thumbnails

@@ -6,7 +6,7 @@ import Contacts
 struct CleanerApp: App {
     
     // MARK: - Body
-    
+
     var body: some Scene {
         WindowGroup {
             RootView()
@@ -155,7 +155,7 @@ struct PermissionsRequestView: View {
                     
                     GhostButton(title: currentStep == 0 ? "Skip for Now" : "Continue") {
                         moveToNextStep()
-                    }
+        }
                 }
                 .padding(.horizontal, AppSpacing.screenPadding)
                 .padding(.bottom, 50)
