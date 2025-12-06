@@ -1,8 +1,8 @@
 import SwiftUI
 import Photos
+import AVKit
 
 // MARK: - Short Videos View
-/// Экран для управления короткими видео (< 60 сек)
 
 struct ShortVideosView: View {
     
@@ -10,7 +10,10 @@ struct ShortVideosView: View {
     
     @StateObject private var viewModel = ShortVideosViewModel()
     @Environment(\.dismiss) private var dismiss
+    
     @State private var showDeleteConfirmation = false
+    @State private var selectedVideo: VideoAsset? = nil
+    @State private var showVideoDetail = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -32,8 +35,26 @@ struct ShortVideosView: View {
             } else {
                 contentView
             }
+            
+            // Video Detail Sheet
+            if showVideoDetail, let video = selectedVideo {
+                ShortVideoDetailSheet(
+                    video: video,
+                    isPresented: $showVideoDetail,
+                    onDelete: {
+                        Task {
+                            await viewModel.deleteVideo(video)
+                        }
+                    }
+                )
+            }
+            
+            // Processing overlay
+            if viewModel.isProcessing {
+                processingOverlay
+            }
         }
-        .navigationTitle("Short videos")
+        .navigationTitle("Short Videos")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -91,7 +112,7 @@ struct ShortVideosView: View {
                 .font(AppFonts.titleM)
                 .foregroundColor(AppColors.textPrimary)
             
-            Text("Videos under 60 seconds will appear here")
+            Text("Videos under 10 seconds will appear here")
                 .font(AppFonts.bodyM)
                 .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)
@@ -103,6 +124,9 @@ struct ShortVideosView: View {
     
     private var contentView: some View {
         VStack(spacing: 0) {
+            // Category hint
+            categoryHint
+            
             // Summary header
             summaryHeader
             
@@ -117,6 +141,11 @@ struct ShortVideosView: View {
                         ) {
                             if viewModel.isSelectionMode {
                                 viewModel.toggleSelection(video)
+                            } else {
+                                selectedVideo = video
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    showVideoDetail = true
+                                }
                             }
                         }
                     }
@@ -130,6 +159,22 @@ struct ShortVideosView: View {
                 selectionBottomBar
             }
         }
+    }
+    
+    // MARK: - Category Hint
+    
+    private var categoryHint: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "lightbulb.fill")
+                .foregroundColor(AppColors.statusWarning)
+            
+            Text("Short videos (under 10 seconds) often include accidental recordings, failed takes, or unnecessary clips that take up storage.")
+                .font(AppFonts.caption)
+                .foregroundColor(AppColors.textSecondary)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(AppColors.statusWarning.opacity(0.1))
     }
     
     // MARK: - Summary Header
@@ -191,7 +236,7 @@ struct ShortVideosView: View {
                     }
                     .font(AppFonts.subtitleM)
                     .foregroundColor(.white)
-                    .padding(.horizontal, 24)
+                    .frame(width: 100)
                     .padding(.vertical, 12)
                     .background(AppColors.statusError)
                     .cornerRadius(12)
@@ -200,6 +245,267 @@ struct ShortVideosView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(AppColors.backgroundSecondary)
+        }
+    }
+    
+    // MARK: - Processing Overlay
+    
+    private var processingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.6)
+                .ignoresSafeArea()
+            
+            VStack(spacing: 16) {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
+                    .scaleEffect(1.5)
+                
+                Text("Deleting...")
+                    .font(AppFonts.subtitleM)
+                    .foregroundColor(AppColors.textPrimary)
+            }
+            .padding(40)
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(16)
+        }
+    }
+}
+
+// MARK: - Short Video Detail Sheet
+
+struct ShortVideoDetailSheet: View {
+    let video: VideoAsset
+    @Binding var isPresented: Bool
+    var onDelete: () -> Void
+    
+    @State private var thumbnail: UIImage?
+    @State private var showPlayer = false
+    @State private var offset: CGFloat = 0
+    @State private var opacity: Double = 1
+    
+    var body: some View {
+        ZStack {
+            // Background
+            Color.black.opacity(0.9 * opacity)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    closeSheet()
+                }
+            
+            // Content
+            VStack(spacing: 0) {
+                Spacer()
+                
+                VStack(spacing: 0) {
+                    // Drag indicator
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color.white.opacity(0.3))
+                        .frame(width: 40, height: 5)
+                        .padding(.top, 12)
+                        .padding(.bottom, 16)
+                    
+                    // Video Preview
+                    ZStack {
+                        if let thumbnail = thumbnail {
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 280)
+                                .cornerRadius(16)
+                        } else {
+                            Rectangle()
+                                .fill(AppColors.backgroundCard)
+                                .frame(height: 280)
+                                .cornerRadius(16)
+                        }
+                        
+                        // Play button
+                        Button {
+                            showPlayer = true
+                        } label: {
+                            Circle()
+                                .fill(Color.black.opacity(0.5))
+                                .frame(width: 70, height: 70)
+                                .overlay(
+                                    Image(systemName: "play.fill")
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.white)
+                                        .offset(x: 3)
+                                )
+                        }
+                    }
+                    .padding(.horizontal, 20)
+                    
+                    // Video Info
+                    HStack(spacing: 20) {
+                        infoItem(icon: "clock", value: video.formattedDuration)
+                        infoItem(icon: "doc", value: video.formattedSize)
+                        infoItem(icon: "calendar", value: video.formattedDate)
+                    }
+                    .padding(.vertical, 20)
+                    
+                    Divider()
+                        .background(AppColors.borderSecondary)
+                        .padding(.horizontal, 20)
+                    
+                    // Delete Button
+                    Button {
+                        onDelete()
+                        closeSheet()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Delete")
+                                    .font(AppFonts.subtitleL)
+                                    .foregroundColor(.white)
+                                
+                                Text("Save \(video.formattedSize) by deleting video")
+                                    .font(AppFonts.caption)
+                                    .foregroundColor(AppColors.textSecondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Image(systemName: "trash")
+                                .foregroundColor(AppColors.statusError)
+                        }
+                        .padding(16)
+                        .background(AppColors.statusError.opacity(0.15))
+                        .cornerRadius(12)
+                    }
+                    .padding(20)
+                }
+                .background(AppColors.backgroundSecondary)
+                .cornerRadius(24, corners: [.topLeft, .topRight])
+                .offset(y: offset)
+                .gesture(
+                    DragGesture()
+                        .onChanged { value in
+                            if value.translation.height > 0 {
+                                offset = value.translation.height
+                                opacity = 1 - Double(value.translation.height / 400)
+                            }
+                        }
+                        .onEnded { value in
+                            if value.translation.height > 100 || value.predictedEndTranslation.height > 300 {
+                                closeSheetWithSwipe()
+                            } else {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    offset = 0
+                                    opacity = 1
+                                }
+                            }
+                        }
+                )
+            }
+        }
+        .transition(.opacity)
+        .onAppear {
+            loadThumbnail()
+        }
+        .fullScreenCover(isPresented: $showPlayer) {
+            ShortVideoPlayerView(asset: video.asset)
+        }
+    }
+    
+    private func infoItem(icon: String, value: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 12))
+                .foregroundColor(AppColors.textTertiary)
+            
+            Text(value)
+                .font(AppFonts.caption)
+                .foregroundColor(AppColors.textSecondary)
+        }
+    }
+    
+    @MainActor
+    private func loadThumbnail() {
+        VideoService.shared.loadThumbnail(for: video.asset, size: CGSize(width: 600, height: 400)) { image in
+            self.thumbnail = image
+        }
+    }
+    
+    private func closeSheet() {
+        withAnimation(.easeOut(duration: 0.2)) {
+            isPresented = false
+        }
+    }
+    
+    private func closeSheetWithSwipe() {
+        withAnimation(.easeOut(duration: 0.25)) {
+            offset = UIScreen.main.bounds.height
+            opacity = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            isPresented = false
+        }
+    }
+}
+
+// MARK: - Short Video Player View
+
+struct ShortVideoPlayerView: View {
+    let asset: PHAsset
+    @Environment(\.dismiss) private var dismiss
+    @State private var player: AVPlayer?
+    
+    var body: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            if let player = player {
+                VideoPlayer(player: player)
+                    .ignoresSafeArea()
+            } else {
+                ProgressView()
+                    .progressViewStyle(CircularProgressViewStyle(tint: .white))
+            }
+            
+            // Close button
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 30))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+                    .padding(20)
+                }
+                Spacer()
+            }
+        }
+        .onAppear {
+            loadVideo()
+        }
+        .onDisappear {
+            player?.pause()
+        }
+    }
+    
+    private func loadVideo() {
+        let options = PHVideoRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .highQualityFormat
+        
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { avAsset, _, _ in
+            if let urlAsset = avAsset as? AVURLAsset {
+                DispatchQueue.main.async {
+                    self.player = AVPlayer(url: urlAsset.url)
+                    self.player?.play()
+                }
+            } else if let composition = avAsset as? AVComposition {
+                let playerItem = AVPlayerItem(asset: composition)
+                DispatchQueue.main.async {
+                    self.player = AVPlayer(playerItem: playerItem)
+                    self.player?.play()
+                }
+            }
         }
     }
 }
@@ -291,12 +597,15 @@ struct ShortVideoCell: View {
 
 // MARK: - Short Videos View Model
 
+// MARK: - Short Videos View Model
+
 @MainActor
 class ShortVideosViewModel: ObservableObject {
     @Published var videos: [VideoAsset] = []
     @Published var isLoading = true
     @Published var isSelectionMode = false
     @Published var selectedIds: Set<String> = []
+    @Published var isProcessing = false
     
     private let videoService = VideoService.shared
     
@@ -318,7 +627,6 @@ class ShortVideosViewModel: ObservableObject {
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
-    @MainActor
     func load() {
         isLoading = true
         
@@ -329,7 +637,7 @@ class ShortVideosViewModel: ObservableObject {
                 fetchResult.enumerateObjects { asset, _, _ in
                     videos.append(VideoAsset(asset: asset))
                 }
-                return videos
+                return videos.sorted { $0.duration < $1.duration }
             }.value
             
             self.videos = result
@@ -361,17 +669,41 @@ class ShortVideosViewModel: ObservableObject {
         selectedIds.removeAll()
     }
     
+    func deleteVideo(_ video: VideoAsset) async {
+        isProcessing = true
+        
+        do {
+            try await videoService.deleteVideos([video.asset])
+            withAnimation {
+                videos.removeAll { $0.id == video.id }
+            }
+            HapticManager.success()
+        } catch {
+            print("Error deleting video: \(error)")
+            HapticManager.error()
+        }
+        
+        isProcessing = false
+    }
+    
     func deleteSelected() async {
         let assetsToDelete = videos.filter { selectedIds.contains($0.id) }.map { $0.asset }
         
+        isProcessing = true
+        
         do {
             try await videoService.deleteVideos(assetsToDelete)
-            videos.removeAll { selectedIds.contains($0.id) }
+            withAnimation {
+                videos.removeAll { selectedIds.contains($0.id) }
+            }
             selectedIds.removeAll()
             isSelectionMode = false
+            HapticManager.success()
         } catch {
             print("Error deleting videos: \(error)")
+            HapticManager.error()
         }
+        
+        isProcessing = false
     }
 }
-
