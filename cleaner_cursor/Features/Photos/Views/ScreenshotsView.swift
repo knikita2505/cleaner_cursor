@@ -71,16 +71,6 @@ struct ScreenshotsView: View {
         }
         .navigationTitle("Screenshots")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button(viewModel.isSelectionMode ? "Done" : "Select") {
-                    withAnimation {
-                        viewModel.toggleSelectionMode()
-                    }
-                }
-                .foregroundColor(AppColors.accentBlue)
-            }
-        }
         .alert("Delete Screenshots?", isPresented: $showDeleteConfirmation) {
             Button("Cancel", role: .cancel) { }
             Button("Delete", role: .destructive) {
@@ -278,7 +268,7 @@ class ScreenshotsViewModel: ObservableObject {
     @Published var selectedIndices: Set<Int> = []
     @Published var isLoading: Bool = true
     @Published var isDeleting: Bool = false
-    @Published var isSelectionMode: Bool = false
+    @Published var isSelectionMode: Bool = true
     
     private let photoService = PhotoService.shared
     
@@ -303,18 +293,7 @@ class ScreenshotsViewModel: ObservableObject {
         isLoading = false
     }
     
-    func toggleSelectionMode() {
-        isSelectionMode.toggle()
-        if !isSelectionMode {
-            selectedIndices.removeAll()
-        }
-    }
-    
     func toggleSelection(at index: Int) {
-        if !isSelectionMode {
-            isSelectionMode = true
-        }
-        
         if selectedIndices.contains(index) {
             selectedIndices.remove(index)
         } else {
@@ -349,7 +328,6 @@ class ScreenshotsViewModel: ObservableObject {
             }
             
             selectedIndices.removeAll()
-            isSelectionMode = false
             
             HapticManager.success()
         } catch {
