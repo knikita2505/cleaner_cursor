@@ -139,16 +139,12 @@ struct NavigationDestinationModifier: ViewModifier {
                     ScreenshotsView()
                 case .similar:
                     SimilarPhotosView()
-                case .blurred:
-                    BlurredPhotosView()
                 case .videos:
                     VideosView()
                 case .shortVideos:
                     ShortVideosView()
                 case .livePhotos:
                     LivePhotosView()
-                case .screenRecordings:
-                    ScreenRecordingsView()
                 case .duplicates:
                     DuplicatesView()
                 case .burst:

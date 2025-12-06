@@ -320,8 +320,6 @@ struct DashboardView: View {
             appState.dashboardPath.append(PhotoCategoryNav.duplicates)
         case "similar":
             appState.dashboardPath.append(PhotoCategoryNav.similar)
-        case "blurred":
-            appState.dashboardPath.append(PhotoCategoryNav.blurred)
         case "screenshots":
             appState.dashboardPath.append(PhotoCategoryNav.screenshots)
         case "live_photos":
@@ -330,8 +328,6 @@ struct DashboardView: View {
             appState.dashboardPath.append(PhotoCategoryNav.videos)
         case "short_videos":
             appState.dashboardPath.append(PhotoCategoryNav.shortVideos)
-        case "screen_recordings":
-            appState.dashboardPath.append(PhotoCategoryNav.screenRecordings)
         default:
             break
         }
@@ -343,11 +339,9 @@ struct DashboardView: View {
 enum PhotoCategoryNav: String, Hashable {
     case screenshots
     case similar
-    case blurred
     case videos
     case shortVideos
     case livePhotos
-    case screenRecordings
     case duplicates
     case burst
     case bigFiles

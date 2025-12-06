@@ -58,39 +58,11 @@ final class VideoService: ObservableObject {
         return PHAsset.fetchAssets(with: options)
     }
     
-    /// Получить записи экрана
-    nonisolated func fetchScreenRecordings() -> PHFetchResult<PHAsset> {
-        // Сначала получаем все видео, потом фильтруем по subtype
-        // Это более надёжный способ чем predicate
-        let options = PHFetchOptions()
-        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
-        return PHAsset.fetchAssets(with: options)
-    }
-    
-    /// Фильтрация записей экрана из всех видео
-    nonisolated func filterScreenRecordings(from fetchResult: PHFetchResult<PHAsset>) -> [PHAsset] {
-        var screenRecordings: [PHAsset] = []
-        fetchResult.enumerateObjects { asset, _, _ in
-            // PHAssetMediaSubtype.videoScreenRecording = 8192 (1 << 13)
-            if asset.mediaSubtypes.rawValue & 8192 != 0 {
-                screenRecordings.append(asset)
-            }
-        }
-        return screenRecordings
-    }
-    
     // MARK: - Counts
     
     var shortVideosCount: Int {
         guard isAuthorized else { return 0 }
         return fetchShortVideos().count
-    }
-    
-    var screenRecordingsCount: Int {
-        guard isAuthorized else { return 0 }
-        let allVideos = fetchScreenRecordings()
-        return filterScreenRecordings(from: allVideos).count
     }
     
     // MARK: - Load Thumbnail

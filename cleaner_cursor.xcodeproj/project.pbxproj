@@ -55,9 +55,7 @@
 		11205D4E2ED79C0D003AFFF9 /* BurstPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */; };
 		11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */; };
 		116799452EDDF16400C73344 /* VideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799422EDDF16400C73344 /* VideosView.swift */; };
-		116799462EDDF16400C73344 /* ScreenRecordingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799432EDDF16400C73344 /* ScreenRecordingsView.swift */; };
 		116799472EDDF16400C73344 /* ShortVideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799442EDDF16400C73344 /* ShortVideosView.swift */; };
-		116799492EDE521A00C73344 /* BlurredPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799482EDE521A00C73344 /* BlurredPhotosView.swift */; };
 		116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799522EE2052C00C73344 /* ScanResultsCache.swift */; };
 /* End PBXBuildFile section */
 
@@ -131,9 +129,7 @@
 		11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BurstPhotosView.swift; sourceTree = "<group>"; };
 		11205D4B2ED79C0D003AFFF9 /* SimilarPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimilarPhotosView.swift; sourceTree = "<group>"; };
 		116799422EDDF16400C73344 /* VideosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideosView.swift; sourceTree = "<group>"; };
-		116799432EDDF16400C73344 /* ScreenRecordingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScreenRecordingsView.swift; sourceTree = "<group>"; };
 		116799442EDDF16400C73344 /* ShortVideosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShortVideosView.swift; sourceTree = "<group>"; };
-		116799482EDE521A00C73344 /* BlurredPhotosView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BlurredPhotosView.swift; sourceTree = "<group>"; };
 		116799522EE2052C00C73344 /* ScanResultsCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScanResultsCache.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -447,7 +443,6 @@
 		11205D392ED797FC003AFFF9 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				116799482EDE521A00C73344 /* BlurredPhotosView.swift */,
 				11205D4A2ED79C0D003AFFF9 /* BurstPhotosView.swift */,
 				11205D482ED79C0D003AFFF9 /* DuplicatesView.swift */,
 				11205D492ED79C0D003AFFF9 /* HighlightsView.swift */,
@@ -474,7 +469,6 @@
 			isa = PBXGroup;
 			children = (
 				116799422EDDF16400C73344 /* VideosView.swift */,
-				116799432EDDF16400C73344 /* ScreenRecordingsView.swift */,
 				116799442EDDF16400C73344 /* ShortVideosView.swift */,
 			);
 			path = Views;
@@ -616,14 +610,12 @@
 				11205BEC2ED4D7A3003AFFF9 /* Persistence.swift in Sources */,
 				11205D4E2ED79C0D003AFFF9 /* BurstPhotosView.swift in Sources */,
 				11205D462ED797FD003AFFF9 /* ScreenshotsView.swift in Sources */,
-				116799492EDE521A00C73344 /* BlurredPhotosView.swift in Sources */,
 				11205D2E2ED62451003AFFF9 /* ProgressBars.swift in Sources */,
 				11205D252ED62451003AFFF9 /* VideoService.swift in Sources */,
 				116799452EDDF16400C73344 /* VideosView.swift in Sources */,
 				11205D1A2ED62451003AFFF9 /* String+Extensions.swift in Sources */,
 				11205D212ED62451003AFFF9 /* AppFonts.swift in Sources */,
 				11205D4D2ED79C0D003AFFF9 /* HighlightsView.swift in Sources */,
-				116799462EDDF16400C73344 /* ScreenRecordingsView.swift in Sources */,
 				11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */,
 				11205D1C2ED62451003AFFF9 /* Date+Extensions.swift in Sources */,
 				11205D1E2ED62451003AFFF9 /* AppSpacing.swift in Sources */,

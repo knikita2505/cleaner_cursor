@@ -50,16 +50,14 @@ final class DashboardViewModel: ObservableObject {
     }
     
     private func setupCategories() {
-        // Порядок согласно requirements/4_dashboard.md + Blurred
+        // Порядок согласно requirements/4_dashboard.md
         categories = [
             MediaCategory(id: "duplicates", title: "Duplicate photos", icon: "square.on.square", color: AppColors.statusError, countsTowardsCleanup: true),
             MediaCategory(id: "similar", title: "Similar photos", icon: "square.stack.3d.down.right", color: AppColors.accentPurple, countsTowardsCleanup: true),
-            MediaCategory(id: "blurred", title: "Blurred", icon: "camera.metering.unknown", color: Color(hex: "9CA3AF"), countsTowardsCleanup: true),
             MediaCategory(id: "screenshots", title: "Screenshots", icon: "camera.viewfinder", color: AppColors.accentBlue, countsTowardsCleanup: true),
             MediaCategory(id: "live_photos", title: "Live Photos", icon: "livephoto", color: AppColors.statusWarning, countsTowardsCleanup: true),
             MediaCategory(id: "videos", title: "Videos", icon: "video.fill", color: AppColors.statusSuccess, countsTowardsCleanup: false),
-            MediaCategory(id: "short_videos", title: "Short videos", icon: "bolt.fill", color: AppColors.accentBlue.opacity(0.8), countsTowardsCleanup: false),
-            MediaCategory(id: "screen_recordings", title: "Screen recordings", icon: "record.circle", color: AppColors.statusError.opacity(0.8), countsTowardsCleanup: false)
+            MediaCategory(id: "short_videos", title: "Short videos", icon: "bolt.fill", color: AppColors.accentBlue.opacity(0.8), countsTowardsCleanup: false)
         ]
     }
     
@@ -139,12 +137,10 @@ final class DashboardViewModel: ObservableObject {
             group.addTask { await self.scanLivePhotosBackground() }
             group.addTask { await self.scanVideosBackground() }
             group.addTask { await self.scanShortVideosBackground() }
-            group.addTask { await self.scanScreenRecordingsBackground() }
             
             // Тяжёлые категории (тоже параллельно!)
             group.addTask { await self.scanDuplicatesBackground() }
             group.addTask { await self.scanSimilarBackground() }
-            group.addTask { await self.scanBlurredBackground() }
         }
         
         // Завершено
@@ -153,27 +149,6 @@ final class DashboardViewModel: ObservableObject {
             self.scanProgress = ""
             self.hasScannedOnce = true
             self.lastScanTime = Date()
-        }
-    }
-    
-    // MARK: - Blurred Photos
-    
-    private func scanBlurredBackground() async {
-        await MainActor.run { scanProgress = "Finding blurred photos..." }
-        
-        let (photos, thumbnail) = await Task.detached(priority: .utility) {
-            let blurred = self.photoService.findBlurredPhotos(limit: 300)
-            let firstAsset = blurred.first?.asset
-            return (blurred, firstAsset)
-        }.value
-        
-        let totalSize = photos.reduce(Int64(0)) { $0 + $1.fileSize }
-        
-        await MainActor.run {
-            animateUpdateCategory(id: "blurred", count: photos.count, size: totalSize)
-            if let asset = thumbnail {
-                loadThumbnail(for: "blurred", asset: asset)
-            }
         }
     }
     
@@ -286,35 +261,7 @@ final class DashboardViewModel: ObservableObject {
         }
     }
     
-    private func scanScreenRecordingsBackground() async {
-        let (count, size, thumbnail) = await Task.detached(priority: .utility) {
-            let allVideos = self.videoService.fetchScreenRecordings()
-            let screenRecordings = self.videoService.filterScreenRecordings(from: allVideos)
-            let count = screenRecordings.count
-            var totalSize: Int64 = 0
-            var firstAsset: PHAsset?
-            
-            for (index, asset) in screenRecordings.enumerated() {
-                if index == 0 { firstAsset = asset }
-                let resources = PHAssetResource.assetResources(for: asset)
-                if let resource = resources.first,
-                   let fileSize = resource.value(forKey: "fileSize") as? Int64 {
-                    totalSize += fileSize
-                }
-            }
-            
-            return (count, totalSize, firstAsset)
-        }.value
-        
-        await MainActor.run {
-            animateUpdateCategory(id: "screen_recordings", count: count, size: size)
-            if let asset = thumbnail {
-                loadThumbnail(for: "screen_recordings", asset: asset)
-            }
-        }
-    }
-    
-    // MARK: - Heavy Categories (Duplicates, Similar, Blurred)
+    // MARK: - Heavy Categories (Duplicates, Similar)
     
     private func scanDuplicatesBackground() async {
         guard !Task.isCancelled else { return }
@@ -393,8 +340,8 @@ final class DashboardViewModel: ObservableObject {
     
     private func sortCategories() {
         // Определяем какие категории относятся к фото, а какие к видео
-        let photoCategories = Set(["duplicates", "similar", "blurred", "screenshots", "live_photos"])
-        let videoCategories = Set(["videos", "short_videos", "screen_recordings"])
+        let photoCategories = Set(["duplicates", "similar", "screenshots", "live_photos"])
+        let videoCategories = Set(["videos", "short_videos"])
         
         withAnimation(.easeInOut(duration: 0.3)) {
             categories.sort { cat1, cat2 in
