@@ -224,6 +224,14 @@ struct VideoAsset: Identifiable, Hashable {
         ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
     }
     
+    var formattedDate: String {
+        guard let date = creationDate else { return "Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+    
     func hash(into hasher: inout Hasher) {
         hasher.combine(id)
     }
