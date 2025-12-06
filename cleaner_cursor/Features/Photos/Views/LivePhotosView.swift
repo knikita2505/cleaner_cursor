@@ -1,5 +1,6 @@
 import SwiftUI
 import Photos
+import PhotosUI
 
 // MARK: - Live Photos View
 
@@ -10,8 +11,10 @@ struct LivePhotosView: View {
     @StateObject private var viewModel = LivePhotosViewModel()
     @Environment(\.dismiss) private var dismiss
     
-    @State private var showActionPopup: Bool = false
-    @State private var selectedPhotoIndex: Int? = nil
+    @State private var expandedIndex: Int? = nil
+    
+    @State private var showPreview: Bool = false
+    @State private var previewAsset: PHAsset? = nil
     
     // MARK: - Body
     
@@ -24,9 +27,6 @@ struct LivePhotosView: View {
                 emptyState
             } else {
                 VStack(spacing: 0) {
-                    // Info Banner
-                    infoBanner
-                    
                     // Summary Card
                     summaryCard
                     
@@ -42,9 +42,9 @@ struct LivePhotosView: View {
                 }
             }
             
-            // Custom Action Popup
-            if showActionPopup, let index = selectedPhotoIndex, index < viewModel.livePhotos.count {
-                actionPopup(for: index)
+            // Live Photo Preview
+            if showPreview, let asset = previewAsset {
+                livePhotoPreview(asset: asset)
             }
             
             // Loading/Processing Overlay
@@ -94,157 +94,86 @@ struct LivePhotosView: View {
         }
     }
     
-    // MARK: - Custom Action Popup
+    // MARK: - Live Photo Preview
     
-    private func actionPopup(for index: Int) -> some View {
+    @State private var previewOffset: CGFloat = 0
+    @State private var previewOpacity: Double = 1
+    
+    private func livePhotoPreview(asset: PHAsset) -> some View {
         ZStack {
-            // Dimmed background
-            Color.black.opacity(0.5)
+            // Dimmed background - тап закрывает
+            Color.black.opacity(0.9 * previewOpacity)
                 .ignoresSafeArea()
                 .onTapGesture {
-                    withAnimation(.easeOut(duration: 0.2)) {
-                        showActionPopup = false
-                        selectedPhotoIndex = nil
-                    }
+                    closePreview()
                 }
             
-            // Popup card
-            VStack(spacing: 0) {
-                // Header
-                Text("Choose Action")
-                    .font(AppFonts.subtitleL)
-                    .foregroundColor(AppColors.textPrimary)
-                    .padding(.top, 20)
-                    .padding(.bottom, 16)
-                
-                Divider()
-                    .background(AppColors.borderSecondary)
-                
-                // Actions
-                VStack(spacing: 0) {
-                    actionButton(
-                        icon: "checkmark.circle.fill",
-                        title: "Keep Live Photo",
-                        subtitle: "No changes",
-                        color: AppColors.statusSuccess,
-                        isSelected: viewModel.livePhotos[index].action == .keepLive
-                    ) {
-                        viewModel.livePhotos[index].action = .keepLive
-                        closePopup()
-                    }
-                    
-                    Divider()
-                        .background(AppColors.borderSecondary)
-                        .padding(.horizontal, 16)
-                    
-                    actionButton(
-                        icon: "photo.fill",
-                        title: "Convert to Still",
-                        subtitle: "Save \(viewModel.livePhotos[index].formattedSavings)",
-                        color: AppColors.accentBlue,
-                        isSelected: viewModel.livePhotos[index].action == .convert
-                    ) {
-                        viewModel.livePhotos[index].action = .convert
-                        closePopup()
-                    }
-                    
-                    Divider()
-                        .background(AppColors.borderSecondary)
-                        .padding(.horizontal, 16)
-                    
-                    actionButton(
-                        icon: "trash.fill",
-                        title: "Delete",
-                        subtitle: "Remove completely",
-                        color: AppColors.statusError,
-                        isSelected: viewModel.livePhotos[index].action == .delete
-                    ) {
-                        viewModel.livePhotos[index].action = .delete
-                        closePopup()
-                    }
-                }
-                
-                // Cancel button
-                Button {
-                    closePopup()
-                } label: {
-                    Text("Cancel")
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(AppColors.textSecondary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                }
-            }
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(16)
-            .padding(.horizontal, 40)
-            .transition(.scale.combined(with: .opacity))
-        }
-        .transition(.opacity)
-    }
-    
-    private func actionButton(
-        icon: String,
-        title: String,
-        subtitle: String,
-        color: Color,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundColor(color)
-                    .frame(width: 32)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text(subtitle)
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                
+            // Live Photo View with drag gesture
+            VStack {
                 Spacer()
                 
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(color)
-                }
+                LivePhotoPlayerView(asset: asset)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: UIScreen.main.bounds.height * 0.65)
+                    .cornerRadius(24)
+                    .padding(.horizontal, 16)
+                    .offset(y: previewOffset)
+                    .scaleEffect(1 - (previewOffset / 1000))
+                    .gesture(
+                        DragGesture()
+                            .onChanged { value in
+                                // Только свайп вниз
+                                if value.translation.height > 0 {
+                                    previewOffset = value.translation.height
+                                    previewOpacity = 1 - Double(value.translation.height / 400)
+                                }
+                            }
+                            .onEnded { value in
+                                // Если свайп достаточно сильный - закрываем
+                                // predictedEndTranslation показывает куда бы улетел элемент
+                                if value.translation.height > 100 || value.predictedEndTranslation.height > 300 {
+                                    closePreviewWithSwipe()
+                                } else {
+                                    // Возвращаем на место
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                        previewOffset = 0
+                                        previewOpacity = 1
+                                    }
+                                }
+                            }
+                    )
+                
+                Spacer()
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 14)
-            .background(isSelected ? color.opacity(0.1) : Color.clear)
+        }
+        .transition(.opacity)
+        .onAppear {
+            previewOffset = 0
+            previewOpacity = 1
         }
     }
     
-    private func closePopup() {
+    private func closePreview() {
         withAnimation(.easeOut(duration: 0.2)) {
-            showActionPopup = false
-            selectedPhotoIndex = nil
+            showPreview = false
+            previewAsset = nil
+            previewOffset = 0
+            previewOpacity = 1
         }
     }
     
-    // MARK: - Info Banner
-    
-    private var infoBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "lightbulb.fill")
-                .foregroundColor(AppColors.statusWarning)
-            
-            Text(viewModel.isMultiSelectMode 
-                 ? "Tap photos to select, then choose action below."
-                 : "Tap a photo to change action. Long press for multi-select.")
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textSecondary)
+    private func closePreviewWithSwipe() {
+        withAnimation(.easeOut(duration: 0.25)) {
+            previewOffset = UIScreen.main.bounds.height
+            previewOpacity = 0
         }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(AppColors.statusWarning.opacity(0.1))
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            showPreview = false
+            previewAsset = nil
+            previewOffset = 0
+            previewOpacity = 1
+        }
     }
     
     // MARK: - Summary Card
@@ -275,7 +204,7 @@ struct LivePhotosView: View {
                 }
             }
             
-            // Action breakdown - новый порядок: Keep, Convert, Delete
+            // Action breakdown
             HStack(spacing: 16) {
                 actionBadge(
                     count: viewModel.keepCount,
@@ -320,24 +249,34 @@ struct LivePhotosView: View {
     
     private var livePhotosList: some View {
         ScrollView {
-            LazyVStack(spacing: 8) {
+            LazyVStack(spacing: 12) {
                 ForEach(Array(viewModel.livePhotos.enumerated()), id: \.element.id) { index, livePhoto in
-                    LivePhotoRow(
+                    LivePhotoCard(
                         livePhoto: Binding(
                             get: { viewModel.livePhotos[index] },
                             set: { viewModel.livePhotos[index] = $0 }
                         ),
+                        isExpanded: expandedIndex == index,
                         isMultiSelectMode: viewModel.isMultiSelectMode,
                         isSelected: viewModel.selectedIndices.contains(index),
-                        onTap: {
+                        onThumbnailTap: {
+                            previewAsset = viewModel.livePhotos[index].asset
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                showPreview = true
+                            }
+                        },
+                        onCardTap: {
                             if viewModel.isMultiSelectMode {
                                 withAnimation(.easeInOut(duration: 0.2)) {
                                     viewModel.toggleSelection(index)
                                 }
                             } else {
-                                selectedPhotoIndex = index
-                                withAnimation(.easeOut(duration: 0.25)) {
-                                    showActionPopup = true
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    if expandedIndex == index {
+                                        expandedIndex = nil
+                                    } else {
+                                        expandedIndex = index
+                                    }
                                 }
                             }
                         },
@@ -345,8 +284,15 @@ struct LivePhotosView: View {
                             if !viewModel.isMultiSelectMode {
                                 HapticManager.impact(.medium)
                                 withAnimation(.easeInOut(duration: 0.3)) {
+                                    expandedIndex = nil
                                     viewModel.enterMultiSelectMode(startingWith: index)
                                 }
+                            }
+                        },
+                        onActionSelected: { action in
+                            viewModel.livePhotos[index].action = action
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                expandedIndex = nil
                             }
                         }
                     )
@@ -404,28 +350,23 @@ struct LivePhotosView: View {
                 .background(AppColors.borderSecondary)
             
             VStack(spacing: 12) {
-                // Selection count
                 Text("\(viewModel.selectedIndices.count) selected")
                     .font(AppFonts.subtitleM)
                     .foregroundColor(AppColors.textPrimary)
                 
-                // Action buttons - новый порядок: Keep, Convert, Delete
                 HStack(spacing: 12) {
                     Button {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             viewModel.setSelectedToAction(.keepLive)
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: "checkmark")
-                            Text("Keep")
-                        }
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(AppColors.statusSuccess)
-                        .cornerRadius(10)
+                        Text("Keep")
+                            .font(AppFonts.subtitleM)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(AppColors.statusSuccess)
+                            .cornerRadius(10)
                     }
                     
                     Button {
@@ -433,16 +374,13 @@ struct LivePhotosView: View {
                             viewModel.setSelectedToAction(.convert)
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: "photo")
-                            Text("Convert")
-                        }
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(AppColors.accentBlue)
-                        .cornerRadius(10)
+                        Text("Convert")
+                            .font(AppFonts.subtitleM)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(AppColors.accentBlue)
+                            .cornerRadius(10)
                     }
                     
                     Button {
@@ -450,16 +388,13 @@ struct LivePhotosView: View {
                             viewModel.setSelectedToAction(.delete)
                         }
                     } label: {
-                        HStack {
-                            Image(systemName: "trash")
-                            Text("Delete")
-                        }
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(AppColors.statusError)
-                        .cornerRadius(10)
+                        Text("Delete")
+                            .font(AppFonts.subtitleM)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(AppColors.statusError)
+                            .cornerRadius(10)
                     }
                 }
                 .opacity(viewModel.selectedIndices.isEmpty ? 0.5 : 1)
@@ -522,101 +457,150 @@ struct LivePhotosView: View {
     }
 }
 
-// MARK: - Live Photo Row
+// MARK: - Live Photo Card (Large)
 
-struct LivePhotoRow: View {
+struct LivePhotoCard: View {
     @Binding var livePhoto: LivePhotoAsset
+    var isExpanded: Bool
     var isMultiSelectMode: Bool
     var isSelected: Bool
-    var onTap: () -> Void
+    var onThumbnailTap: () -> Void
+    var onCardTap: () -> Void
     var onLongPress: () -> Void
+    var onActionSelected: (LivePhotoAsset.LivePhotoAction) -> Void
     
     @State private var thumbnail: UIImage?
     
+    private var borderColor: Color {
+        switch livePhoto.action {
+        case .keepLive: return AppColors.statusSuccess
+        case .convert: return AppColors.accentBlue
+        case .delete: return AppColors.statusError
+        }
+    }
+    
     var body: some View {
-        HStack(spacing: 14) {
-            // Selection checkbox (multi-select mode)
-            if isMultiSelectMode {
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 24))
-                    .foregroundColor(isSelected ? AppColors.accentBlue : AppColors.textTertiary)
-                    .transition(.scale.combined(with: .opacity))
-            }
-            
-            // Thumbnail with Live badge
-            ZStack(alignment: .bottomLeading) {
-                if let thumbnail = thumbnail {
-                    Image(uiImage: thumbnail)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 70, height: 70)
-                        .cornerRadius(10)
-                        .clipped()
-                } else {
-                    Rectangle()
-                        .fill(AppColors.backgroundCard)
-                        .frame(width: 70, height: 70)
-                        .cornerRadius(10)
+        VStack(spacing: 0) {
+            // Main content
+            HStack(spacing: 16) {
+                // Selection checkbox (multi-select mode)
+                if isMultiSelectMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 28))
+                        .foregroundColor(isSelected ? AppColors.accentBlue : AppColors.textTertiary)
+                        .transition(.scale.combined(with: .opacity))
                 }
                 
-                // Live Badge
-                Text("LIVE")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 2)
-                    .background(
-                        LinearGradient(
-                            colors: [AppColors.accentBlue, AppColors.accentPurple],
-                            startPoint: .leading,
-                            endPoint: .trailing
+                // Large Thumbnail - тап открывает превью
+                ZStack(alignment: .bottomLeading) {
+                    if let thumbnail = thumbnail {
+                        Image(uiImage: thumbnail)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 120, height: 120)
+                            .cornerRadius(16)
+                            .clipped()
+                    } else {
+                        Rectangle()
+                            .fill(AppColors.backgroundCard)
+                            .frame(width: 120, height: 120)
+                            .cornerRadius(16)
+                    }
+                    
+                    // Live Badge
+                    Text("LIVE")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            LinearGradient(
+                                colors: [AppColors.accentBlue, AppColors.accentPurple],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
                         )
-                    )
-                    .cornerRadius(4)
-                    .padding(4)
+                        .cornerRadius(6)
+                        .padding(8)
+                }
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    onThumbnailTap()
+                }
+                
+                // Info
+                VStack(alignment: .leading, spacing: 8) {
+                    // Дата как заголовок
+                    Text(livePhoto.formattedDate)
+                        .font(AppFonts.titleM)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text(livePhoto.formattedTotalSize)
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    Text("Save \(livePhoto.formattedSavings)")
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.statusSuccess)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                
+                // Chevron indicator
+                if !isMultiSelectMode {
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textTertiary)
+                }
+            }
+            .padding(16)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                onCardTap()
             }
             
-            // Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(livePhoto.formattedDate)
-                    .font(AppFonts.subtitleM)
-                    .foregroundColor(AppColors.textPrimary)
+            // Expanded action buttons
+            if isExpanded && !isMultiSelectMode {
+                Divider()
+                    .background(AppColors.borderSecondary)
+                    .padding(.horizontal, 16)
                 
-                Text("\(livePhoto.formattedTotalSize) • Live Photo")
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.textTertiary)
-                
-                Text("Save \(livePhoto.formattedSavings) by converting")
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.statusSuccess)
-            }
-            
-            Spacer()
-            
-            // Action indicator (not in multi-select mode)
-            if !isMultiSelectMode {
-                Text(livePhoto.action.rawValue)
-                    .font(AppFonts.caption)
-                    .foregroundColor(actionColor(livePhoto.action))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(actionColor(livePhoto.action).opacity(0.15))
-                    .cornerRadius(8)
+                HStack(spacing: 12) {
+                    actionButton(
+                        title: "Keep",
+                        color: AppColors.statusSuccess,
+                        isActive: livePhoto.action == .keepLive
+                    ) {
+                        onActionSelected(.keepLive)
+                    }
+                    
+                    actionButton(
+                        title: "Convert",
+                        color: AppColors.accentBlue,
+                        isActive: livePhoto.action == .convert
+                    ) {
+                        onActionSelected(.convert)
+                    }
+                    
+                    actionButton(
+                        title: "Delete",
+                        color: AppColors.statusError,
+                        isActive: livePhoto.action == .delete
+                    ) {
+                        onActionSelected(.delete)
+                    }
+                }
+                .padding(16)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: AppSpacing.buttonRadius)
+            RoundedRectangle(cornerRadius: 20)
                 .fill(AppColors.backgroundCard)
                 .overlay(
-                    RoundedRectangle(cornerRadius: AppSpacing.buttonRadius)
-                        .stroke(isSelected ? AppColors.accentBlue : Color.clear, lineWidth: 2)
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(borderColor, lineWidth: isMultiSelectMode ? (isSelected ? 3 : 0) : 2)
                 )
         )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            onTap()
-        }
         .onLongPressGesture(minimumDuration: 0.5) {
             onLongPress()
         }
@@ -627,21 +611,63 @@ struct LivePhotoRow: View {
         }
     }
     
+    private func actionButton(title: String, color: Color, isActive: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(AppFonts.subtitleM)
+                .foregroundColor(isActive ? .white : color)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(isActive ? color : color.opacity(0.15))
+                )
+        }
+    }
+    
     @MainActor
     private func loadThumbnail() {
         PhotoService.shared.loadThumbnail(
             for: livePhoto.asset,
-            size: CGSize(width: 200, height: 200)
+            size: CGSize(width: 300, height: 300)
         ) { image in
             thumbnail = image
         }
     }
+}
+
+// MARK: - Live Photo Player View (UIViewRepresentable)
+
+struct LivePhotoPlayerView: UIViewRepresentable {
+    let asset: PHAsset
     
-    private func actionColor(_ action: LivePhotoAsset.LivePhotoAction) -> Color {
-        switch action {
-        case .keepLive: return AppColors.statusSuccess
-        case .convert: return AppColors.accentBlue
-        case .delete: return AppColors.statusError
+    func makeUIView(context: Context) -> PHLivePhotoView {
+        let livePhotoView = PHLivePhotoView()
+        livePhotoView.contentMode = .scaleAspectFit
+        livePhotoView.isMuted = false
+        loadLivePhoto(into: livePhotoView)
+        return livePhotoView
+    }
+    
+    func updateUIView(_ uiView: PHLivePhotoView, context: Context) {}
+    
+    private func loadLivePhoto(into view: PHLivePhotoView) {
+        let options = PHLivePhotoRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+        
+        PHImageManager.default().requestLivePhoto(
+            for: asset,
+            targetSize: CGSize(width: asset.pixelWidth, height: asset.pixelHeight),
+            contentMode: .aspectFit,
+            options: options
+        ) { livePhoto, _ in
+            DispatchQueue.main.async {
+                if let livePhoto = livePhoto {
+                    view.livePhoto = livePhoto
+                    view.startPlayback(with: .full)
+                }
+            }
         }
     }
 }
@@ -658,7 +684,6 @@ final class LivePhotosViewModel: ObservableObject {
     @Published var processedCount: Int = 0
     @Published var totalToProcess: Int = 0
     
-    // Multi-select
     @Published var isMultiSelectMode: Bool = false
     @Published var selectedIndices: Set<Int> = []
     
@@ -691,15 +716,11 @@ final class LivePhotosViewModel: ObservableObject {
         livePhotos.filter { $0.action == .keepLive }.count
     }
     
-    // MARK: - Load
-    
     func loadLivePhotos() async {
         isLoading = true
         livePhotos = photoService.fetchLivePhotosAsModels()
         isLoading = false
     }
-    
-    // MARK: - Multi-Select
     
     func enterMultiSelectMode(startingWith index: Int) {
         isMultiSelectMode = true
@@ -727,8 +748,6 @@ final class LivePhotosViewModel: ObservableObject {
         }
         exitMultiSelectMode()
     }
-    
-    // MARK: - Apply Changes
     
     func applyChanges() async {
         let toProcess = livePhotos.enumerated().filter { $0.element.action != .keepLive }
@@ -763,20 +782,16 @@ final class LivePhotosViewModel: ObservableObject {
             processingProgress = Double(processedCount) / Double(totalToProcess)
         }
         
-        // Remove processed photos from list with animation
         withAnimation(.easeInOut(duration: 0.3)) {
             livePhotos.removeAll { successIds.contains($0.id) }
         }
         
-        // Record cleaning
         if !successIds.isEmpty {
             SubscriptionService.shared.recordCleaning(count: successIds.count)
         }
         
         isProcessing = false
     }
-    
-    // MARK: - Bulk Actions
     
     func setAllToConvert() {
         for i in livePhotos.indices {
