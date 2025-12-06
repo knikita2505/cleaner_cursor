@@ -137,92 +137,68 @@ struct DashboardView: View {
     // MARK: - Storage Summary Card
     
     private var storageSummaryCard: some View {
-        VStack(spacing: 20) {
-            HStack(alignment: .top, spacing: 20) {
-                // Left side - Text info
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Space to clean")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                    
-                    // Big number with animation
-                    if viewModel.isScanning && viewModel.spaceToClean == 0 {
-                        HStack(spacing: 12) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
-                            Text("Scanning...")
-                                .font(.system(size: 24, weight: .semibold, design: .rounded))
-                                .foregroundColor(AppColors.textSecondary)
-                        }
-                        .frame(height: 50)
-                    } else {
-                        Text(viewModel.formattedSpaceToClean)
-                            .font(.system(size: 42, weight: .bold, design: .rounded))
-                            .foregroundColor(AppColors.textPrimary)
-                            .contentTransition(.numericText())
-                            .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
-                    }
-                    
-                    // Mini stats: Clutter, Photo & Video, Total
-                    VStack(alignment: .leading, spacing: 6) {
-                        miniStatRow(label: "Clutter", value: viewModel.formattedClutter, color: Color(hex: "FF496C"), isLoading: viewModel.isScanning && viewModel.clutterSize == 0)
-                        miniStatRow(label: "Photo & Video", value: viewModel.formattedPhotoVideoSize, color: Color(hex: "87CEFA"), isLoading: viewModel.isScanning && viewModel.photoVideoSize == 0)
-                        miniStatRow(label: "Total", value: viewModel.formattedTotal, color: AppColors.textSecondary, isLoading: viewModel.totalStorage == 0)
-                    }
-                }
+        HStack(alignment: .top, spacing: 16) {
+            // Left side - Text info + Stats
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Space to clean")
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.textTertiary)
                 
-                Spacer()
+                // Big number - always fits in one line
+                Text(viewModel.formattedSpaceToClean)
+                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
                 
-                // Right side - Double Ring Progress
-                ZStack {
-                    // Background ring (Total capacity)
-                    Circle()
-                        .stroke(AppColors.progressInactive, lineWidth: 14)
-                        .frame(width: 100, height: 100)
-                    
-                    // Photo & Video ring (outer)
-                    Circle()
-                        .trim(from: 0, to: animateStorage ? viewModel.photoVideoPercentage : 0)
-                        .stroke(
-                            Color(hex: "87CEFA"),
-                            style: StrokeStyle(lineWidth: 14, lineCap: .round)
-                        )
-                        .frame(width: 100, height: 100)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 1.2), value: animateStorage)
-                        .animation(.easeOut(duration: 0.8), value: viewModel.photoVideoPercentage)
-                    
-                    // Clutter ring (over Photo & Video)
-                    Circle()
-                        .trim(from: 0, to: animateStorage ? viewModel.cleanablePercentage : 0)
-                        .stroke(
-                            Color(hex: "FF496C"),
-                            style: StrokeStyle(lineWidth: 14, lineCap: .round)
-                        )
-                        .frame(width: 100, height: 100)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 1.0), value: animateStorage)
-                        .animation(.easeOut(duration: 0.8), value: viewModel.cleanablePercentage)
-                    
-                    // Center text
-                    VStack(spacing: 2) {
-                        if viewModel.isScanning && viewModel.spaceToClean == 0 {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "87CEFA")))
-                                .scaleEffect(0.8)
-                        } else {
-                            Text("\(Int(viewModel.cleanablePercentage * 100))%")
-                                .font(.system(size: 18, weight: .bold, design: .rounded))
-                                .foregroundColor(Color(hex: "FF496C"))
-                                .contentTransition(.numericText())
-                                .animation(.easeInOut(duration: 0.5), value: viewModel.cleanablePercentage)
-                        }
-                        
-                        Text("clutter")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundColor(AppColors.textTertiary)
+                // Stats aligned with number
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 16) {
+                        miniStatItem(label: "Clutter", value: viewModel.formattedClutter, color: Color(hex: "FF496C"))
+                        miniStatItem(label: "Used", value: viewModel.formattedUsed, color: Color(hex: "87CEFA"))
                     }
+                    miniStatItem(label: "Total", value: viewModel.formattedTotal, color: AppColors.textSecondary)
                 }
+            }
+            
+            Spacer()
+            
+            // Right side - Ring Progress
+            ZStack {
+                Circle()
+                    .stroke(AppColors.progressInactive, lineWidth: 10)
+                    .frame(width: 70, height: 70)
+                
+                // Used storage ring
+                Circle()
+                    .trim(from: 0, to: animateStorage ? viewModel.storageUsagePercentage : 0)
+                    .stroke(
+                        Color(hex: "87CEFA"),
+                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                    )
+                    .frame(width: 70, height: 70)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 1.0), value: animateStorage)
+                    .animation(.easeOut(duration: 0.8), value: viewModel.storageUsagePercentage)
+                
+                // Clutter ring
+                Circle()
+                    .trim(from: 0, to: animateStorage ? viewModel.cleanablePercentage : 0)
+                    .stroke(
+                        Color(hex: "FF496C"),
+                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                    )
+                    .frame(width: 70, height: 70)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 0.8), value: animateStorage)
+                    .animation(.easeOut(duration: 0.8), value: viewModel.cleanablePercentage)
+                
+                // Center percentage
+                Text("\(Int(viewModel.storageUsagePercentage * 100))%")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
             }
         }
         .padding(AppSpacing.containerPaddingLarge)
@@ -231,30 +207,15 @@ struct DashboardView: View {
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
     }
     
-    private func miniStatRow(label: String, value: String, color: Color, isLoading: Bool = false) -> some View {
-        HStack(spacing: 8) {
+    private func miniStatItem(label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 4) {
             Circle()
                 .fill(color)
-                .frame(width: 8, height: 8)
-            
-            Text(label)
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textTertiary)
-            
-            Spacer()
-            
-            if isLoading {
-                ProgressView()
-                    .progressViewStyle(CircularProgressViewStyle(tint: color))
-                    .scaleEffect(0.4)
-                    .frame(width: 16, height: 16)
-            } else {
-                Text(value)
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.textSecondary)
-                    .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.3), value: value)
-            }
+                .frame(width: 6, height: 6)
+            Text("\(label) \(value)")
+                .font(.system(size: 11))
+                .foregroundColor(AppColors.textSecondary)
+                .lineLimit(1)
         }
     }
     
@@ -262,36 +223,9 @@ struct DashboardView: View {
     
     private var categoriesGrid: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Categories")
-                    .font(AppFonts.subtitleL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Spacer()
-                
-                // Scanning indicator
-                if viewModel.isScanning {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
-                            .scaleEffect(0.7)
-                        
-                        Text(viewModel.scanProgress)
-                            .font(.system(size: 11))
-                            .foregroundColor(AppColors.textTertiary)
-                            .lineLimit(1)
-                    }
-                } else {
-                    // Refresh button
-                    Button {
-                        viewModel.forceRefresh()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16))
-                            .foregroundColor(AppColors.textTertiary)
-                    }
-                }
-            }
+            Text("Categories")
+                .font(AppFonts.subtitleL)
+                .foregroundColor(AppColors.textPrimary)
             
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.categories) { category in
@@ -363,32 +297,18 @@ struct CategoryCard: View {
                     Image(uiImage: thumbnail)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
-                        .frame(height: 140)
+                        .frame(height: 110)
                         .clipped()
                         .opacity(isLocked ? 0.5 : 1.0)
                 } else {
-                    // Gradient placeholder
-                    LinearGradient(
-                        colors: [
-                            category.color.opacity(0.4),
-                            category.color.opacity(0.2)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+                    // Dark gray placeholder (одинаковый для всех при сканировании или пустых)
+                    Color(white: 0.2).opacity(0.8)
                     
-                    // Loading or icon
-                    if category.isLoading {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                            .scaleEffect(1.0)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        Image(systemName: category.icon)
-                            .font(.system(size: 40, weight: .medium))
-                            .foregroundColor(.white.opacity(0.5))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                    // Icon in center
+                    Image(systemName: category.icon)
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(.white.opacity(0.3))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
                 
                 // Dark gradient overlay for text readability
@@ -419,9 +339,9 @@ struct CategoryCard: View {
                         .lineLimit(1)
                     
                     if category.isLoading && category.size == 0 {
-                        Text("Scanning...")
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundColor(.white.opacity(0.7))
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
                     } else {
                         Text(category.formattedSize)
                             .font(.system(size: 22, weight: .bold))
@@ -430,7 +350,7 @@ struct CategoryCard: View {
                 }
                 .padding(14)
             }
-            .frame(height: 140)
+            .frame(height: 110)
             .cornerRadius(16)
             .contentShape(Rectangle())
             .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)

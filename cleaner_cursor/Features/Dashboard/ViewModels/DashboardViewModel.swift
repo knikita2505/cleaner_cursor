@@ -52,7 +52,7 @@ final class DashboardViewModel: ObservableObject {
     private func setupCategories() {
         // Порядок согласно requirements/4_dashboard.md
         categories = [
-            MediaCategory(id: "duplicates", title: "Duplicate photos", icon: "square.on.square", color: AppColors.statusError, countsTowardsCleanup: true),
+            MediaCategory(id: "duplicates", title: "Duplicates", icon: "square.on.square", color: AppColors.statusError, countsTowardsCleanup: true),
             MediaCategory(id: "similar", title: "Similar photos", icon: "square.stack.3d.down.right", color: AppColors.accentPurple, countsTowardsCleanup: true),
             MediaCategory(id: "screenshots", title: "Screenshots", icon: "camera.viewfinder", color: AppColors.accentBlue, countsTowardsCleanup: true),
             MediaCategory(id: "live_photos", title: "Live Photos", icon: "livephoto", color: AppColors.statusWarning, countsTowardsCleanup: true),
@@ -141,6 +141,7 @@ final class DashboardViewModel: ObservableObject {
             // Тяжёлые категории (тоже параллельно!)
             group.addTask { await self.scanDuplicatesBackground() }
             group.addTask { await self.scanSimilarBackground() }
+            
         }
         
         // Завершено
@@ -329,12 +330,10 @@ final class DashboardViewModel: ObservableObject {
     
     private func calculateTotals() {
         let newClutter = categories.filter { $0.countsTowardsCleanup }.reduce(Int64(0)) { $0 + $1.size }
-        let allPhotoVideo = categories.reduce(Int64(0)) { $0 + $1.size }
         
         withAnimation(.easeInOut(duration: 0.4)) {
             clutterSize = newClutter
             spaceToClean = newClutter
-            photoVideoSize = allPhotoVideo
         }
     }
     
@@ -373,15 +372,11 @@ final class DashboardViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Photo & Video Size
-    
-    @Published var photoVideoSize: Int64 = 0
-    
-    var formattedPhotoVideoSize: String {
-        ByteCountFormatter.string(fromByteCount: photoVideoSize, countStyle: .file)
-    }
-    
     // MARK: - Formatted Values
+    
+    var formattedUsed: String {
+        ByteCountFormatter.string(fromByteCount: totalStorageUsed, countStyle: .file)
+    }
     
     var formattedSpaceToClean: String {
         ByteCountFormatter.string(fromByteCount: spaceToClean, countStyle: .file)
@@ -407,11 +402,6 @@ final class DashboardViewModel: ObservableObject {
     var cleanablePercentage: Double {
         guard totalStorage > 0 else { return 0 }
         return min(1.0, Double(spaceToClean) / Double(totalStorage))
-    }
-    
-    var photoVideoPercentage: Double {
-        guard totalStorage > 0 else { return 0 }
-        return min(1.0, Double(photoVideoSize) / Double(totalStorage))
     }
 }
 
