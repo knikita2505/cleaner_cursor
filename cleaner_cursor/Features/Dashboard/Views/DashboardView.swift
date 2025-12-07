@@ -215,7 +215,7 @@ struct DashboardView: View {
             Text("\(label) \(value)")
                 .font(.system(size: 11))
                 .foregroundColor(AppColors.textSecondary)
-                .lineLimit(1)
+                .fixedSize()
         }
     }
     
