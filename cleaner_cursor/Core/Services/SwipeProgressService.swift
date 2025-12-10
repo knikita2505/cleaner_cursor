@@ -142,6 +142,11 @@ final class SwipeProgressService: ObservableObject {
     private func saveProgress() {
         guard let encoded = try? JSONEncoder().encode(monthProgress) else { return }
         defaults.set(encoded, forKey: progressKey)
+        
+        // Explicitly notify observers about changes
+        DispatchQueue.main.async { [weak self] in
+            self?.objectWillChange.send()
+        }
     }
 }
 

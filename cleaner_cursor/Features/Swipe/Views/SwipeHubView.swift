@@ -59,6 +59,23 @@ struct SwipeHubView: View {
         }
     }
     
+    // MARK: - Computed Progress
+    
+    private var totalProgressValue: Double {
+        progressService.getTotalProgress()
+    }
+    
+    private var progressDisplayText: String {
+        let progress = totalProgressValue
+        if progress == 0 {
+            return "0%"
+        } else if progress < 1 {
+            return "<1%"
+        } else {
+            return "\(Int(progress))%"
+        }
+    }
+    
     // MARK: - Summary Header
     
     private var summaryHeader: some View {
@@ -72,7 +89,7 @@ struct SwipeHubView: View {
                 
                 // Progress circle
                 Circle()
-                    .trim(from: 0, to: viewModel.totalProgress / 100)
+                    .trim(from: 0, to: totalProgressValue / 100)
                     .stroke(
                         LinearGradient(
                             colors: [AppColors.accentBlue, AppColors.accentPurple],
@@ -83,11 +100,11 @@ struct SwipeHubView: View {
                     )
                     .frame(width: 120, height: 120)
                     .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 0.5), value: viewModel.totalProgress)
+                    .animation(.easeOut(duration: 0.5), value: totalProgressValue)
                 
                 // Percentage
                 VStack(spacing: 2) {
-                    Text("\(Int(viewModel.totalProgress))%")
+                    Text(progressDisplayText)
                         .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -156,19 +173,17 @@ struct MonthCard: View {
     let group: PhotoMonthGroup
     let progress: MonthProgress
     
+    // Get up to 3 photos for preview stack
+    private var previewPhotos: [PhotoAsset] {
+        Array(group.photos.prefix(3))
+    }
+    
     var body: some View {
         NavigationLink(value: group) {
             HStack(spacing: 16) {
-                // Month icon
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(iconBackground)
-                        .frame(width: 52, height: 52)
-                    
-                    Image(systemName: iconName)
-                        .font(.system(size: 22))
-                        .foregroundColor(iconColor)
-                }
+                // Photo stack preview (larger size)
+                PhotoStackPreview(photos: previewPhotos)
+                    .frame(width: 68, height: 68)
                 
                 // Info
                 VStack(alignment: .leading, spacing: 4) {
@@ -217,35 +232,81 @@ struct MonthCard: View {
             .padding(AppSpacing.containerPadding)
             .background(AppColors.backgroundSecondary)
             .cornerRadius(AppSpacing.cardRadius)
+            .overlay(
+                // Green border for completed months
+                RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
+                    .stroke(AppColors.statusSuccess, lineWidth: progress.isCompleted ? 2 : 0)
+            )
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
+}
+
+// MARK: - Photo Stack Preview
+
+struct PhotoStackPreview: View {
+    let photos: [PhotoAsset]
     
-    private var iconBackground: Color {
-        if progress.isCompleted {
-            return AppColors.statusSuccess.opacity(0.15)
-        } else if progress.reviewedCount > 0 {
-            return AppColors.accentBlue.opacity(0.15)
-        } else {
-            return AppColors.textTertiary.opacity(0.1)
+    var body: some View {
+        ZStack {
+            // Show up to 3 photos in a fan/stack
+            ForEach(Array(photos.enumerated().reversed()), id: \.element.id) { index, photo in
+                PhotoStackItem(asset: photo, index: index, total: photos.count)
+            }
+        }
+    }
+}
+
+struct PhotoStackItem: View {
+    let asset: PhotoAsset
+    let index: Int
+    let total: Int
+    
+    @State private var image: UIImage?
+    
+    // Calculate offset and rotation for fan effect
+    private var xOffset: CGFloat {
+        CGFloat(index) * 5
+    }
+    
+    private var yOffset: CGFloat {
+        CGFloat(index) * -3
+    }
+    
+    private var rotation: Double {
+        Double(index - 1) * 6
+    }
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            } else {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(AppColors.backgroundCard)
+                    .frame(width: 52, height: 52)
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(AppColors.backgroundSecondary, lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.2), radius: 3, x: 1, y: 2)
+        .offset(x: xOffset, y: yOffset)
+        .rotationEffect(.degrees(rotation))
+        .onAppear {
+            loadThumbnail()
         }
     }
     
-    private var iconColor: Color {
-        if progress.isCompleted {
-            return AppColors.statusSuccess
-        } else if progress.reviewedCount > 0 {
-            return AppColors.accentBlue
-        } else {
-            return AppColors.textTertiary
-        }
-    }
-    
-    private var iconName: String {
-        if progress.isCompleted {
-            return "checkmark"
-        } else {
-            return "calendar"
+    @MainActor
+    private func loadThumbnail() {
+        PhotoService.shared.loadThumbnail(for: asset.asset, size: CGSize(width: 100, height: 100)) { img in
+            self.image = img
         }
     }
 }
