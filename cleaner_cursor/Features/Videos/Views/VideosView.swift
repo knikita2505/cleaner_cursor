@@ -2,6 +2,13 @@ import SwiftUI
 import Photos
 import AVKit
 
+// MARK: - Video Sort Option
+enum VideoSortOption: String, CaseIterable {
+    case recent = "Recent"
+    case oldest = "Oldest"
+    case largest = "Largest"
+}
+
 // MARK: - Videos View
 
 struct VideosView: View {
@@ -15,11 +22,12 @@ struct VideosView: View {
     @State private var showCompressSheet = false
     @State private var selectedVideo: VideoAsset? = nil
     @State private var showVideoDetail = false
+    @State private var sortOption: VideoSortOption = .recent
+    @State private var showSortPicker = false
     
     private let columns = [
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2),
-        GridItem(.flexible(), spacing: 2)
+        GridItem(.flexible(), spacing: 8),
+        GridItem(.flexible(), spacing: 8)
     ]
     
     // MARK: - Body
@@ -101,6 +109,14 @@ struct VideosView: View {
         } message: {
             Text("Choose compression quality for \(viewModel.selectedCount) videos")
         }
+        .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
+            ForEach(VideoSortOption.allCases, id: \.self) { option in
+                Button(option.rawValue) {
+                    sortOption = option
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
     
     // MARK: - Loading View
@@ -146,8 +162,8 @@ struct VideosView: View {
             
             // Videos grid
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 2) {
-                    ForEach(viewModel.videos) { video in
+                LazyVGrid(columns: columns, spacing: 10) {
+                    ForEach(sortedVideos) { video in
                         VideoCell(
                             video: video,
                             isSelected: viewModel.isSelected(video),
@@ -164,7 +180,7 @@ struct VideosView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 2)
+                .padding(.horizontal, 12)
                 .padding(.bottom, viewModel.isSelectionMode ? 100 : 20)
             }
             
@@ -180,7 +196,7 @@ struct VideosView: View {
     private var summaryHeader: some View {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(viewModel.videos.count) videos")
+                Text("\(sortedVideos.count) videos")
                     .font(AppFonts.subtitleL)
                     .foregroundColor(AppColors.textPrimary)
                 
@@ -200,10 +216,30 @@ struct VideosView: View {
                         .foregroundColor(AppColors.accentBlue)
                 }
             }
+            
+            // Sort button
+            Button {
+                showSortPicker = true
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 18))
+                    .foregroundColor(AppColors.accentBlue)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
         .background(AppColors.backgroundSecondary)
+    }
+    
+    private var sortedVideos: [VideoAsset] {
+        switch sortOption {
+        case .recent:
+            return viewModel.videos.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+        case .oldest:
+            return viewModel.videos.sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
+        case .largest:
+            return viewModel.videos.sorted { $0.fileSize > $1.fileSize }
+        }
     }
     
     // MARK: - Selection Bottom Bar
@@ -615,45 +651,67 @@ struct VideoCell: View {
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(minWidth: 0, maxWidth: .infinity)
-                        .frame(height: 130)
+                        .frame(height: 180)
                         .clipped()
                 } else {
                     Rectangle()
                         .fill(AppColors.backgroundCard)
-                        .frame(height: 130)
+                        .frame(height: 180)
                 }
                 
                 // Badges
                 VStack {
-                    // Huge badge
-                    if isHuge {
-                        HStack {
+                    // Top row: Huge badge and Favorite
+                    HStack {
+                        if isHuge {
                             Text("HUGE")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
                                 .background(AppColors.statusError)
                                 .cornerRadius(4)
-                                .padding(6)
-                            Spacer()
+                        }
+                        
+                        Spacer()
+                        
+                        // Favorite badge
+                        if video.isFavorite {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.red)
+                                .padding(5)
+                                .background(Color.white.opacity(0.9))
+                                .clipShape(Circle())
                         }
                     }
+                    .padding(8)
                     
                     Spacer()
                     
-                    // Duration badge
+                    // Bottom info: Size and Duration
                     HStack {
-                        Spacer()
-                        Text(video.formattedDuration)
-                            .font(.system(size: 11, weight: .medium))
+                        // Size badge
+                        Text(video.formattedSize)
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
                             .background(Color.black.opacity(0.6))
                             .cornerRadius(4)
-                            .padding(6)
+                        
+                        Spacer()
+                        
+                        // Duration badge
+                        Text(video.formattedDuration)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.black.opacity(0.6))
+                            .cornerRadius(4)
                     }
+                    .padding(8)
                 }
                 
                 // Selection indicator
@@ -663,15 +721,15 @@ struct VideoCell: View {
                             ZStack {
                                 Circle()
                                     .fill(isSelected ? AppColors.accentBlue : Color.white.opacity(0.3))
-                                    .frame(width: 24, height: 24)
+                                    .frame(width: 28, height: 28)
                                 
                                 if isSelected {
                                     Image(systemName: "checkmark")
-                                        .font(.system(size: 12, weight: .bold))
+                                        .font(.system(size: 14, weight: .bold))
                                         .foregroundColor(.white)
                                 }
                             }
-                            .padding(8)
+                            .padding(10)
                             
                             Spacer()
                         }
@@ -683,6 +741,7 @@ struct VideoCell: View {
                     }
                 }
             }
+            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
         .onAppear {
@@ -692,7 +751,7 @@ struct VideoCell: View {
     
     @MainActor
     private func loadThumbnail() {
-        VideoService.shared.loadThumbnail(for: video.asset, size: CGSize(width: 200, height: 200)) { image in
+        VideoService.shared.loadThumbnail(for: video.asset, size: CGSize(width: 400, height: 400)) { image in
             self.thumbnail = image
         }
     }
@@ -738,7 +797,8 @@ class VideosViewModel: ObservableObject {
     }
     
     var isAllSelected: Bool {
-        selectedIds.count == videos.count && !videos.isEmpty
+        let nonFavoriteCount = videos.filter { !$0.isFavorite }.count
+        return selectedIds.count == nonFavoriteCount && nonFavoriteCount > 0
     }
     
     var formattedTotalSize: String {
@@ -785,7 +845,8 @@ class VideosViewModel: ObservableObject {
         if isAllSelected {
             selectedIds.removeAll()
         } else {
-            selectedIds = Set(videos.map { $0.id })
+            // Select all non-favorite videos
+            selectedIds = Set(videos.filter { !$0.isFavorite }.map { $0.id })
         }
     }
     

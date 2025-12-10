@@ -13,12 +13,25 @@ struct ScreenshotsView: View {
     @Environment(\.dismiss) private var dismiss
     
     @State private var showDeleteConfirmation: Bool = false
+    @State private var sortOption: PhotoSortOption = .recent
+    @State private var showSortPicker: Bool = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 2),
         GridItem(.flexible(), spacing: 2),
         GridItem(.flexible(), spacing: 2)
     ]
+    
+    private var sortedScreenshots: [PhotoAsset] {
+        switch sortOption {
+        case .recent:
+            return viewModel.screenshots.sorted { ($0.creationDate ?? .distantPast) > ($1.creationDate ?? .distantPast) }
+        case .oldest:
+            return viewModel.screenshots.sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
+        case .largest:
+            return viewModel.screenshots.sorted { $0.fileSize > $1.fileSize }
+        }
+    }
     
     // MARK: - Body
     
@@ -31,22 +44,22 @@ struct ScreenshotsView: View {
                 emptyState
             } else {
                 VStack(spacing: 0) {
-                    // Selection Header
-                    if viewModel.isSelectionMode {
-                        selectionHeader
-                    }
+                    // Summary Header with sort
+                    summaryHeader
                     
                     // Grid
                     ScrollView(showsIndicators: false) {
                         LazyVGrid(columns: columns, spacing: 2) {
-                            ForEach(Array(viewModel.screenshots.enumerated()), id: \.element.id) { index, screenshot in
-                                ScreenshotCell(
-                                    asset: screenshot,
-                                    isSelected: viewModel.selectedIndices.contains(index),
-                                    onTap: {
-                                        viewModel.toggleSelection(at: index)
-                                    }
-                                )
+                            ForEach(sortedScreenshots) { screenshot in
+                                if let index = viewModel.screenshots.firstIndex(where: { $0.id == screenshot.id }) {
+                                    ScreenshotCell(
+                                        asset: screenshot,
+                                        isSelected: viewModel.selectedIndices.contains(index),
+                                        onTap: {
+                                            viewModel.toggleSelection(at: index)
+                                        }
+                                    )
+                                }
                             }
                         }
                         .padding(.bottom, 100)
@@ -81,6 +94,14 @@ struct ScreenshotsView: View {
         } message: {
             Text("Delete \(viewModel.selectedIndices.count) screenshots? This cannot be undone.")
         }
+        .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
+            ForEach(PhotoSortOption.allCases, id: \.self) { option in
+                Button(option.rawValue) {
+                    sortOption = option
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
         .onAppear {
             Task {
                 await viewModel.loadScreenshots()
@@ -104,21 +125,38 @@ struct ScreenshotsView: View {
     
     // MARK: - Selection Header
     
-    private var selectionHeader: some View {
+    private var summaryHeader: some View {
         HStack {
-            Button {
-                viewModel.selectAll()
-            } label: {
-                Text(viewModel.isAllSelected ? "Deselect All" : "Select All")
-                    .font(AppFonts.bodyM)
-                    .foregroundColor(AppColors.accentBlue)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("\(sortedScreenshots.count) screenshots")
+                    .font(AppFonts.subtitleL)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                Text(viewModel.formattedTotalSize)
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.textSecondary)
             }
             
             Spacer()
             
-            Text("\(viewModel.selectedIndices.count) selected")
-                .font(AppFonts.bodyM)
-                .foregroundColor(AppColors.textSecondary)
+            if viewModel.isSelectionMode {
+                Button {
+                    viewModel.selectAllNonFavorites()
+                } label: {
+                    Text(viewModel.isAllSelected ? "Deselect All" : "Select All")
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.accentBlue)
+                }
+            }
+            
+            // Sort button
+            Button {
+                showSortPicker = true
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 18))
+                    .foregroundColor(AppColors.accentBlue)
+            }
         }
         .padding(.horizontal, AppSpacing.screenPadding)
         .padding(.vertical, 12)
@@ -199,7 +237,7 @@ struct ScreenshotCell: View {
     
     var body: some View {
         Button(action: onTap) {
-            ZStack(alignment: .topTrailing) {
+            ZStack {
                 // Thumbnail
                 if let thumbnail = thumbnail {
                     Image(uiImage: thumbnail)
@@ -219,23 +257,42 @@ struct ScreenshotCell: View {
                         )
                 }
                 
-                // Selection indicator
-                ZStack {
-                    Circle()
-                        .fill(isSelected ? AppColors.accentBlue : Color.black.opacity(0.3))
-                        .frame(width: 24, height: 24)
-                    
-                    if isSelected {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 12, weight: .bold))
-                            .foregroundColor(.white)
-                    } else {
-                        Circle()
-                            .stroke(Color.white.opacity(0.8), lineWidth: 2)
-                            .frame(width: 22, height: 22)
+                // Top badges
+                VStack {
+                    HStack {
+                        // Selection indicator
+                        ZStack {
+                            Circle()
+                                .fill(isSelected ? AppColors.accentBlue : Color.black.opacity(0.3))
+                                .frame(width: 24, height: 24)
+                            
+                            if isSelected {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                            } else {
+                                Circle()
+                                    .stroke(Color.white.opacity(0.8), lineWidth: 2)
+                                    .frame(width: 22, height: 22)
+                            }
+                        }
+                        
+                        Spacer()
+                        
+                        // Favorite badge
+                        if asset.isFavorite {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 12))
+                                .foregroundColor(.red)
+                                .padding(4)
+                                .background(Color.white.opacity(0.9))
+                                .clipShape(Circle())
+                        }
                     }
+                    .padding(6)
+                    
+                    Spacer()
                 }
-                .padding(6)
                 
                 // Selection overlay
                 if isSelected {
@@ -273,7 +330,16 @@ class ScreenshotsViewModel: ObservableObject {
     private let photoService = PhotoService.shared
     
     var isAllSelected: Bool {
-        selectedIndices.count == screenshots.count && !screenshots.isEmpty
+        let nonFavoriteCount = screenshots.filter { !$0.isFavorite }.count
+        return selectedIndices.count == nonFavoriteCount && nonFavoriteCount > 0
+    }
+    
+    var totalSize: Int64 {
+        screenshots.reduce(Int64(0)) { $0 + $1.fileSize }
+    }
+    
+    var formattedTotalSize: String {
+        ByteCountFormatter.string(fromByteCount: totalSize, countStyle: .file)
     }
     
     var selectedSize: Int64 {
@@ -306,6 +372,17 @@ class ScreenshotsViewModel: ObservableObject {
             selectedIndices.removeAll()
         } else {
             selectedIndices = Set(0..<screenshots.count)
+        }
+    }
+    
+    /// Select all non-favorite screenshots
+    func selectAllNonFavorites() {
+        if isAllSelected {
+            selectedIndices.removeAll()
+        } else {
+            selectedIndices = Set(screenshots.enumerated().compactMap { index, asset in
+                asset.isFavorite ? nil : index
+            })
         }
     }
     

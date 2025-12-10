@@ -703,12 +703,14 @@ struct PhotoAsset: Identifiable, Hashable {
     let asset: PHAsset
     let creationDate: Date?
     let fileSize: Int64
+    let isFavorite: Bool
     var isSelected: Bool = false
     
     init(asset: PHAsset) {
         self.id = asset.localIdentifier
         self.asset = asset
         self.creationDate = asset.creationDate
+        self.isFavorite = asset.isFavorite
         
         // Медленная операция - вычисляем fileSize
         let resources = PHAssetResource.assetResources(for: asset)
@@ -722,6 +724,7 @@ struct PhotoAsset: Identifiable, Hashable {
         self.id = asset.localIdentifier
         self.asset = asset
         self.creationDate = asset.creationDate
+        self.isFavorite = asset.isFavorite
         self.fileSize = cachedFileSize
     }
     
@@ -835,6 +838,7 @@ struct LivePhotoAsset: Identifiable {
     let asset: PHAsset
     let photoSize: Int64
     let videoSize: Int64
+    let isFavorite: Bool
     var action: LivePhotoAction = .keepLive
     
     init(asset: PHAsset, photoSize: Int64, videoSize: Int64) {
@@ -842,6 +846,11 @@ struct LivePhotoAsset: Identifiable {
         self.asset = asset
         self.photoSize = photoSize
         self.videoSize = videoSize
+        self.isFavorite = asset.isFavorite
+    }
+    
+    var fileSize: Int64 {
+        totalSize
     }
     
     var totalSize: Int64 {

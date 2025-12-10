@@ -15,6 +15,19 @@ struct LivePhotosView: View {
     
     @State private var showPreview: Bool = false
     @State private var previewAsset: PHAsset? = nil
+    @State private var sortOption: PhotoSortOption = .recent
+    @State private var showSortPicker: Bool = false
+    
+    private var sortedLivePhotos: [LivePhotoAsset] {
+        switch sortOption {
+        case .recent:
+            return viewModel.livePhotos.sorted { ($0.asset.creationDate ?? .distantPast) > ($1.asset.creationDate ?? .distantPast) }
+        case .oldest:
+            return viewModel.livePhotos.sorted { ($0.asset.creationDate ?? .distantPast) < ($1.asset.creationDate ?? .distantPast) }
+        case .largest:
+            return viewModel.livePhotos.sorted { $0.fileSize > $1.fileSize }
+        }
+    }
     
     // MARK: - Body
     
@@ -91,6 +104,14 @@ struct LivePhotosView: View {
         }
         .task {
             await viewModel.loadLivePhotos()
+        }
+        .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
+            ForEach(PhotoSortOption.allCases, id: \.self) { option in
+                Button(option.rawValue) {
+                    sortOption = option
+                }
+            }
+            Button("Cancel", role: .cancel) {}
         }
     }
     
@@ -194,7 +215,7 @@ struct LivePhotosView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(viewModel.livePhotos.count)")
+                    Text("\(sortedLivePhotos.count)")
                         .font(AppFonts.titleM)
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -202,6 +223,16 @@ struct LivePhotosView: View {
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }
+                
+                // Sort button
+                Button {
+                    showSortPicker = true
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .font(.system(size: 18))
+                        .foregroundColor(AppColors.accentBlue)
+                }
+                .padding(.leading, 8)
             }
             
             // Action breakdown
@@ -250,7 +281,8 @@ struct LivePhotosView: View {
     private var livePhotosList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(Array(viewModel.livePhotos.enumerated()), id: \.element.id) { index, livePhoto in
+                ForEach(sortedLivePhotos) { livePhoto in
+                    let index = viewModel.livePhotos.firstIndex(where: { $0.id == livePhoto.id }) ?? 0
                     LivePhotoCard(
                         livePhoto: Binding(
                             get: { viewModel.livePhotos[index] },
@@ -492,7 +524,7 @@ struct LivePhotoCard: View {
                 }
                 
                 // Large Thumbnail - тап открывает превью
-                ZStack(alignment: .bottomLeading) {
+                ZStack {
                     if let thumbnail = thumbnail {
                         Image(uiImage: thumbnail)
                             .resizable()
@@ -507,22 +539,44 @@ struct LivePhotoCard: View {
                             .cornerRadius(16)
                     }
                     
-                    // Live Badge
-                    Text("LIVE")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            LinearGradient(
-                                colors: [AppColors.accentBlue, AppColors.accentPurple],
-                                startPoint: .leading,
-                                endPoint: .trailing
-                            )
-                        )
-                        .cornerRadius(6)
+                    VStack {
+                        // Favorite badge at top right
+                        HStack {
+                            Spacer()
+                            if livePhoto.isFavorite {
+                                Image(systemName: "heart.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.red)
+                                    .padding(4)
+                                    .background(Color.white.opacity(0.9))
+                                    .clipShape(Circle())
+                            }
+                        }
                         .padding(8)
+                        
+                        Spacer()
+                        
+                        // Live Badge at bottom left
+                        HStack {
+                            Text("LIVE")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    LinearGradient(
+                                        colors: [AppColors.accentBlue, AppColors.accentPurple],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                .cornerRadius(6)
+                            Spacer()
+                        }
+                        .padding(8)
+                    }
                 }
+                .frame(width: 120, height: 120)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     onThumbnailTap()

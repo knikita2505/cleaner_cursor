@@ -172,6 +172,7 @@ struct VideoAsset: Identifiable, Hashable {
     let creationDate: Date?
     let duration: TimeInterval
     let fileSize: Int64
+    let isFavorite: Bool
     var isSelected: Bool = false
     
     init(asset: PHAsset) {
@@ -179,6 +180,7 @@ struct VideoAsset: Identifiable, Hashable {
         self.asset = asset
         self.creationDate = asset.creationDate
         self.duration = asset.duration
+        self.isFavorite = asset.isFavorite
         
         let resources = PHAssetResource.assetResources(for: asset)
         self.fileSize = resources.first.flatMap { resource in

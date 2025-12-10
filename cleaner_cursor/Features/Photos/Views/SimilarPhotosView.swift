@@ -1,6 +1,13 @@
 import SwiftUI
 import Photos
 
+// MARK: - Sort Option
+enum PhotoSortOption: String, CaseIterable {
+    case recent = "Recent"
+    case oldest = "Oldest"
+    case largest = "Largest"
+}
+
 // MARK: - Similar Photos View
 /// Экран для очистки похожих фотографий согласно photos_similar.md
 
@@ -13,6 +20,8 @@ struct SimilarPhotosView: View {
     
     @State private var showDeleteConfirmation: Bool = false
     @State private var expandedGroupId: String? = nil
+    @State private var sortOption: PhotoSortOption = .recent
+    @State private var showSortPicker: Bool = false
     
     // MARK: - Body
     
@@ -72,6 +81,14 @@ struct SimilarPhotosView: View {
         .task {
             await viewModel.load()
         }
+        .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
+            ForEach(PhotoSortOption.allCases, id: \.self) { option in
+                Button(option.rawValue) {
+                    sortOption = option
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
     }
     
     // MARK: - Summary Bar
@@ -84,7 +101,7 @@ struct SimilarPhotosView: View {
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.textTertiary)
                 
-                Text("\(viewModel.groups.count)")
+                Text("\(sortedGroups.count)")
                     .font(AppFonts.subtitleL)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -92,15 +109,15 @@ struct SimilarPhotosView: View {
             Divider()
                 .frame(height: 30)
             
-            // Suggested to delete
+            // Photos count
             VStack(alignment: .leading, spacing: 2) {
-                Text("Suggested to delete")
+                Text("Photos")
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.textTertiary)
                 
-                Text("\(viewModel.suggestedToDelete) photos")
+                Text("\(viewModel.totalPhotosCount)")
                     .font(AppFonts.subtitleL)
-                    .foregroundColor(AppColors.statusWarning)
+                    .foregroundColor(AppColors.textPrimary)
             }
             
             Divider()
@@ -118,10 +135,30 @@ struct SimilarPhotosView: View {
             }
             
             Spacer()
+            
+            // Sort button
+            Button {
+                showSortPicker = true
+            } label: {
+                Image(systemName: "arrow.up.arrow.down")
+                    .font(.system(size: 18))
+                    .foregroundColor(AppColors.accentBlue)
+            }
         }
         .padding(.horizontal, AppSpacing.screenPadding)
         .padding(.vertical, 12)
         .background(AppColors.backgroundSecondary)
+    }
+    
+    private var sortedGroups: [SimilarGroupItem] {
+        switch sortOption {
+        case .recent:
+            return viewModel.groups.sorted { ($0.assets.first?.photoAsset.creationDate ?? .distantPast) > ($1.assets.first?.photoAsset.creationDate ?? .distantPast) }
+        case .oldest:
+            return viewModel.groups.sorted { ($0.assets.first?.photoAsset.creationDate ?? .distantPast) < ($1.assets.first?.photoAsset.creationDate ?? .distantPast) }
+        case .largest:
+            return viewModel.groups.sorted { $0.totalSize > $1.totalSize }
+        }
     }
     
     // MARK: - Groups List
@@ -129,23 +166,25 @@ struct SimilarPhotosView: View {
     private var groupsList: some View {
         ScrollView {
             LazyVStack(spacing: 12) {
-                ForEach(viewModel.groups.indices, id: \.self) { groupIndex in
-                    SimilarGroupSection(
-                        group: $viewModel.groups[groupIndex],
-                        isExpanded: expandedGroupId == viewModel.groups[groupIndex].id,
-                        onToggleExpand: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
-                                if expandedGroupId == viewModel.groups[groupIndex].id {
-                                    expandedGroupId = nil
-                                } else {
-                                    expandedGroupId = viewModel.groups[groupIndex].id
+                ForEach(sortedGroups) { group in
+                    if let groupIndex = viewModel.groups.firstIndex(where: { $0.id == group.id }) {
+                        SimilarGroupSection(
+                            group: $viewModel.groups[groupIndex],
+                            isExpanded: expandedGroupId == group.id,
+                            onToggleExpand: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                    if expandedGroupId == group.id {
+                                        expandedGroupId = nil
+                                    } else {
+                                        expandedGroupId = group.id
+                                    }
                                 }
+                            },
+                            onToggleDelete: { assetIndex in
+                                viewModel.toggleDelete(groupIndex: groupIndex, assetIndex: assetIndex)
                             }
-                        },
-                        onToggleDelete: { assetIndex in
-                            viewModel.toggleDelete(groupIndex: groupIndex, assetIndex: assetIndex)
-                        }
-                    )
+                        )
+                    }
                 }
             }
             .padding(AppSpacing.screenPadding)
@@ -162,12 +201,12 @@ struct SimilarPhotosView: View {
             
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("\(viewModel.totalToDelete) photos selected")
-                        .font(AppFonts.subtitleM)
+                    Text("\(viewModel.totalToDelete) selected")
+                        .font(AppFonts.caption)
                         .foregroundColor(AppColors.textPrimary)
                     
-                    Text("\(viewModel.formattedSelectedSize) to clean")
-                        .font(AppFonts.caption)
+                    Text(viewModel.formattedSelectedSize)
+                        .font(AppFonts.subtitleM)
                         .foregroundColor(AppColors.statusSuccess)
                 }
                 
@@ -176,16 +215,17 @@ struct SimilarPhotosView: View {
                 Button {
                     showDeleteConfirmation = true
                 } label: {
-                    Text("Delete selected")
-                        .font(AppFonts.buttonPrimary)
+                    Text("Delete")
+                        .font(AppFonts.subtitleM)
                         .foregroundColor(.white)
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 14)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
                         .background(AppColors.statusError)
-                        .cornerRadius(AppSpacing.buttonRadius)
+                        .cornerRadius(10)
                 }
             }
-            .padding(AppSpacing.screenPadding)
+            .padding(.horizontal, AppSpacing.screenPadding)
+            .padding(.vertical, 10)
             .background(AppColors.backgroundSecondary)
         }
     }
@@ -281,126 +321,132 @@ struct SimilarGroupSection: View {
     let onToggleDelete: (Int) -> Void
     
     private let expandedColumns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8)
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10),
+        GridItem(.flexible(), spacing: 10)
     ]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             Button(action: onToggleExpand) {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Info row
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text("\(group.assets.count) similar photos")
-                                    .font(AppFonts.subtitleM)
-                                    .foregroundColor(AppColors.textPrimary)
-                                
-                                if group.isBurst {
-                                    Text("BURST")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 5)
-                                        .padding(.vertical, 2)
-                                        .background(AppColors.accentPurple)
-                                        .cornerRadius(4)
-                                }
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text("\(group.assets.count) similar photos")
+                                .font(AppFonts.subtitleM)
+                                .foregroundColor(AppColors.textPrimary)
+                            
+                            if group.isBurst {
+                                Text("BURST")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(AppColors.accentPurple)
+                                    .cornerRadius(4)
                             }
-                            
-                            Text(group.dateRange)
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.textTertiary)
                         }
                         
-                        Spacer()
-                        
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(group.deleteCount) to delete")
-                                .font(AppFonts.caption)
-                                .foregroundColor(group.deleteCount > 0 ? AppColors.statusError : AppColors.textTertiary)
-                            
-                            Text("Save \(group.formattedSavings)")
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.statusSuccess)
-                        }
-                        
-                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                            .font(.system(size: 14))
+                        Text(group.dateRange)
+                            .font(AppFonts.caption)
                             .foregroundColor(AppColors.textTertiary)
-                            .padding(.leading, 8)
                     }
                     
-                    // Preview (collapsed) with status indicators
-                    if !isExpanded {
-                        HStack(spacing: -8) {
-                            ForEach(Array(group.assets.prefix(6).enumerated()), id: \.element.id) { index, asset in
-                                ZStack(alignment: .topLeading) {
-                                    SimilarThumbnail(asset: asset.photoAsset, size: 56)
-                                    
-                                    // Status indicator
-                                    if !asset.isMarkedForDeletion {
-                                        // Green checkmark for Keep
-                                        Circle()
-                                            .fill(AppColors.statusSuccess)
-                                            .frame(width: 18, height: 18)
-                                            .overlay(
-                                                Image(systemName: "checkmark")
-                                                    .font(.system(size: 9, weight: .bold))
-                                                    .foregroundColor(.white)
-                                            )
-                                            .offset(x: -2, y: -2)
-                                    } else {
-                                        // Red X for Delete
-                                        Circle()
-                                            .fill(AppColors.statusError)
-                                            .frame(width: 18, height: 18)
-                                            .overlay(
-                                                Image(systemName: "xmark")
-                                                    .font(.system(size: 9, weight: .bold))
-                                                    .foregroundColor(.white)
-                                            )
-                                            .offset(x: -2, y: -2)
-                                    }
-                                }
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .stroke(
-                                            asset.isMarkedForDeletion ? AppColors.statusError.opacity(0.5) : AppColors.statusSuccess,
-                                            lineWidth: 2
-                                        )
-                                )
-                                .zIndex(Double(6 - index))
-                            }
-                            
-                            if group.assets.count > 6 {
-                                ZStack {
-                                    Circle()
-                                        .fill(AppColors.backgroundCard)
-                                        .frame(width: 48, height: 48)
-                                    
-                                    Text("+\(group.assets.count - 6)")
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(AppColors.textSecondary)
-                                }
-                            }
-                            
-                            Spacer()
-                        }
+                    Spacer()
+                    
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text("\(group.deleteCount) to delete")
+                            .font(AppFonts.caption)
+                            .foregroundColor(group.deleteCount > 0 ? AppColors.statusError : AppColors.textTertiary)
+                        
+                        Text("Save \(group.formattedSavings)")
+                            .font(AppFonts.caption)
+                            .foregroundColor(AppColors.statusSuccess)
                     }
+                    
+                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.textTertiary)
+                        .padding(.leading, 8)
                 }
             }
             .buttonStyle(.plain)
             .padding(AppSpacing.containerPadding)
             
-            // Expanded grid
+            // Preview (collapsed) - horizontal carousel with tap to toggle
+            if !isExpanded {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(group.assets.enumerated()), id: \.element.id) { index, asset in
+                            Button {
+                                onToggleDelete(index)
+                            } label: {
+                                ZStack {
+                                    SimilarThumbnail(asset: asset.photoAsset, size: 130)
+                                    
+                                    // Top badges
+                                    VStack {
+                                        HStack {
+                                            // Status indicator
+                                            if !asset.isMarkedForDeletion {
+                                                Circle()
+                                                    .fill(AppColors.statusSuccess)
+                                                    .frame(width: 26, height: 26)
+                                                    .overlay(
+                                                        Image(systemName: "checkmark")
+                                                            .font(.system(size: 13, weight: .bold))
+                                                            .foregroundColor(.white)
+                                                    )
+                                            } else {
+                                                Circle()
+                                                    .fill(AppColors.statusError)
+                                                    .frame(width: 26, height: 26)
+                                                    .overlay(
+                                                        Image(systemName: "xmark")
+                                                            .font(.system(size: 13, weight: .bold))
+                                                            .foregroundColor(.white)
+                                                    )
+                                            }
+                                            
+                                            Spacer()
+                                            
+                                            // Favorite badge
+                                            if asset.photoAsset.isFavorite {
+                                                Image(systemName: "heart.fill")
+                                                    .font(.system(size: 12))
+                                                    .foregroundColor(.red)
+                                                    .padding(3)
+                                                    .background(Color.white.opacity(0.9))
+                                                    .clipShape(Circle())
+                                            }
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(6)
+                                }
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(
+                                            asset.isMarkedForDeletion ? AppColors.statusError.opacity(0.5) : AppColors.statusSuccess,
+                                            lineWidth: 3
+                                        )
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(.horizontal, AppSpacing.containerPadding)
+                    .padding(.bottom, 12)
+                }
+            }
+            
+            // Expanded - vertical grid
             if isExpanded {
                 Divider()
                     .padding(.horizontal, AppSpacing.containerPadding)
                 
-                LazyVGrid(columns: expandedColumns, spacing: 8) {
+                LazyVGrid(columns: expandedColumns, spacing: 10) {
                     ForEach(group.assets.indices, id: \.self) { index in
                         SimilarPhotoItem(
                             asset: group.assets[index],
@@ -432,39 +478,52 @@ struct SimilarPhotoItem: View {
                     SimilarThumbnail(asset: asset.photoAsset, size: geometry.size.width)
                         .frame(width: geometry.size.width, height: geometry.size.width)
                         .clipped()
-                        .cornerRadius(8)
+                        .cornerRadius(12)
                         .overlay(
-                            RoundedRectangle(cornerRadius: 8)
+                            RoundedRectangle(cornerRadius: 12)
                                 .stroke(
                                     asset.isMarkedForDeletion ? AppColors.statusError : 
                                         (isBest ? AppColors.statusSuccess : Color.clear),
-                                    lineWidth: 2
+                                    lineWidth: 3
                                 )
                         )
                         .opacity(asset.isMarkedForDeletion ? 0.6 : 1.0)
                     
-                    // Badges
-                    if isBest && !asset.isMarkedForDeletion {
-                        Text("Best")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(AppColors.statusSuccess)
-                            .cornerRadius(4)
-                            .padding(4)
-                    } else if asset.isMarkedForDeletion {
-                        ZStack {
-                            Circle()
-                                .fill(AppColors.statusError)
-                                .frame(width: 20, height: 20)
-                            
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 10, weight: .bold))
+                    // Top badges
+                    HStack {
+                        if isBest && !asset.isMarkedForDeletion {
+                            Text("Best")
+                                .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(AppColors.statusSuccess)
+                                .cornerRadius(6)
+                        } else if asset.isMarkedForDeletion {
+                            ZStack {
+                                Circle()
+                                    .fill(AppColors.statusError)
+                                    .frame(width: 26, height: 26)
+                                
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
                         }
-                        .padding(4)
+                        
+                        Spacer()
+                        
+                        // Favorite badge
+                        if asset.photoAsset.isFavorite {
+                            Image(systemName: "heart.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.red)
+                                .padding(4)
+                                .background(Color.white.opacity(0.9))
+                                .clipShape(Circle())
+                        }
                     }
+                    .padding(6)
                 }
             }
             .aspectRatio(1, contentMode: .fit)
@@ -499,7 +558,7 @@ struct SimilarThumbnail: View {
         }
         .frame(width: size, height: size)
         .clipped()
-        .cornerRadius(8)
+        .cornerRadius(10)
         .onAppear {
             loadThumbnail()
         }
@@ -507,7 +566,7 @@ struct SimilarThumbnail: View {
     
     @MainActor
     private func loadThumbnail() {
-        let requestSize = size ?? 200
+        let requestSize = max(size ?? 110, 110) * 2 // Retina
         PhotoService.shared.loadThumbnail(
             for: asset.asset,
             size: CGSize(width: requestSize, height: requestSize)
@@ -535,10 +594,8 @@ final class SimilarPhotosViewModel: ObservableObject {
         groups.reduce(0) { $0 + $1.deleteCount }
     }
     
-    var suggestedToDelete: Int {
-        groups.reduce(0) { result, group in
-            result + max(0, group.assets.count - 1)
-        }
+    var totalPhotosCount: Int {
+        groups.reduce(0) { $0 + $1.assets.count }
     }
     
     var totalSavings: Int64 {
@@ -563,10 +620,18 @@ final class SimilarPhotosViewModel: ObservableObject {
     }
     
     var isAllSelected: Bool {
-        // Все группы имеют выбранными все фото кроме лучшей (bestAssetIndex)
+        // Проверяем что все НЕ-избранные и НЕ-лучшие фото помечены к удалению
         groups.allSatisfy { group in
-            let expectedDeleteCount = group.assets.count - 1
-            return group.deleteCount == expectedDeleteCount
+            for (index, asset) in group.assets.enumerated() {
+                let isBest = index == group.bestAssetIndex
+                let isFavorite = asset.photoAsset.isFavorite
+                
+                // Если фото НЕ лучшее и НЕ избранное, оно должно быть помечено к удалению
+                if !isBest && !isFavorite && !asset.isMarkedForDeletion {
+                    return false
+                }
+            }
+            return true
         }
     }
     
@@ -579,9 +644,11 @@ final class SimilarPhotosViewModel: ObservableObject {
         if photoService.similarScanned {
             groups = photoService.cachedSimilarPhotos.map { group in
                 let items = group.assets.enumerated().map { index, asset in
-                    SimilarAssetItem(
+                    // Избранные НЕ помечаем к удалению по умолчанию
+                    let shouldDelete = index != group.bestAssetIndex && !asset.isFavorite
+                    return SimilarAssetItem(
                         photoAsset: asset,
-                        isMarkedForDeletion: index != group.bestAssetIndex
+                        isMarkedForDeletion: shouldDelete
                     )
                 }
                 
@@ -601,9 +668,11 @@ final class SimilarPhotosViewModel: ObservableObject {
         
         groups = photoService.cachedSimilarPhotos.map { group in
             let items = group.assets.enumerated().map { index, asset in
-                SimilarAssetItem(
+                // Избранные НЕ помечаем к удалению по умолчанию
+                let shouldDelete = index != group.bestAssetIndex && !asset.isFavorite
+                return SimilarAssetItem(
                     photoAsset: asset,
-                    isMarkedForDeletion: index != group.bestAssetIndex
+                    isMarkedForDeletion: shouldDelete
                 )
             }
             
@@ -637,34 +706,52 @@ final class SimilarPhotosViewModel: ObservableObject {
     }
     
     func toggleSelectAll() {
-        if isAllSelected {
-            // Deselect all - снять отметку удаления со всех фото
-            for i in groups.indices {
-                for j in groups[i].assets.indices {
-                    groups[i].assets[j].isMarkedForDeletion = false
+        let selectAll = !isAllSelected
+        let currentGroups = groups
+        
+        // Выполняем в фоне чтобы не блокировать UI
+        Task.detached(priority: .userInitiated) {
+            var result: [SimilarGroupItem] = []
+            
+            for var group in currentGroups {
+                for j in group.assets.indices {
+                    if selectAll {
+                        // Не помечаем к удалению: лучшую (bestAssetIndex) и избранные
+                        let isBest = j == group.bestAssetIndex
+                        let isFavorite = group.assets[j].photoAsset.isFavorite
+                        group.assets[j].isMarkedForDeletion = !isBest && !isFavorite
+                    } else {
+                        group.assets[j].isMarkedForDeletion = false
+                    }
                 }
+                result.append(group)
             }
-        } else {
-            // Select all - отметить все кроме лучшей для удаления
-            for i in groups.indices {
-                for j in groups[i].assets.indices {
-                    groups[i].assets[j].isMarkedForDeletion = j != groups[i].bestAssetIndex
-                }
+            
+            await MainActor.run { [result] in
+                self.groups = result
+                HapticManager.mediumImpact()
             }
         }
-        HapticManager.mediumImpact()
     }
     
     func deleteSelected() async {
-        var allAssetsToDelete: [PHAsset] = []
+        var assetsToDeleteIds: Set<String> = []
         
+        for group in groups {
+            for asset in group.assets where asset.isMarkedForDeletion {
+                assetsToDeleteIds.insert(asset.id)
+            }
+        }
+        
+        guard !assetsToDeleteIds.isEmpty else { return }
+        
+        // Собираем PHAsset'ы для удаления
+        var allAssetsToDelete: [PHAsset] = []
         for group in groups {
             for asset in group.assets where asset.isMarkedForDeletion {
                 allAssetsToDelete.append(asset.photoAsset.asset)
             }
         }
-        
-        guard !allAssetsToDelete.isEmpty else { return }
         
         isDeleting = true
         deleteProgress = 0
@@ -686,14 +773,36 @@ final class SimilarPhotosViewModel: ObservableObject {
             HapticManager.success()
             SubscriptionService.shared.recordCleaning(count: allAssetsToDelete.count)
             
-            await load()
+            // Сбрасываем прогресс бар
+            isDeleting = false
+            deleteProgress = 0
+            
+            // Удаляем фото из локального списка БЕЗ перезагрузки
+            removeDeletedPhotos(ids: assetsToDeleteIds)
             
         } catch {
             print("Failed to delete similar photos: \(error)")
             HapticManager.error()
+            isDeleting = false
+            deleteProgress = 0
+        }
+    }
+    
+    private func removeDeletedPhotos(ids: Set<String>) {
+        // Удаляем фото из групп
+        for i in groups.indices.reversed() {
+            groups[i].assets.removeAll { ids.contains($0.id) }
         }
         
-        isDeleting = false
+        // Удаляем пустые группы
+        groups.removeAll { $0.assets.isEmpty }
+        
+        // Обновляем bestAssetIndex для оставшихся групп
+        for i in groups.indices {
+            if groups[i].bestAssetIndex >= groups[i].assets.count {
+                groups[i].bestAssetIndex = 0
+            }
+        }
     }
 }
 
@@ -712,6 +821,10 @@ struct SimilarGroupItem: Identifiable {
     var savingsSize: Int64 {
         assets.filter { $0.isMarkedForDeletion }
             .reduce(Int64(0)) { $0 + $1.photoAsset.fileSize }
+    }
+    
+    var totalSize: Int64 {
+        assets.reduce(Int64(0)) { $0 + $1.photoAsset.fileSize }
     }
     
     var formattedSavings: String {
