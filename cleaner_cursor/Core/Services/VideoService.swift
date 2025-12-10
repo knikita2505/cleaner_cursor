@@ -50,6 +50,21 @@ final class VideoService: ObservableObject {
         return largeVideos.sorted { $0.fileSize > $1.fileSize }
     }
     
+    /// Получить короткие видео (< 10 сек)
+    nonisolated func fetchShortVideos(maxDuration: TimeInterval = 10) -> PHFetchResult<PHAsset> {
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType = %d AND duration < %f", PHAssetMediaType.video.rawValue, maxDuration)
+        return PHAsset.fetchAssets(with: options)
+    }
+    
+    // MARK: - Counts
+    
+    var shortVideosCount: Int {
+        guard isAuthorized else { return 0 }
+        return fetchShortVideos().count
+    }
+    
     // MARK: - Load Thumbnail
     
     func loadThumbnail(for asset: PHAsset, size: CGSize, completion: @escaping (UIImage?) -> Void) {
@@ -157,6 +172,7 @@ struct VideoAsset: Identifiable, Hashable {
     let creationDate: Date?
     let duration: TimeInterval
     let fileSize: Int64
+    let isFavorite: Bool
     var isSelected: Bool = false
     
     init(asset: PHAsset) {
@@ -164,6 +180,7 @@ struct VideoAsset: Identifiable, Hashable {
         self.asset = asset
         self.creationDate = asset.creationDate
         self.duration = asset.duration
+        self.isFavorite = asset.isFavorite
         
         let resources = PHAssetResource.assetResources(for: asset)
         self.fileSize = resources.first.flatMap { resource in
@@ -179,6 +196,14 @@ struct VideoAsset: Identifiable, Hashable {
     
     var formattedSize: String {
         ByteCountFormatter.string(fromByteCount: fileSize, countStyle: .file)
+    }
+    
+    var formattedDate: String {
+        guard let date = creationDate else { return "Unknown" }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
     }
     
     func hash(into hasher: inout Hasher) {

@@ -140,13 +140,11 @@ struct NavigationDestinationModifier: ViewModifier {
                 case .similar:
                     SimilarPhotosView()
                 case .videos:
-                    Text("Videos") // TODO: Implement
+                    VideosView()
                 case .shortVideos:
-                    Text("Short Videos") // TODO: Implement
+                    ShortVideosView()
                 case .livePhotos:
                     LivePhotosView()
-                case .screenRecordings:
-                    Text("Screen Recordings") // TODO: Implement
                 case .duplicates:
                     DuplicatesView()
                 case .burst:

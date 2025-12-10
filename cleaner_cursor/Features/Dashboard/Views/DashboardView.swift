@@ -50,14 +50,14 @@ struct DashboardView: View {
             .navigationBarHidden(true)
             .withNavigationDestinations()
             .onAppear {
-                // Start background scan - non-blocking
-                viewModel.startScanIfNeeded()
+                // Animate storage indicator first
+                withAnimation(.easeOut(duration: 0.5)) {
+                    animateStorage = true
+                }
                 
-                // Animate storage indicator
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    withAnimation(.easeOut(duration: 0.5)) {
-                        animateStorage = true
-                    }
+                // Start background scan AFTER UI is rendered (не блокирует UI)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    viewModel.startScanIfNeeded()
                 }
             }
             .sheet(isPresented: $showPaywall) {
@@ -137,65 +137,68 @@ struct DashboardView: View {
     // MARK: - Storage Summary Card
     
     private var storageSummaryCard: some View {
-        VStack(spacing: 20) {
-            HStack(alignment: .top, spacing: 20) {
-                // Left side - Text info
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("Space to clean")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                    
-                    // Big number with animation
-                    Text(viewModel.formattedSpaceToClean)
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
-                        .foregroundColor(AppColors.textPrimary)
-                        .scaleEffect(animateStorage ? 1.0 : 0.8)
-                        .opacity(animateStorage ? 1.0 : 0.5)
-                        .animation(.spring(response: 0.5), value: viewModel.spaceToClean)
-                    
-                    // Mini stats
-                    VStack(alignment: .leading, spacing: 6) {
-                        miniStatRow(label: "Clutter", value: viewModel.formattedClutter, color: AppColors.statusWarning)
-                        miniStatRow(label: "Apps & data", value: viewModel.formattedAppsData, color: AppColors.accentBlue)
-                        miniStatRow(label: "Total used", value: viewModel.formattedTotal, color: AppColors.textTertiary)
-                    }
-                }
+        HStack(alignment: .top, spacing: 16) {
+            // Left side - Text info + Stats
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Space to clean")
+                    .font(AppFonts.caption)
+                    .foregroundColor(AppColors.textTertiary)
                 
-                Spacer()
+                // Big number - always fits in one line
+                Text(viewModel.formattedSpaceToClean)
+                    .font(.system(size: 38, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.5), value: viewModel.spaceToClean)
                 
-                // Right side - Circular Progress
-                ZStack {
-                    // Background ring
-                    Circle()
-                        .stroke(AppColors.progressInactive, lineWidth: 12)
-                        .frame(width: 100, height: 100)
-                    
-                    // Progress ring
-                    Circle()
-                        .trim(from: 0, to: animateStorage ? viewModel.cleanablePercentage : 0)
-                        .stroke(
-                            AngularGradient(
-                                colors: [AppColors.accentBlue, AppColors.accentPurple, AppColors.accentBlue],
-                                center: .center
-                            ),
-                            style: StrokeStyle(lineWidth: 12, lineCap: .round)
-                        )
-                        .frame(width: 100, height: 100)
-                        .rotationEffect(.degrees(-90))
-                        .animation(.easeOut(duration: 1.0), value: animateStorage)
-                        .animation(.easeOut(duration: 0.5), value: viewModel.cleanablePercentage)
-                    
-                    // Center text
-                    VStack(spacing: 2) {
-                        Text("\(Int(viewModel.cleanablePercentage * 100))%")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        Text("clutter")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundColor(AppColors.textTertiary)
+                // Stats aligned with number
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 16) {
+                        miniStatItem(label: "Clutter", value: viewModel.formattedClutter, color: Color(hex: "FF496C"))
+                        miniStatItem(label: "Used", value: viewModel.formattedUsed, color: Color(hex: "87CEFA"))
                     }
+                    miniStatItem(label: "Total", value: viewModel.formattedTotal, color: AppColors.textSecondary)
                 }
+            }
+            
+            Spacer()
+            
+            // Right side - Ring Progress
+            ZStack {
+                Circle()
+                    .stroke(AppColors.progressInactive, lineWidth: 10)
+                    .frame(width: 70, height: 70)
+                
+                // Used storage ring
+                Circle()
+                    .trim(from: 0, to: animateStorage ? viewModel.storageUsagePercentage : 0)
+                    .stroke(
+                        Color(hex: "87CEFA"),
+                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                    )
+                    .frame(width: 70, height: 70)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 1.0), value: animateStorage)
+                    .animation(.easeOut(duration: 0.8), value: viewModel.storageUsagePercentage)
+                
+                // Clutter ring
+                Circle()
+                    .trim(from: 0, to: animateStorage ? viewModel.cleanablePercentage : 0)
+                    .stroke(
+                        Color(hex: "FF496C"),
+                        style: StrokeStyle(lineWidth: 10, lineCap: .round)
+                    )
+                    .frame(width: 70, height: 70)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.easeOut(duration: 0.8), value: animateStorage)
+                    .animation(.easeOut(duration: 0.8), value: viewModel.cleanablePercentage)
+                
+                // Center percentage
+                Text("\(Int(viewModel.storageUsagePercentage * 100))%")
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundColor(AppColors.textPrimary)
             }
         }
         .padding(AppSpacing.containerPaddingLarge)
@@ -204,21 +207,15 @@ struct DashboardView: View {
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
     }
     
-    private func miniStatRow(label: String, value: String, color: Color) -> some View {
-        HStack(spacing: 8) {
+    private func miniStatItem(label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 4) {
             Circle()
                 .fill(color)
-                .frame(width: 8, height: 8)
-            
-            Text(label)
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textTertiary)
-            
-            Spacer()
-            
-            Text(value)
-                .font(AppFonts.caption)
+                .frame(width: 6, height: 6)
+            Text("\(label) \(value)")
+                .font(.system(size: 11))
                 .foregroundColor(AppColors.textSecondary)
+                .fixedSize()
         }
     }
     
@@ -226,36 +223,9 @@ struct DashboardView: View {
     
     private var categoriesGrid: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text("Categories")
-                    .font(AppFonts.subtitleL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Spacer()
-                
-                // Scanning indicator
-                if viewModel.isScanning {
-                    HStack(spacing: 6) {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle(tint: AppColors.accentBlue))
-                            .scaleEffect(0.7)
-                        
-                        Text(viewModel.scanProgress)
-                            .font(.system(size: 11))
-                            .foregroundColor(AppColors.textTertiary)
-                            .lineLimit(1)
-                    }
-                } else {
-                    // Refresh button
-                    Button {
-                        viewModel.forceRefresh()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 16))
-                            .foregroundColor(AppColors.textTertiary)
-                    }
-                }
-            }
+            Text("Categories")
+                .font(AppFonts.subtitleL)
+                .foregroundColor(AppColors.textPrimary)
             
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.categories) { category in
@@ -280,18 +250,18 @@ struct DashboardView: View {
         }
         
         switch category.id {
-        case "screenshots":
-            appState.dashboardPath.append(PhotoCategoryNav.screenshots)
         case "duplicates":
             appState.dashboardPath.append(PhotoCategoryNav.duplicates)
         case "similar":
             appState.dashboardPath.append(PhotoCategoryNav.similar)
+        case "screenshots":
+            appState.dashboardPath.append(PhotoCategoryNav.screenshots)
         case "live_photos":
             appState.dashboardPath.append(PhotoCategoryNav.livePhotos)
-        case "big_files":
-            appState.dashboardPath.append(PhotoCategoryNav.bigFiles)
         case "videos":
             appState.dashboardPath.append(PhotoCategoryNav.videos)
+        case "short_videos":
+            appState.dashboardPath.append(PhotoCategoryNav.shortVideos)
         default:
             break
         }
@@ -306,7 +276,6 @@ enum PhotoCategoryNav: String, Hashable {
     case videos
     case shortVideos
     case livePhotos
-    case screenRecordings
     case duplicates
     case burst
     case bigFiles
@@ -322,83 +291,73 @@ struct CategoryCard: View {
     
     var body: some View {
         Button(action: action) {
-            VStack(alignment: .leading, spacing: 0) {
-                // Thumbnail area
-                ZStack {
-                    // Background gradient
-                    LinearGradient(
-                        colors: [
-                            category.color.opacity(0.3),
-                            category.color.opacity(0.1)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            ZStack(alignment: .bottomLeading) {
+                // Background - full card is thumbnail or gradient
+                if let thumbnail = category.thumbnail {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 110)
+                        .clipped()
+                        .opacity(isLocked ? 0.5 : 1.0)
+                } else {
+                    // Dark gray placeholder (одинаковый для всех при сканировании или пустых)
+                    Color(white: 0.2).opacity(0.8)
                     
-                    // Thumbnail or icon
-                    if let thumbnail = category.thumbnail {
-                        Image(uiImage: thumbnail)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .opacity(isLocked ? 0.5 : 1.0)
-                    } else {
-                        Image(systemName: category.icon)
-                            .font(.system(size: 32, weight: .medium))
-                            .foregroundColor(category.color)
-                    }
-                    
-                    // Lock overlay
-                    if isLocked {
-                        Color.black.opacity(0.4)
-                        
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                    }
-                    
-                    // Count badge
-                    if category.count > 0 && !isLocked {
-                        VStack {
-                            HStack {
-                                Spacer()
-                                
-                                Text("\(category.count)")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 4)
-                                    .background(category.color)
-                                    .cornerRadius(10)
-                                    .padding(8)
-                            }
-                            Spacer()
-                        }
-                    }
+                    // Icon in center
+                    Image(systemName: category.icon)
+                        .font(.system(size: 40, weight: .medium))
+                        .foregroundColor(.white.opacity(0.3))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .frame(height: 100)
-                .clipped()
                 
-                // Info section
+                // Dark gradient overlay for text readability
+                LinearGradient(
+                    colors: [
+                        Color.black.opacity(0),
+                        Color.black.opacity(0.6)
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                
+                // Lock overlay
+                if isLocked && !category.isLoading {
+                    Color.black.opacity(0.5)
+                    
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                
+                // Text content at bottom
                 VStack(alignment: .leading, spacing: 4) {
                     Text(category.title)
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(AppColors.textPrimary)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(.white)
                         .lineLimit(1)
                     
-                    Text(category.formattedSize)
-                        .font(AppFonts.caption)
-                        .foregroundColor(category.isEmpty ? AppColors.textTertiary : category.color)
+                    if category.isLoading && category.size == 0 {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                            .scaleEffect(0.8)
+                    } else {
+                        Text(category.formattedSize)
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(.white)
+                    }
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(AppColors.backgroundCard)
+                .padding(14)
             }
-            .cornerRadius(18)
-            .shadow(color: Color.black.opacity(0.15), radius: 8, x: 0, y: 4)
-            .opacity(category.isEmpty ? 0.6 : 1.0)
+            .frame(height: 110)
+            .cornerRadius(16)
+            .contentShape(Rectangle())
+            .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
+            .opacity(category.isEmpty && !category.isLoading ? 0.5 : 1.0)
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.97))
-        .disabled(category.isEmpty)
+        .disabled(category.isEmpty && !category.isLoading)
     }
 }
 

@@ -2,7 +2,7 @@ import SwiftUI
 import StoreKit
 
 // MARK: - Paywall View
-/// Экран подписки
+/// Экран подписки с анимированной визуализацией
 
 struct PaywallView: View {
     
@@ -12,310 +12,536 @@ struct PaywallView: View {
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     @Environment(\.dismiss) private var dismiss
     
-    @State private var selectedPlan: SubscriptionService.ProductID = .yearly
+    @State private var selectedPlan: SubscriptionPlan = .weekly
     @State private var isPurchasing: Bool = false
+    @State private var freeTrialEnabled: Bool = true
+    
+    // Animation states
+    @State private var photosCount: Int = 678
+    @State private var emailsCount: Int = 326
+    @State private var progressPercent: Int = 100
+    @State private var animationStarted: Bool = false
+    
+    // Target values
+    private let targetPhotos = 169
+    private let targetEmails = 81
+    private let targetPercent = 25
+    
+    // Prices
+    private let weeklyPrice = "$6.99"
+    private let yearlyPrice = "$34.99"
+    
+    enum SubscriptionPlan {
+        case weekly
+        case yearly
+    }
     
     // MARK: - Body
     
     var body: some View {
         ZStack {
-            // Background
-            AuroraBackground(animated: false)
+            // Background gradient
+            backgroundGradient
+            
+            // Sparkles
+            sparklesOverlay
             
             VStack(spacing: 0) {
-                // Close Button
-                HStack {
-                    Spacer()
-                    
-                    IconButton(icon: "xmark", size: 18, color: AppColors.textTertiary) {
-                        dismiss()
-                    }
-                }
-                .padding(.horizontal, AppSpacing.screenPadding)
-                .padding(.top, 16)
+                // Close button
+                closeButton
                 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 24) {
                         // Header
                         headerSection
                         
-                        // Features
-                        featuresSection
+                        // Storage visualization
+                        storageSection
+                        
+                        // Progress bar
+                        progressSection
+                        
+                        // Free trial toggle
+                        freeTrialToggle
                         
                         // Plans
                         plansSection
                         
-                        // CTA
-                        ctaSection
+                        // No payment text
+                        noPaymentText
                         
-                        // Footer
-                        footerSection
+                        // CTA Button
+                        ctaButton
+                        
+                        // Footer links
+                        footerLinks
                     }
-                    .padding(.horizontal, AppSpacing.screenPadding)
+                    .padding(.horizontal, 24)
                     .padding(.bottom, 40)
                 }
             }
         }
+        .onAppear {
+            startAnimations()
+        }
     }
     
-    // MARK: - Header Section
+    // MARK: - Background
+    
+    private var backgroundGradient: some View {
+        LinearGradient(
+            colors: [
+                Color(hex: "1a0a2e"),
+                Color(hex: "16213e"),
+                Color(hex: "0f0f23")
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea()
+    }
+    
+    // MARK: - Sparkles
+    
+    private var sparklesOverlay: some View {
+        GeometryReader { geometry in
+            ZStack {
+                // Top sparkles
+                sparkle(size: 16)
+                    .position(x: geometry.size.width * 0.15, y: 80)
+                
+                sparkle(size: 12)
+                    .position(x: geometry.size.width * 0.35, y: 60)
+                
+                sparkle(size: 14)
+                    .position(x: geometry.size.width * 0.65, y: 55)
+                
+                sparkle(size: 18)
+                    .position(x: geometry.size.width * 0.85, y: 75)
+                
+                // Side sparkles
+                sparkle(size: 10)
+                    .position(x: geometry.size.width * 0.08, y: 200)
+                
+                sparkle(size: 12)
+                    .position(x: geometry.size.width * 0.92, y: 180)
+            }
+        }
+    }
+    
+    private func sparkle(size: CGFloat) -> some View {
+        Image(systemName: "sparkle")
+            .font(.system(size: size, weight: .light))
+            .foregroundColor(Color(hex: "b794f6").opacity(0.7))
+    }
+    
+    // MARK: - Close Button
+    
+    private var closeButton: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.4))
+            }
+            .frame(width: 30, height: 30)
+            
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+    }
+    
+    // MARK: - Header
     
     private var headerSection: some View {
-        VStack(spacing: 16) {
-            // Crown Icon
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color(hex: "FFD700"),
-                                Color(hex: "FFA500")
-                            ],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 36))
-                    .foregroundColor(.white)
-            }
-            .shadow(color: Color(hex: "FFD700").opacity(0.4), radius: 20, x: 0, y: 8)
+        VStack(spacing: 8) {
+            Text("CLEAN UP YOUR")
+                .font(.system(size: 32, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
             
-            // Title
-            VStack(spacing: 8) {
-                Text("Unlock Premium")
-                    .font(AppFonts.titleL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text("Get unlimited access to all features")
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textSecondary)
-            }
+            // Storage badge
+            Text("STORAGE")
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .padding(.horizontal, 24)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(hex: "7c3aed").opacity(0.6))
+                )
+        }
+        .padding(.top, 8)
+    }
+    
+    // MARK: - Storage Section
+    
+    private var storageSection: some View {
+        HStack(spacing: 40) {
+            // Photos
+            storageItem(
+                iconName: "photo.fill.on.rectangle.fill",
+                iconColors: [Color(hex: "ff6b6b"), Color(hex: "feca57"), Color(hex: "48dbfb"), Color(hex: "ff9ff3")],
+                count: photosCount,
+                label: "Photos"
+            )
+            
+            // ICloud
+            storageItem(
+                iconName: "icloud.fill",
+                iconColors: [Color(hex: "74b9ff")],
+                count: emailsCount,
+                label: "ICloud"
+            )
         }
         .padding(.top, 16)
     }
     
-    // MARK: - Features Section
-    
-    private var featuresSection: some View {
+    private func storageItem(iconName: String, iconColors: [Color], count: Int, label: String) -> some View {
         VStack(spacing: 12) {
-            featureRow(icon: "infinity", text: "Unlimited cleaning")
-            featureRow(icon: "photo.stack.fill", text: "All photo categories")
-            featureRow(icon: "video.fill", text: "Video compression")
-            featureRow(icon: "lock.fill", text: "Secret folder")
-            featureRow(icon: "bell.fill", text: "Smart notifications")
-            featureRow(icon: "xmark.circle.fill", text: "No ads")
+            ZStack(alignment: .topTrailing) {
+                // Icon background
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(hex: "2d2d44").opacity(0.8))
+                    .frame(width: 90, height: 90)
+                
+                // Icon
+                Image(systemName: iconName)
+                    .font(.system(size: 40))
+                    .foregroundStyle(
+                        iconColors.count > 1
+                            ? AnyShapeStyle(LinearGradient(colors: iconColors, startPoint: .topLeading, endPoint: .bottomTrailing))
+                            : AnyShapeStyle(iconColors[0])
+                    )
+                    .frame(width: 90, height: 90)
+                
+                // Count badge
+                Text("\(count)")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color(hex: "ff6b6b"))
+                    .clipShape(Capsule())
+                    .offset(x: 10, y: -10)
+            }
+            
+            Text(label)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundColor(Color.white.opacity(0.7))
         }
-        .padding(AppSpacing.containerPadding)
-        .background(AppColors.backgroundSecondary.opacity(0.6))
-        .cornerRadius(AppSpacing.cardRadius)
     }
     
-    private func featureRow(icon: String, text: String) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(AppColors.accentBlue)
-                .frame(width: 24)
+    // MARK: - Progress Section
+    
+    private var progressSection: some View {
+        VStack(spacing: 12) {
+            // Progress bar
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    // Background
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color(hex: "3d3d5c"))
+                        .frame(height: 12)
+                    
+                    // Progress
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "ff6b6b"), Color(hex: "feca57")],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geometry.size.width * CGFloat(progressPercent) / 100, height: 12)
+                        .animation(.easeInOut(duration: 2.5), value: progressPercent)
+                }
+            }
+            .frame(height: 12)
+            .padding(.horizontal, 20)
             
-            Text(text)
-                .font(AppFonts.bodyL)
-                .foregroundColor(AppColors.textPrimary)
+            // Percentage text
+            HStack(spacing: 4) {
+                Text("\(progressPercent)")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(Color(hex: "ff6b6b"))
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 2.5), value: progressPercent)
+                
+                Text("from 100% used")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(Color.white.opacity(0.8))
+            }
+        }
+        .padding(.top, 8)
+    }
+    
+    // MARK: - Free Trial Toggle
+    
+    private var freeTrialToggle: some View {
+        HStack {
+            Text("Free Trial Enabled")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundColor(.white)
             
             Spacer()
             
-            Image(systemName: "checkmark")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(AppColors.statusSuccess)
+            Toggle("", isOn: $freeTrialEnabled)
+                .tint(Color(hex: "34d399"))
+                .labelsHidden()
         }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(hex: "2d2d44").opacity(0.6))
+        )
+        .padding(.top, 20)
     }
     
     // MARK: - Plans Section
     
     private var plansSection: some View {
         VStack(spacing: 12) {
-            // Yearly Plan
-            planCard(
-                id: .yearly,
-                title: "Yearly",
-                price: subscriptionService.yearlyProduct?.displayPrice ?? "$34.99",
-                period: "/year",
-                badge: "Best Value",
-                savings: "Save 70%",
-                isSelected: selectedPlan == .yearly
-            )
+            // Weekly plan
+            weeklyPlanCard
             
-            // Weekly Plan
-            planCard(
-                id: .weekly,
-                title: "Weekly",
-                price: subscriptionService.weeklyProduct?.displayPrice ?? "$6.99",
-                period: "/week",
-                badge: nil,
-                savings: nil,
-                isSelected: selectedPlan == .weekly
-            )
-            
-            // Lifetime (if variant B)
-            if appState.paywallVariant == .b {
-                planCard(
-                    id: .lifetime,
-                    title: "Lifetime",
-                    price: subscriptionService.lifetimeProduct?.displayPrice ?? "$29.99",
-                    period: "one-time",
-                    badge: "Limited Offer",
-                    savings: nil,
-                    isSelected: selectedPlan == .lifetime
-                )
-            }
+            // Yearly plan
+            yearlyPlanCard
         }
     }
     
-    private func planCard(
-        id: SubscriptionService.ProductID,
-        title: String,
-        price: String,
-        period: String,
-        badge: String?,
-        savings: String?,
-        isSelected: Bool
-    ) -> some View {
+    private var weeklyPlanCard: some View {
         Button {
             withAnimation(.easeOut(duration: 0.2)) {
-                selectedPlan = id
+                selectedPlan = .weekly
             }
         } label: {
             HStack {
-                // Radio Button
-                ZStack {
-                    Circle()
-                        .stroke(isSelected ? AppColors.accentBlue : AppColors.borderSecondary, lineWidth: 2)
-                        .frame(width: 24, height: 24)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("3-DAY FREE TRIAL")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color(hex: "a78bfa"))
                     
-                    if isSelected {
-                        Circle()
-                            .fill(AppColors.accentBlue)
-                            .frame(width: 14, height: 14)
-                    }
-                }
-                
-                // Plan Info
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 8) {
-                        Text(title)
-                            .font(AppFonts.subtitleL)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        if let badge = badge {
-                            Text(badge)
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    badge == "Best Value" ? AppColors.statusSuccess : AppColors.statusWarning
-                                )
-                                .cornerRadius(6)
-                        }
-                    }
-                    
-                    if let savings = savings {
-                        Text(savings)
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.statusSuccess)
-                    }
+                    Text("then \(weeklyPrice) / week")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
                 }
                 
                 Spacer()
                 
-                // Price
-                HStack(alignment: .lastTextBaseline, spacing: 2) {
-                    Text(price)
-                        .font(AppFonts.titleM)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text(period)
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                }
+                Text("3 DAYS FREE")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: "f97316"), Color(hex: "ea580c")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .cornerRadius(8)
             }
-            .padding(AppSpacing.containerPadding)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
             .background(
-                isSelected
-                    ? AppColors.accentBlue.opacity(0.15)
-                    : AppColors.backgroundSecondary.opacity(0.6)
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        selectedPlan == .weekly
+                            ? Color(hex: "7c3aed").opacity(0.3)
+                            : Color(hex: "2d2d44").opacity(0.6)
+                    )
             )
             .overlay(
-                RoundedRectangle(cornerRadius: AppSpacing.buttonRadius)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(
-                        isSelected ? AppColors.accentBlue : Color.clear,
+                        selectedPlan == .weekly
+                            ? Color(hex: "a78bfa")
+                            : Color.clear,
                         lineWidth: 2
                     )
             )
-            .cornerRadius(AppSpacing.buttonRadius)
         }
         .buttonStyle(.plain)
     }
     
-    // MARK: - CTA Section
-    
-    private var ctaSection: some View {
-        VStack(spacing: 12) {
-            PrimaryButton(
-                title: "Start Free Trial",
-                isLoading: isPurchasing
-            ) {
-                Task {
-                    await purchase()
+    private var yearlyPlanCard: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.2)) {
+                selectedPlan = .yearly
+            }
+        } label: {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("YEARLY ACCESS")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(Color(hex: "a78bfa"))
+                    
+                    Text("\(yearlyPrice) / year")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("BEST OFFER")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(Color(hex: "a78bfa"))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color(hex: "a78bfa"), lineWidth: 1)
+                        )
+                    
+                    Text("$0.67/WEEK")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color.white.opacity(0.5))
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(
+                        selectedPlan == .yearly
+                            ? Color(hex: "7c3aed").opacity(0.3)
+                            : Color(hex: "2d2d44").opacity(0.6)
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        selectedPlan == .yearly
+                            ? Color(hex: "a78bfa")
+                            : Color.clear,
+                        lineWidth: 2
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // MARK: - No Payment Text
+    
+    private var noPaymentText: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark.shield.fill")
+                .font(.system(size: 16))
+                .foregroundColor(Color(hex: "a78bfa"))
             
-            Text("3 days free, then \(selectedPlanPrice)")
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textTertiary)
+            Text("NO PAYMENT NOW")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(Color.white.opacity(0.8))
         }
+        .padding(.top, 8)
     }
     
-    private var selectedPlanPrice: String {
-        switch selectedPlan {
-        case .weekly:
-            return subscriptionService.weeklyProduct?.displayPrice ?? "$6.99/week"
-        case .yearly:
-            return subscriptionService.yearlyProduct?.displayPrice ?? "$34.99/year"
-        case .lifetime:
-            return subscriptionService.lifetimeProduct?.displayPrice ?? "$29.99"
+    // MARK: - CTA Button
+    
+    private var ctaButton: some View {
+        Button {
+            Task {
+                await purchase()
+            }
+        } label: {
+            ZStack {
+                // Button background
+                RoundedRectangle(cornerRadius: 30)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "a78bfa"), Color(hex: "ec4899")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 60)
+                
+                if isPurchasing {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("CONTINUE FOR FREE")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                }
+            }
         }
+        .disabled(isPurchasing)
+        .padding(.top, 8)
     }
     
-    // MARK: - Footer Section
+    // MARK: - Footer Links
     
-    private var footerSection: some View {
-        VStack(spacing: 16) {
-            // Restore Purchases
-            GhostButton(title: "Restore Purchases") {
+    private var footerLinks: some View {
+        HStack(spacing: 24) {
+            Button("Restore") {
                 Task {
                     await subscriptionService.restorePurchases()
                 }
             }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(Color.white.opacity(0.5))
             
-            // Terms & Privacy
-            HStack(spacing: 16) {
-                Button("Terms of Use") {
-                    // Open terms
+            Button("Terms of use") {
+                // Open terms
+            }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(Color.white.opacity(0.5))
+            
+            Button("Privacy Policy") {
+                // Open privacy
+            }
+            .font(.system(size: 14, weight: .medium))
+            .foregroundColor(Color.white.opacity(0.5))
+        }
+        .padding(.top, 16)
+    }
+    
+    // MARK: - Animations
+    
+    private func startAnimations() {
+        guard !animationStarted else { return }
+        animationStarted = true
+        
+        // Delay before starting animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            // Animate photos count
+            animateCount(from: 678, to: targetPhotos, duration: 2.5) { value in
+                photosCount = value
+            }
+            
+            // Animate emails count
+            animateCount(from: 326, to: targetEmails, duration: 2.5) { value in
+                emailsCount = value
+            }
+            
+            // Animate progress
+            withAnimation(.easeInOut(duration: 2.5)) {
+                progressPercent = targetPercent
+            }
+        }
+    }
+    
+    private func animateCount(from start: Int, to end: Int, duration: Double, update: @escaping (Int) -> Void) {
+        let steps = 60
+        let stepDuration = duration / Double(steps)
+        let difference = start - end
+        
+        for i in 0...steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + stepDuration * Double(i)) {
+                let progress = Double(i) / Double(steps)
+                // Ease out curve
+                let easedProgress = 1 - pow(1 - progress, 3)
+                let currentValue = start - Int(Double(difference) * easedProgress)
+                withAnimation(.linear(duration: stepDuration)) {
+                    update(currentValue)
                 }
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textTertiary.opacity(0.6))
-                
-                Text("•")
-                    .foregroundColor(AppColors.textTertiary.opacity(0.4))
-                
-                Button("Privacy Policy") {
-                    // Open privacy
-                }
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textTertiary.opacity(0.6))
             }
         }
     }
@@ -323,7 +549,12 @@ struct PaywallView: View {
     // MARK: - Purchase
     
     private func purchase() async {
-        guard let product = subscriptionService.product(for: selectedPlan) else { return }
+        let productId: SubscriptionService.ProductID = selectedPlan == .weekly ? .weekly : .yearly
+        guard let product = subscriptionService.product(for: productId) else {
+            // Fallback if StoreKit products not loaded
+            dismiss()
+            return
+        }
         
         isPurchasing = true
         
@@ -348,4 +579,3 @@ struct PaywallView_Previews: PreviewProvider {
             .environmentObject(AppState.shared)
     }
 }
-

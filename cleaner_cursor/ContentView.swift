@@ -9,8 +9,8 @@ struct ContentView: View {
         RootView()
             .environmentObject(AppState.shared)
             .environmentObject(SubscriptionService.shared)
-    }
-}
+            }
+        }
 
 // MARK: - Preview
 

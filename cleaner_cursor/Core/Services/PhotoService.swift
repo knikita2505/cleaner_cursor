@@ -75,20 +75,33 @@ final class PhotoService: ObservableObject {
         videosCount = videosFetch.count
     }
     
-    // MARK: - Scan Duplicates & Similar (with caching)
+    // MARK: - Scan Duplicates & Similar (with persistent caching)
+    
+    private let resultsCache = ScanResultsCache.shared
     
     func scanDuplicatesIfNeeded() async {
         guard !duplicatesScanned else { return }
         
         isScanning = true
         
-        let groups = await Task.detached(priority: .userInitiated) {
-            self.findDuplicatesInternal()
+        // Всё выполняем в background чтобы не блокировать UI
+        let (groups, shouldSaveCache) = await Task.detached(priority: .userInitiated) { [resultsCache] in
+            // Проверяем persistent кэш (в background!)
+            if resultsCache.isCacheValid(), let cached = resultsCache.getCachedDuplicates() {
+                return (cached, false)
+            }
+            // Кэш невалиден - сканируем
+            return (self.findDuplicatesInternal(), true)
         }.value
         
         cachedDuplicates = groups
         duplicatesScanned = true
         isScanning = false
+        
+        // Сохраняем в кэш если сканировали заново
+        if shouldSaveCache {
+            resultsCache.saveResults(duplicates: cachedDuplicates, similar: cachedSimilarPhotos)
+        }
     }
     
     func scanSimilarIfNeeded() async {
@@ -96,13 +109,24 @@ final class PhotoService: ObservableObject {
         
         isScanning = true
         
-        let groups = await Task.detached(priority: .userInitiated) {
-            self.findSimilarPhotosInternal()
+        // Всё выполняем в background чтобы не блокировать UI
+        let (groups, shouldSaveCache) = await Task.detached(priority: .userInitiated) { [resultsCache] in
+            // Проверяем persistent кэш (в background!)
+            if resultsCache.isCacheValid(), let cached = resultsCache.getCachedSimilar() {
+                return (cached, false)
+            }
+            // Кэш невалиден - сканируем
+            return (self.findSimilarPhotosInternal(), true)
         }.value
         
         cachedSimilarPhotos = groups
         similarScanned = true
         isScanning = false
+        
+        // Сохраняем оба результата в persistent кэш (если сканировали)
+        if shouldSaveCache {
+            resultsCache.saveResults(duplicates: cachedDuplicates, similar: cachedSimilarPhotos)
+        }
     }
     
     func invalidateCache() {
@@ -110,6 +134,7 @@ final class PhotoService: ObservableObject {
         similarScanned = false
         cachedDuplicates = []
         cachedSimilarPhotos = []
+        resultsCache.clear()
     }
     
     // MARK: - Duplicates Stats (from cache)
@@ -192,6 +217,25 @@ final class PhotoService: ObservableObject {
         return assets
     }
     
+    // MARK: - Fetch Screen Recordings
+    
+    nonisolated func fetchScreenRecordings() -> [PHAsset] {
+        // Получаем все видео и фильтруем по subtype
+        let options = PHFetchOptions()
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        options.predicate = NSPredicate(format: "mediaType = %d", PHAssetMediaType.video.rawValue)
+        let allVideos = PHAsset.fetchAssets(with: options)
+        
+        var screenRecordings: [PHAsset] = []
+        allVideos.enumerateObjects { asset, _, _ in
+            // PHAssetMediaSubtype.videoScreenRecording = 8192 (1 << 13)
+            if asset.mediaSubtypes.rawValue & 8192 != 0 {
+                screenRecordings.append(asset)
+            }
+        }
+        return screenRecordings
+    }
+    
     // MARK: - Fetch Burst Photos
     
     func fetchBurstPhotos() -> PHFetchResult<PHAsset> {
@@ -245,24 +289,27 @@ final class PhotoService: ObservableObject {
     
     // MARK: - Find Duplicates (Internal - for caching)
     
+    /// Поиск точных дубликатов
+    /// Дубликат = фото с ТОЧНО одинаковым размером файла + разрешением + близкой датой создания
     private nonisolated func findDuplicatesInternal() -> [DuplicateGroup] {
         let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        // Limit to 3000 most recent for performance
-        fetchOptions.fetchLimit = 3000
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
         
         let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
         
-        // Group by: file size + resolution
+        // Группируем по: размер файла (в байтах) + разрешение
         var compositeGroups: [String: [PhotoAsset]] = [:]
         
         fetchResult.enumerateObjects { asset, _, _ in
-            // Skip screenshots
+            // Пропускаем скриншоты
             if asset.mediaSubtypes.contains(.photoScreenshot) { return }
             
             let photoAsset = PhotoAsset(asset: asset)
             
-            // Key: size + resolution
+            // Используем только файлы с ненулевым размером
+            guard photoAsset.fileSize > 0 else { return }
+            
+            // Ключ: точный размер файла + разрешение
             let sizeKey = "\(photoAsset.fileSize)_\(asset.pixelWidth)x\(asset.pixelHeight)"
             
             if compositeGroups[sizeKey] != nil {
@@ -274,8 +321,10 @@ final class PhotoService: ObservableObject {
         
         var duplicateGroups: [DuplicateGroup] = []
         
+        // Для каждой группы с одинаковым размером и разрешением
+        // дополнительно проверяем близость по времени создания
         for (_, assets) in compositeGroups where assets.count > 1 {
-            // Additional check: creation time within 60 seconds
+            // Сортируем по дате создания
             let sortedByDate = assets.sorted { 
                 ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) 
             }
@@ -288,15 +337,18 @@ final class PhotoService: ObservableObject {
                 } else if let lastDate = currentGroup.last?.creationDate,
                           let currentDate = asset.creationDate,
                           abs(currentDate.timeIntervalSince(lastDate)) <= 60 {
+                    // В пределах 60 секунд - это дубликат
                     currentGroup.append(asset)
-                } else if currentGroup.count > 1 {
-                    duplicateGroups.append(createDuplicateGroup(from: currentGroup))
-                    currentGroup = [asset]
                 } else {
+                    // Время разное - сохраняем текущую группу если >= 2 фото
+                    if currentGroup.count > 1 {
+                        duplicateGroups.append(createDuplicateGroup(from: currentGroup))
+                    }
                     currentGroup = [asset]
                 }
             }
             
+            // Последняя группа
             if currentGroup.count > 1 {
                 duplicateGroups.append(createDuplicateGroup(from: currentGroup))
             }
@@ -322,18 +374,19 @@ final class PhotoService: ObservableObject {
     
     // MARK: - Find Similar Photos (Internal - for caching)
     
+    /// Поиск похожих фото:
+    /// 1. Burst-серии (фото с одинаковым burstIdentifier)
+    /// 2. Фото, сделанные в течение 5 секунд друг от друга
     private nonisolated func findSimilarPhotosInternal() -> [SimilarGroup] {
         let fetchOptions = PHFetchOptions()
-        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
-        // Limit to 3000 most recent for performance
-        fetchOptions.fetchLimit = 3000
+        fetchOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
+        // Сканируем ВСЕ фото без лимита
         
         let fetchResult = PHAsset.fetchAssets(with: .image, options: fetchOptions)
         var burstGroups: [String: [PhotoAsset]] = [:]
-        var timeGroups: [[PhotoAsset]] = []
         var processedIds: Set<String> = []
         
-        // 1. First find burst series
+        // 1. Находим burst-серии (они точно похожи)
         fetchResult.enumerateObjects { asset, _, _ in
             if asset.mediaSubtypes.contains(.photoScreenshot) { return }
             
@@ -348,7 +401,7 @@ final class PhotoService: ObservableObject {
             }
         }
         
-        // 2. Group remaining by time (3 seconds)
+        // 2. Группируем остальные по времени (5 секунд между фото)
         var remainingPhotos: [PhotoAsset] = []
         fetchResult.enumerateObjects { asset, _, _ in
             if asset.mediaSubtypes.contains(.photoScreenshot) { return }
@@ -357,17 +410,16 @@ final class PhotoService: ObservableObject {
             remainingPhotos.append(PhotoAsset(asset: asset))
         }
         
-        remainingPhotos.sort { 
-            ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) 
-        }
-        
+        // Уже отсортированы по дате (ascending)
+        var timeGroups: [[PhotoAsset]] = []
         var currentTimeGroup: [PhotoAsset] = []
+        
         for photo in remainingPhotos {
             if currentTimeGroup.isEmpty {
                 currentTimeGroup.append(photo)
             } else if let lastDate = currentTimeGroup.last?.creationDate,
                       let currentDate = photo.creationDate,
-                      abs(currentDate.timeIntervalSince(lastDate)) <= 3 {
+                      abs(currentDate.timeIntervalSince(lastDate)) <= 5 {
                 currentTimeGroup.append(photo)
             } else {
                 if currentTimeGroup.count >= 2 {
@@ -382,12 +434,12 @@ final class PhotoService: ObservableObject {
         
         var similarGroups: [SimilarGroup] = []
         
-        // Add burst groups
+        // Добавляем burst-группы
         for (_, assets) in burstGroups where assets.count >= 2 {
             similarGroups.append(createSimilarGroup(from: assets, isBurst: true))
         }
         
-        // Add time groups
+        // Добавляем группы по времени
         for assets in timeGroups {
             similarGroups.append(createSimilarGroup(from: assets, isBurst: false))
         }
@@ -656,17 +708,29 @@ struct PhotoAsset: Identifiable, Hashable {
     let asset: PHAsset
     let creationDate: Date?
     let fileSize: Int64
+    let isFavorite: Bool
     var isSelected: Bool = false
     
     init(asset: PHAsset) {
         self.id = asset.localIdentifier
         self.asset = asset
         self.creationDate = asset.creationDate
+        self.isFavorite = asset.isFavorite
         
+        // Медленная операция - вычисляем fileSize
         let resources = PHAssetResource.assetResources(for: asset)
         self.fileSize = resources.first.flatMap { resource in
             (resource.value(forKey: "fileSize") as? Int64)
         } ?? 0
+    }
+    
+    /// Быстрый init с кэшированным fileSize (не вызывает PHAssetResource)
+    init(asset: PHAsset, cachedFileSize: Int64) {
+        self.id = asset.localIdentifier
+        self.asset = asset
+        self.creationDate = asset.creationDate
+        self.isFavorite = asset.isFavorite
+        self.fileSize = cachedFileSize
     }
     
     var formattedSize: String {
@@ -779,6 +843,7 @@ struct LivePhotoAsset: Identifiable {
     let asset: PHAsset
     let photoSize: Int64
     let videoSize: Int64
+    let isFavorite: Bool
     var action: LivePhotoAction = .keepLive
     
     init(asset: PHAsset, photoSize: Int64, videoSize: Int64) {
@@ -786,6 +851,11 @@ struct LivePhotoAsset: Identifiable {
         self.asset = asset
         self.photoSize = photoSize
         self.videoSize = videoSize
+        self.isFavorite = asset.isFavorite
+    }
+    
+    var fileSize: Int64 {
+        totalSize
     }
     
     var totalSize: Int64 {

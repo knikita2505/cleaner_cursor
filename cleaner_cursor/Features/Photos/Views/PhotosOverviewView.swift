@@ -53,7 +53,7 @@ struct PhotosOverviewView: View {
         }
         .onAppear {
             Task {
-                await viewModel.scanAllCategories()
+            await viewModel.scanAllCategories()
             }
         }
     }
