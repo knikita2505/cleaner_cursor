@@ -85,18 +85,23 @@ final class PhotoService: ObservableObject {
         isScanning = true
         
         // Всё выполняем в background чтобы не блокировать UI
-        let groups = await Task.detached(priority: .userInitiated) { [resultsCache] in
+        let (groups, shouldSaveCache) = await Task.detached(priority: .userInitiated) { [resultsCache] in
             // Проверяем persistent кэш (в background!)
             if resultsCache.isCacheValid(), let cached = resultsCache.getCachedDuplicates() {
-                return cached
+                return (cached, false)
             }
             // Кэш невалиден - сканируем
-            return self.findDuplicatesInternal()
+            return (self.findDuplicatesInternal(), true)
         }.value
         
         cachedDuplicates = groups
         duplicatesScanned = true
         isScanning = false
+        
+        // Сохраняем в кэш если сканировали заново
+        if shouldSaveCache {
+            resultsCache.saveResults(duplicates: cachedDuplicates, similar: cachedSimilarPhotos)
+        }
     }
     
     func scanSimilarIfNeeded() async {
