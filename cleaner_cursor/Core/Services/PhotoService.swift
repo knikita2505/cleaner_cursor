@@ -166,6 +166,18 @@ final class PhotoService: ObservableObject {
         return PHAsset.fetchAssets(with: options)
     }
     
+    /// Получить все фотографии как массив PhotoAsset
+    nonisolated func fetchAllPhotosAsAssets() -> [PhotoAsset] {
+        let fetchResult = fetchAllPhotos()
+        var assets: [PhotoAsset] = []
+        
+        fetchResult.enumerateObjects { asset, _, _ in
+            assets.append(PhotoAsset(asset: asset))
+        }
+        
+        return assets
+    }
+    
     // MARK: - Fetch Screenshots
     
     nonisolated func fetchScreenshots() -> PHFetchResult<PHAsset> {
