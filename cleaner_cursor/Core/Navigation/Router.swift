@@ -130,7 +130,7 @@ struct NavigationDestinationModifier: ViewModifier {
                 case .bigFiles:
                     BigFilesView()
                 case .swipeClean:
-                    SwipeCleanView()
+                    SwipeHubView()
                 }
             }
             .navigationDestination(for: PhotoCategoryNav.self) { destination in

@@ -84,9 +84,7 @@ struct MainTabView: View {
 
 struct SwipeCleanTab: View {
     var body: some View {
-        NavigationStack {
-            SwipeCleanView()
-        }
+        SwipeHubView()
     }
 }
 
