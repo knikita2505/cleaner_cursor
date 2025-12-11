@@ -190,12 +190,14 @@ struct PhotoMonthGroup: Identifiable, Hashable {
     
     var displayName: String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
         formatter.dateFormat = "MMMM yyyy"
         return formatter.string(from: month)
     }
     
     var shortDisplayName: String {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US")
         formatter.dateFormat = "MMM yyyy"
         return formatter.string(from: month)
     }
