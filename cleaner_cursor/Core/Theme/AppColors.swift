@@ -70,6 +70,17 @@ enum AppColors {
     
     /// Граница secondary кнопки
     static let borderSecondary = Color.white.opacity(0.2)
+    
+    // MARK: - Dashboard Colors
+    
+    /// Неоновый синий для Used показателей
+    static let neonBlue = Color(hex: "5555FF")
+    
+    /// Неоновый розовый для Clutter показателей
+    static let neonPink = Color(hex: "FE019A")
+    
+    /// Золотисто-желтый для Premium
+    static let premiumGold = Color(hex: "FFD700")
 }
 
 // MARK: - Color Extension for Hex

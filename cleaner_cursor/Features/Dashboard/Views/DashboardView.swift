@@ -86,7 +86,7 @@ struct DashboardView: View {
             
             Spacer()
             
-            // Start Free Trial Button
+            // Premium Button
             if !subscriptionService.isPremium {
                 Button {
                     showPaywall = true
@@ -95,21 +95,15 @@ struct DashboardView: View {
                         Image(systemName: "crown.fill")
                             .font(.system(size: 14, weight: .semibold))
                         
-                        Text("Start Free Trial")
+                        Text("Premium")
                             .font(.system(size: 14, weight: .semibold))
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(AppColors.premiumGold)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 10)
-                    .background(
-                        LinearGradient(
-                            colors: [AppColors.statusSuccess, AppColors.statusSuccess.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
+                    .background(AppColors.neonBlue)
                     .cornerRadius(20)
-                    .shadow(color: AppColors.statusSuccess.opacity(0.4), radius: 8, x: 0, y: 4)
+                    .shadow(color: AppColors.neonBlue.opacity(0.4), radius: 8, x: 0, y: 4)
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
@@ -156,8 +150,8 @@ struct DashboardView: View {
                 // Stats aligned with number
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 16) {
-                        miniStatItem(label: "Clutter", value: viewModel.formattedClutter, color: Color(hex: "FF496C"))
-                        miniStatItem(label: "Used", value: viewModel.formattedUsed, color: Color(hex: "87CEFA"))
+                        miniStatItem(label: "Clutter", value: viewModel.formattedClutter, color: AppColors.neonPink)
+                        miniStatItem(label: "Used", value: viewModel.formattedUsed, color: AppColors.neonBlue)
                     }
                     miniStatItem(label: "Total", value: viewModel.formattedTotal, color: AppColors.textSecondary)
                 }
@@ -171,11 +165,11 @@ struct DashboardView: View {
                     .stroke(AppColors.progressInactive, lineWidth: 10)
                     .frame(width: 70, height: 70)
                 
-                // Used storage ring
+                // Used storage ring (background - neon blue)
                 Circle()
                     .trim(from: 0, to: animateStorage ? viewModel.storageUsagePercentage : 0)
                     .stroke(
-                        Color(hex: "87CEFA"),
+                        AppColors.neonBlue,
                         style: StrokeStyle(lineWidth: 10, lineCap: .round)
                     )
                     .frame(width: 70, height: 70)
@@ -183,11 +177,11 @@ struct DashboardView: View {
                     .animation(.easeOut(duration: 1.0), value: animateStorage)
                     .animation(.easeOut(duration: 0.8), value: viewModel.storageUsagePercentage)
                 
-                // Clutter ring
+                // Clutter ring (foreground - neon pink)
                 Circle()
                     .trim(from: 0, to: animateStorage ? viewModel.cleanablePercentage : 0)
                     .stroke(
-                        Color(hex: "FF496C"),
+                        AppColors.neonPink,
                         style: StrokeStyle(lineWidth: 10, lineCap: .round)
                     )
                     .frame(width: 70, height: 70)
@@ -195,10 +189,16 @@ struct DashboardView: View {
                     .animation(.easeOut(duration: 0.8), value: animateStorage)
                     .animation(.easeOut(duration: 0.8), value: viewModel.cleanablePercentage)
                 
-                // Center percentage
-                Text("\(Int(viewModel.storageUsagePercentage * 100))%")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundColor(AppColors.textPrimary)
+                // Center - Clutter percentage
+                VStack(spacing: 0) {
+                    Text("\(Int(viewModel.cleanablePercentage * 100))%")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text("Clutter")
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundColor(AppColors.textTertiary)
+                }
             }
         }
         .padding(AppSpacing.containerPaddingLarge)

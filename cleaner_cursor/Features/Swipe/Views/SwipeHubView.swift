@@ -232,11 +232,6 @@ struct MonthCard: View {
             .padding(AppSpacing.containerPadding)
             .background(AppColors.backgroundSecondary)
             .cornerRadius(AppSpacing.cardRadius)
-            .overlay(
-                // Green border for completed months
-                RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
-                    .stroke(AppColors.statusSuccess, lineWidth: progress.isCompleted ? 2 : 0)
-            )
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
