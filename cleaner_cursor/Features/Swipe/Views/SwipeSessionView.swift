@@ -48,21 +48,27 @@ struct SwipeSessionView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
-                    // Show confirmation if there are unsaved decisions
-                    if viewModel.sessionDecisions.isEmpty {
-                        dismiss()
+                    // If on summary screen and can continue - go back to session
+                    if viewModel.showSummary && viewModel.canContinueSwiping {
+                        viewModel.showSummary = false
                     } else {
-                        showExitConfirmation = true
+                        // Show confirmation if there are unsaved decisions
+                        if viewModel.sessionDecisions.isEmpty {
+                            dismiss()
+                        } else {
+                            showExitConfirmation = true
+                        }
                     }
                 } label: {
-                    Image(systemName: "xmark")
+                    // Show back arrow only if on summary AND can continue swiping
+                    Image(systemName: (viewModel.showSummary && viewModel.canContinueSwiping) ? "chevron.left" : "xmark")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
                 }
             }
             
             ToolbarItem(placement: .principal) {
-                Text(monthGroup.shortDisplayName)
+                Text(viewModel.showSummary ? "Summary" : monthGroup.shortDisplayName)
                     .font(AppFonts.subtitleM)
                     .foregroundColor(AppColors.textPrimary)
             }
@@ -384,9 +390,17 @@ struct SwipeSessionView: View {
                     }
                 }
                 
-                // Cancel - discard session without saving
-                SecondaryButton(title: "Discard Session") {
-                    dismiss()
+                // Show different button based on session state
+                if viewModel.canContinueSwiping {
+                    // Can continue - show "Continue Swiping"
+                    SecondaryButton(title: "Continue Swiping") {
+                        viewModel.showSummary = false
+                    }
+                } else {
+                    // Session complete - show "Discard Session"
+                    SecondaryButton(title: "Discard Session") {
+                        dismiss()
+                    }
                 }
             }
             .padding(.horizontal, AppSpacing.screenPadding)
@@ -674,6 +688,16 @@ class SwipeSessionViewModel: ObservableObject {
     var sessionProgress: CGFloat {
         guard !availablePhotos.isEmpty else { return 0 }
         return CGFloat(currentIndex) / CGFloat(availablePhotos.count)
+    }
+    
+    /// True if all photos have been processed (no more to swipe)
+    var isSessionComplete: Bool {
+        currentIndex >= availablePhotos.count - 1 && !sessionDecisions.isEmpty
+    }
+    
+    /// True if there are more photos to swipe
+    var canContinueSwiping: Bool {
+        currentIndex < availablePhotos.count - 1
     }
     
     // MARK: - Init
