@@ -82,8 +82,8 @@ final class AppState: ObservableObject {
         selectedTab = .swipe
     }
     
-    func navigateToEmail() {
-        selectedTab = .email
+    func navigateToContacts() {
+        selectedTab = .contacts
     }
     
     func navigateToHide() {
@@ -118,20 +118,20 @@ final class AppState: ObservableObject {
 // MARK: - App Tab
 
 enum AppTab: String, CaseIterable, Identifiable {
-    case clean = "Clean"
-    case swipe = "Swipe"
-    case email = "Email"
     case hide = "Hide"
+    case swipe = "Swipe"
+    case clean = "Clean"
+    case contacts = "Contacts"
     case more = "More"
     
     var id: String { rawValue }
     
     var icon: String {
         switch self {
-        case .clean: return "sparkles"
-        case .swipe: return "hand.draw"
-        case .email: return "envelope"
         case .hide: return "lock.shield"
+        case .swipe: return "hand.draw"
+        case .clean: return "sparkles"
+        case .contacts: return "person.crop.circle"
         case .more: return "ellipsis.circle"
         }
     }

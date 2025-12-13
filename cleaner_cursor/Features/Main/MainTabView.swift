@@ -8,50 +8,137 @@ struct MainTabView: View {
     // MARK: - Properties
     
     @EnvironmentObject private var appState: AppState
+    @State private var dragOffset: CGFloat = 0
+    
+    // Tab order for swipe navigation
+    private let tabOrder: [AppTab] = [.hide, .swipe, .clean, .contacts, .more]
     
     // MARK: - Body
     
     var body: some View {
-        TabView(selection: $appState.selectedTab) {
-            // Clean Tab (Dashboard)
-            DashboardView()
-                .tabItem {
-                    Label(AppTab.clean.title, systemImage: AppTab.clean.icon)
-                }
-                .tag(AppTab.clean)
+        ZStack(alignment: .bottom) {
+            TabView(selection: $appState.selectedTab) {
+                // 1. Hide Tab (Secret Folder) - leftmost
+                SecretFolderPlaceholder()
+                    .tabItem {
+                        Label(AppTab.hide.title, systemImage: AppTab.hide.icon)
+                    }
+                    .tag(AppTab.hide)
+                
+                // 2. Swipe Tab
+                SwipeCleanTab()
+                    .tabItem {
+                        Label(AppTab.swipe.title, systemImage: AppTab.swipe.icon)
+                    }
+                    .tag(AppTab.swipe)
+                
+                // 3. Clean Tab (Dashboard) - CENTER
+                DashboardView()
+                    .tabItem {
+                        Label(AppTab.clean.title, systemImage: AppTab.clean.icon)
+                    }
+                    .tag(AppTab.clean)
+                
+                // 4. Contacts Tab
+                ContactsPlaceholder()
+                    .tabItem {
+                        Label(AppTab.contacts.title, systemImage: AppTab.contacts.icon)
+                    }
+                    .tag(AppTab.contacts)
+                
+                // 5. More Tab (Settings) - rightmost
+                MoreView()
+                    .tabItem {
+                        Label(AppTab.more.title, systemImage: AppTab.more.icon)
+                    }
+                    .tag(AppTab.more)
+            }
+            .tint(AppColors.accentBlue)
             
-            // Swipe Tab
-            SwipeCleanTab()
-                .tabItem {
-                    Label(AppTab.swipe.title, systemImage: AppTab.swipe.icon)
-                }
-                .tag(AppTab.swipe)
-            
-            // Email Tab
-            EmailCleanerPlaceholder()
-                .tabItem {
-                    Label(AppTab.email.title, systemImage: AppTab.email.icon)
-                }
-                .tag(AppTab.email)
-            
-            // Hide Tab (Secret Folder)
-            SecretFolderPlaceholder()
-                .tabItem {
-                    Label(AppTab.hide.title, systemImage: AppTab.hide.icon)
-                }
-                .tag(AppTab.hide)
-            
-            // More Tab (Settings)
-            MoreView()
-                .tabItem {
-                    Label(AppTab.more.title, systemImage: AppTab.more.icon)
-                }
-                .tag(AppTab.more)
+            // Neon indicator line
+            tabIndicator
         }
-        .tint(AppColors.accentBlue)
+        .gesture(swipeGesture)
         .onAppear {
             setupTabBarAppearance()
         }
+    }
+    
+    // MARK: - Tab Indicator
+    
+    private var tabIndicator: some View {
+        GeometryReader { geo in
+            let tabWidth = geo.size.width / CGFloat(tabOrder.count)
+            let currentIndex = tabOrder.firstIndex(of: appState.selectedTab) ?? 2
+            let indicatorX = tabWidth * CGFloat(currentIndex) + tabWidth / 2
+            
+            // Neon horizontal line - positioned at top border of tab bar
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(
+                    LinearGradient(
+                        colors: [AppColors.neonBlue, AppColors.neonPink],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(width: 36, height: 3)
+                .shadow(color: AppColors.neonBlue.opacity(0.8), radius: 4, x: 0, y: 0)
+                .shadow(color: AppColors.neonPink.opacity(0.5), radius: 8, x: 0, y: 0)
+                .position(x: indicatorX, y: 1.5)
+                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: appState.selectedTab)
+                .allowsHitTesting(false)
+        }
+        .frame(height: 49)
+    }
+    
+    // MARK: - Swipe Gesture
+    
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 30, coordinateSpace: .local)
+            .onChanged { value in
+                // Track drag for visual feedback
+                dragOffset = value.translation.width
+            }
+            .onEnded { value in
+                let horizontalAmount = value.translation.width
+                let velocity = value.predictedEndTranslation.width - value.translation.width
+                
+                guard let currentIndex = tabOrder.firstIndex(of: appState.selectedTab) else {
+                    dragOffset = 0
+                    return
+                }
+                
+                // Use velocity to make swipe feel more responsive
+                let threshold: CGFloat = 50
+                let shouldSwipe = abs(horizontalAmount) > threshold || abs(velocity) > 100
+                
+                if shouldSwipe {
+                    if horizontalAmount < 0 || velocity < -100 {
+                        // Swipe left - go to next tab
+                        let nextIndex = min(currentIndex + 1, tabOrder.count - 1)
+                        if nextIndex != currentIndex {
+                            HapticManager.lightImpact()
+                        }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            appState.selectedTab = tabOrder[nextIndex]
+                        }
+                    } else if horizontalAmount > 0 || velocity > 100 {
+                        // Swipe right - go to previous tab
+                        let prevIndex = max(currentIndex - 1, 0)
+                        if prevIndex != currentIndex {
+                            HapticManager.lightImpact()
+                        }
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                            appState.selectedTab = tabOrder[prevIndex]
+                        }
+                    }
+                }
+                
+                // Reset drag offset
+                withAnimation(.spring(response: 0.2)) {
+                    dragOffset = 0
+                }
+            }
     }
     
     // MARK: - Tab Bar Appearance
@@ -88,7 +175,7 @@ struct SwipeCleanTab: View {
     }
 }
 
-struct EmailCleanerPlaceholder: View {
+struct ContactsPlaceholder: View {
     var body: some View {
         ZStack {
             AppColors.backgroundPrimary
@@ -97,19 +184,19 @@ struct EmailCleanerPlaceholder: View {
             VStack(spacing: 24) {
                 ZStack {
                     Circle()
-                        .fill(AppColors.statusWarning.opacity(0.15))
+                        .fill(AppColors.accentBlue.opacity(0.15))
                         .frame(width: 100, height: 100)
                     
-                    Image(systemName: "envelope.fill")
+                    Image(systemName: "person.crop.circle")
                         .font(.system(size: 44))
-                        .foregroundColor(AppColors.statusWarning)
+                        .foregroundColor(AppColors.accentBlue)
                 }
                 
-                Text("Email Cleaner")
+                Text("Contacts Cleaner")
                     .font(AppFonts.titleL)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text("Clean spam & unsubscribe\nComing soon...")
+                Text("Find and merge duplicate contacts\nComing soon...")
                     .font(AppFonts.bodyL)
                     .foregroundColor(AppColors.textTertiary)
                     .multilineTextAlignment(.center)
@@ -168,16 +255,13 @@ struct MoreView: View {
                             premiumBanner
                         }
                         
-                        // Tools Section
-                        toolsSection
-                        
-                        // Coming Soon
-                        comingSoonSection
+                        // Email Section
+                        emailSection
                     }
                     .padding(AppSpacing.screenPadding)
                 }
             }
-            .navigationTitle("Tools")
+            .navigationTitle("More")
             .navigationBarTitleDisplayMode(.inline)
             .withNavigationDestinations()
         }
@@ -221,116 +305,51 @@ struct MoreView: View {
         .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
-    private var toolsSection: some View {
+    private var emailSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Storage Tools")
+            Text("Tools")
                 .font(AppFonts.subtitleL)
                 .foregroundColor(AppColors.textPrimary)
             
             VStack(spacing: 2) {
-                // Big Files
-                Button {
-                    appState.morePath.append(PhotoCategoryNav.bigFiles)
-                } label: {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(AppColors.accentLilac.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            
-                            Image(systemName: "doc.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(AppColors.accentLilac)
-                        }
+                // Email Cleaner
+                HStack(spacing: 14) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(AppColors.statusWarning.opacity(0.15))
+                            .frame(width: 44, height: 44)
                         
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Big Files")
-                                .font(AppFonts.subtitleM)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            Text("Find and delete large files")
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.textTertiary)
-                        }
-                        
-                        Spacer()
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(AppColors.textTertiary.opacity(0.5))
+                        Image(systemName: "envelope.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(AppColors.statusWarning)
                     }
-                    .padding(AppSpacing.containerPadding)
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Email Cleaner")
+                            .font(AppFonts.subtitleM)
+                            .foregroundColor(AppColors.textSecondary)
+                        
+                        Text("Clean spam & unsubscribe")
+                            .font(AppFonts.caption)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                    
+                    Spacer()
+                    
+                    Text("Soon")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(AppColors.textTertiary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(AppColors.textTertiary.opacity(0.1))
+                        .cornerRadius(6)
                 }
+                .padding(AppSpacing.containerPadding)
+                .opacity(0.6)
             }
             .background(AppColors.backgroundSecondary)
             .cornerRadius(AppSpacing.cardRadius)
         }
-    }
-    
-    private var comingSoonSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Coming Soon")
-                .font(AppFonts.subtitleL)
-                .foregroundColor(AppColors.textPrimary)
-            
-            VStack(spacing: 2) {
-                comingSoonRow(
-                    icon: "person.2.fill",
-                    title: "Contacts Cleaner",
-                    description: "Find and merge duplicates"
-                )
-                
-                comingSoonRow(
-                    icon: "calendar",
-                    title: "Calendar Cleaner",
-                    description: "Remove old events"
-                )
-                
-                comingSoonRow(
-                    icon: "externaldrive.fill",
-                    title: "Storage Analysis",
-                    description: "Detailed storage breakdown"
-                )
-            }
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
-        }
-    }
-    
-    private func comingSoonRow(icon: String, title: String, description: String) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(AppColors.textTertiary.opacity(0.1))
-                    .frame(width: 44, height: 44)
-                
-                Image(systemName: icon)
-                    .font(.system(size: 20))
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(AppFonts.subtitleM)
-                    .foregroundColor(AppColors.textSecondary)
-                
-                Text(description)
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            
-            Spacer()
-            
-            Text("Soon")
-                .font(.system(size: 11, weight: .medium))
-                .foregroundColor(AppColors.textTertiary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(AppColors.textTertiary.opacity(0.1))
-                .cornerRadius(6)
-        }
-        .padding(AppSpacing.containerPadding)
-        .opacity(0.6)
     }
 }
 
