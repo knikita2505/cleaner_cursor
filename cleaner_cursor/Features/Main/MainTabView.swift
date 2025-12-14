@@ -40,7 +40,9 @@ struct MainTabView: View {
                     .tag(AppTab.clean)
                 
                 // 4. Contacts Tab
-                ContactsPlaceholder()
+                NavigationStack {
+                    ContactsCleanerView()
+                }
                     .tabItem {
                         Label(AppTab.contacts.title, systemImage: AppTab.contacts.icon)
                     }
@@ -175,35 +177,6 @@ struct SwipeCleanTab: View {
     }
 }
 
-struct ContactsPlaceholder: View {
-    var body: some View {
-        ZStack {
-            AppColors.backgroundPrimary
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.accentBlue.opacity(0.15))
-                        .frame(width: 100, height: 100)
-                    
-                    Image(systemName: "person.crop.circle")
-                        .font(.system(size: 44))
-                        .foregroundColor(AppColors.accentBlue)
-                }
-                
-                Text("Contacts Cleaner")
-                    .font(AppFonts.titleL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text("Find and merge duplicate contacts\nComing soon...")
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-    }
-}
 
 struct SecretFolderPlaceholder: View {
     var body: some View {
