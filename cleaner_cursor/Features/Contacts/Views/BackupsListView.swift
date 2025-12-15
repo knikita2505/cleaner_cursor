@@ -216,12 +216,8 @@ struct BackupCard: View {
                 } label: {
                     Image(systemName: "trash")
                         .foregroundColor(.red)
-                        .padding(8)
+                        .font(.body)
                 }
-                
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.gray)
-                    .font(.caption)
             }
             .padding(16)
             .background(

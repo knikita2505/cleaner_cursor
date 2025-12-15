@@ -7,6 +7,9 @@ import Contacts
 struct ContactsCleanerView: View {
     @ObservedObject private var service = ContactsService.shared
     @State private var hasAppeared = false
+    @State private var showBackupSuggestion = false
+    
+    private let backupSuggestionKey = "contacts_backup_suggested"
     
     var body: some View {
         ZStack {
@@ -36,10 +39,26 @@ struct ContactsCleanerView: View {
                 if service.isAuthorized {
                     print("🔍 Starting scan...")
                     await service.scanAllCategories()
+                    
+                    // Show backup suggestion on first visit
+                    if !UserDefaults.standard.bool(forKey: backupSuggestionKey) && service.contacts.count > 0 {
+                        showBackupSuggestion = true
+                    }
                 } else {
                     print("❌ Not authorized, skipping scan")
                 }
             }
+        }
+        .alert("Create Backup?", isPresented: $showBackupSuggestion) {
+            Button("Create Backup") {
+                UserDefaults.standard.set(true, forKey: backupSuggestionKey)
+                Task { await service.createBackup() }
+            }
+            Button("Later", role: .cancel) {
+                UserDefaults.standard.set(true, forKey: backupSuggestionKey)
+            }
+        } message: {
+            Text("We recommend creating a backup of your \(service.contacts.count) contacts before making any changes.")
         }
     }
     
@@ -51,10 +70,8 @@ struct ContactsCleanerView: View {
                 // Header
                 headerSection
                 
-                // Stats widget
-                if !service.isScanning {
-                    statsWidget
-                }
+                // Stats widget (always visible)
+                statsWidget
                 
                 // Categories
                 categoriesSection
@@ -66,11 +83,6 @@ struct ContactsCleanerView: View {
         }
         .refreshable {
             await service.scanAllCategories()
-        }
-        .overlay {
-            if service.isScanning {
-                scanningOverlay
-            }
         }
     }
     
@@ -106,18 +118,18 @@ struct ContactsCleanerView: View {
     }
     
     private var allContactsSection: some View {
-        HStack {
-            Image(systemName: "person.crop.circle.badge.checkmark")
-                .font(.title2)
-                .foregroundColor(AppColors.neonBlue)
-            
-            Text("\(service.contacts.count) contacts")
-                .font(.headline)
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            NavigationLink(destination: AllContactsView()) {
+        NavigationLink(destination: AllContactsView()) {
+            HStack {
+                Image(systemName: "person.crop.circle.badge.checkmark")
+                    .font(.title2)
+                    .foregroundColor(AppColors.neonBlue)
+                
+                Text("\(service.contacts.count) contacts")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
                 HStack(spacing: 4) {
                     Text("View all")
                         .font(.subheadline)
@@ -130,18 +142,18 @@ struct ContactsCleanerView: View {
     }
     
     private var backupsSection: some View {
-        HStack {
-            Image(systemName: "externaldrive.fill")
-                .font(.title2)
-                .foregroundColor(.green)
-            
-            Text("\(service.backups.count) backups")
-                .font(.headline)
-                .foregroundColor(.white)
-            
-            Spacer()
-            
-            NavigationLink(destination: BackupsListView()) {
+        NavigationLink(destination: BackupsListView()) {
+            HStack {
+                Image(systemName: "externaldrive.fill")
+                    .font(.title2)
+                    .foregroundColor(.green)
+                
+                Text("\(service.backups.count) backups")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
                 HStack(spacing: 4) {
                     Text("Manage")
                         .font(.subheadline)
@@ -157,47 +169,51 @@ struct ContactsCleanerView: View {
     
     private var categoriesSection: some View {
         VStack(spacing: 12) {
-            // Duplicate Contacts
+            // Duplicates
             NavigationLink(destination: DuplicateContactsView()) {
                 ContactCategoryCard(
                     icon: "person.2.fill",
-                    title: "Duplicate Contacts",
+                    title: "Duplicates",
                     subtitle: "Contacts with same name, phone or email",
                     count: service.duplicateGroups.count,
-                    color: .orange
+                    color: .orange,
+                    isLoading: service.isScanning
                 )
             }
             
             // Similar Names
             NavigationLink(destination: SimilarNamesView()) {
                 ContactCategoryCard(
-                    icon: "textformat.abc",
+                    icon: "character.textbox",
                     title: "Similar Names",
                     subtitle: "Names differing by 1-2 characters",
                     count: service.similarNameGroups.count,
-                    color: .purple
+                    color: .purple,
+                    isLoading: service.isScanning
                 )
             }
             
-            // No Name Contacts
+            // No Name
             NavigationLink(destination: NoNameContactsView()) {
                 ContactCategoryCard(
                     icon: "person.fill.questionmark",
-                    title: "No Name Contacts",
+                    title: "No Name",
                     subtitle: "Contacts with phone but no name",
                     count: service.noNameContacts.count,
-                    color: .blue
+                    color: .blue,
+                    isLoading: service.isScanning
                 )
             }
             
-            // No Number Contacts
+            // No Number
             NavigationLink(destination: NoNumberContactsView()) {
                 ContactCategoryCard(
-                    icon: "phone.badge.minus",
-                    title: "No Number Contacts",
+                    icon: "book.closed.fill",
+                    title: "No Number",
                     subtitle: "Contacts with name but no phone",
                     count: service.noNumberContacts.count,
-                    color: .cyan
+                    color: .cyan,
+                    isLoading: service.isScanning
                 )
             }
         }
@@ -243,21 +259,6 @@ struct ContactsCleanerView: View {
         }
     }
     
-    // MARK: - Scanning Overlay
-    
-    private var scanningOverlay: some View {
-        VStack(spacing: 16) {
-            ProgressView()
-                .scaleEffect(1.5)
-                .tint(AppColors.neonBlue)
-            
-            Text("Scanning contacts...")
-                .font(.headline)
-                .foregroundColor(.white)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.black.opacity(0.7))
-    }
 }
 
 // MARK: - Contact Category Card
@@ -268,6 +269,7 @@ struct ContactCategoryCard: View {
     let subtitle: String
     let count: Int
     let color: Color
+    var isLoading: Bool = false
     
     var body: some View {
         HStack(spacing: 16) {
@@ -296,8 +298,11 @@ struct ContactCategoryCard: View {
             
             Spacer()
             
-            // Count Badge
-            if count > 0 {
+            // Count Badge or Loading
+            if isLoading {
+                ProgressView()
+                    .tint(color)
+            } else if count > 0 {
                 Text("\(count)")
                     .font(.subheadline)
                     .fontWeight(.bold)
