@@ -8,8 +8,11 @@ import UIKit
 struct DuplicateContactsView: View {
     @ObservedObject private var service = ContactsService.shared
     @State private var selectedGroup: ContactDuplicateGroup?
+    @State private var quickMergeGroup: ContactDuplicateGroup?
     @State private var isMergingAll = false
+    @State private var isMergingSingle = false
     @State private var showMergeAllConfirm = false
+    @State private var showQuickMergeConfirm = false
     @State private var showError = false
     @State private var errorMessage = ""
     
@@ -51,13 +54,31 @@ struct DuplicateContactsView: View {
         } message: {
             Text("This will merge all duplicate groups into single contacts. This action cannot be undone.")
         }
+        .confirmationDialog(
+            "Quick Merge?",
+            isPresented: $showQuickMergeConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Merge \(quickMergeGroup?.contacts.count ?? 0) Contacts", role: .destructive) {
+                if let group = quickMergeGroup {
+                    Task { await quickMerge(group: group) }
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                quickMergeGroup = nil
+            }
+        } message: {
+            if let group = quickMergeGroup {
+                Text("Merge \(group.contacts.count) contacts into one? This action cannot be undone.")
+            }
+        }
         .alert("Error", isPresented: $showError) {
             Button("OK") { }
         } message: {
             Text(errorMessage)
         }
         .overlay {
-            if isMergingAll {
+            if isMergingAll || isMergingSingle {
                 mergingOverlay
             }
         }
@@ -93,10 +114,16 @@ struct DuplicateContactsView: View {
                 // Groups
                 LazyVStack(spacing: 16) {
                     ForEach(service.duplicateGroups) { group in
-                        DuplicateGroupCard(group: group) {
-                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                            selectedGroup = group
-                        }
+                        DuplicateGroupCard(
+                            group: group,
+                            onTap: {
+                                selectedGroup = group
+                            },
+                            onQuickMerge: {
+                                quickMergeGroup = group
+                                showQuickMergeConfirm = true
+                            }
+                        )
                     }
                 }
             }
@@ -166,6 +193,22 @@ struct DuplicateContactsView: View {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         isMergingAll = false
     }
+    
+    private func quickMerge(group: ContactDuplicateGroup) async {
+        isMergingSingle = true
+        
+        do {
+            try await service.mergeContacts(group.contacts)
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        } catch {
+            errorMessage = error.localizedDescription
+            showError = true
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
+        }
+        
+        quickMergeGroup = nil
+        isMergingSingle = false
+    }
 }
 
 // MARK: - Duplicate Group Card
@@ -173,105 +216,128 @@ struct DuplicateContactsView: View {
 struct DuplicateGroupCard: View {
     let group: ContactDuplicateGroup
     let onTap: () -> Void
+    let onQuickMerge: () -> Void
     
     var body: some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
-                // Header
-                HStack {
-                    // Match type badge
-                    HStack(spacing: 6) {
-                        Image(systemName: matchIcon)
-                            .font(.caption)
-                        Text(group.matchType.description)
-                            .font(.caption)
-                            .fontWeight(.medium)
-                    }
-                    .foregroundColor(.orange)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.15))
-                    .cornerRadius(8)
-                    
-                    Spacer()
-                    
-                    Text("\(group.contacts.count) contacts")
+        VStack(alignment: .leading, spacing: 12) {
+            // Header
+            HStack {
+                // Match type badge
+                HStack(spacing: 6) {
+                    Image(systemName: matchIcon)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                    Text(group.matchType.description)
+                        .font(.caption)
+                        .fontWeight(.medium)
                 }
+                .foregroundColor(.orange)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(Color.orange.opacity(0.15))
+                .cornerRadius(8)
                 
-                // Contacts preview (stacked avatars)
-                HStack(spacing: -12) {
-                    ForEach(Array(group.contacts.prefix(4).enumerated()), id: \.element.identifier) { index, contact in
-                        ContactAvatar(contact: contact, size: 44)
-                            .overlay(
-                                Circle()
-                                    .stroke(AppColors.backgroundPrimary, lineWidth: 2)
-                            )
-                            .zIndex(Double(4 - index))
-                    }
-                    
-                    if group.contacts.count > 4 {
-                        ZStack {
-                            Circle()
-                                .fill(Color.gray.opacity(0.3))
-                                .frame(width: 44, height: 44)
-                            
-                            Text("+\(group.contacts.count - 4)")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                        }
+                Spacer()
+                
+                Text("\(group.contacts.count) contacts")
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+            
+            // Contacts preview (stacked avatars)
+            HStack(spacing: -12) {
+                ForEach(Array(group.contacts.prefix(4).enumerated()), id: \.element.identifier) { index, contact in
+                    ContactAvatar(contact: contact, size: 44)
                         .overlay(
                             Circle()
                                 .stroke(AppColors.backgroundPrimary, lineWidth: 2)
                         )
-                    }
-                    
-                    Spacer()
+                        .zIndex(Double(4 - index))
                 }
                 
-                // Names list
-                VStack(alignment: .leading, spacing: 4) {
-                    ForEach(group.contacts.prefix(3), id: \.identifier) { contact in
-                        HStack(spacing: 8) {
-                            Text("•")
-                                .foregroundColor(.orange)
-                            Text(contact.displayName)
-                                .font(.subheadline)
-                                .foregroundColor(.white)
-                                .lineLimit(1)
-                        }
-                    }
-                    
-                    if group.contacts.count > 3 {
-                        Text("  +\(group.contacts.count - 3) more...")
+                if group.contacts.count > 4 {
+                    ZStack {
+                        Circle()
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 44, height: 44)
+                        
+                        Text("+\(group.contacts.count - 4)")
                             .font(.caption)
-                            .foregroundColor(.gray)
-                    }
-                }
-                
-                // Action hint
-                HStack {
-                    Spacer()
-                    
-                    HStack(spacing: 4) {
-                        Text("Review & Merge")
-                            .font(.subheadline)
                             .fontWeight(.medium)
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
+                            .foregroundColor(.white)
                     }
-                    .foregroundColor(AppColors.neonBlue)
+                    .overlay(
+                        Circle()
+                            .stroke(AppColors.backgroundPrimary, lineWidth: 2)
+                    )
+                }
+                
+                Spacer()
+            }
+            
+            // Names list
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(group.contacts.prefix(3), id: \.identifier) { contact in
+                    HStack(spacing: 8) {
+                        Text("•")
+                            .foregroundColor(.orange)
+                        Text(contact.displayName)
+                            .font(.subheadline)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
+                }
+                
+                if group.contacts.count > 3 {
+                    Text("  +\(group.contacts.count - 3) more...")
+                        .font(.caption)
+                        .foregroundColor(.gray)
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white.opacity(0.05))
-            )
+            
+            // Action buttons
+            HStack(spacing: 12) {
+                // Quick Merge button
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    onQuickMerge()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.triangle.merge")
+                            .font(.caption)
+                        Text("Quick Merge")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                    }
+                    .foregroundColor(AppColors.neonBlue)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(AppColors.neonBlue.opacity(0.15))
+                    .cornerRadius(8)
+                }
+                
+                Spacer()
+                
+                // Review label (tap anywhere on card to open)
+                HStack(spacing: 4) {
+                    Text("Review & Merge")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .foregroundColor(AppColors.neonBlue)
+            }
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.white.opacity(0.05))
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            onTap()
+        }
     }
     
     private var matchIcon: String {
