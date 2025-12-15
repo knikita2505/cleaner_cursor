@@ -7,6 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		111038602EEDDAE90015FEE3 /* SimilarNamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */; };
+		111038612EEDDAE90015FEE3 /* ContactsCleanerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385B2EEDDAE90015FEE3 /* ContactsCleanerView.swift */; };
+		111038622EEDDAE90015FEE3 /* NoNumberContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */; };
+		111038642EEDDAE90015FEE3 /* NoNameContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385E2EEDDAE90015FEE3 /* NoNameContactsView.swift */; };
+		111038652EEDDAE90015FEE3 /* DuplicateContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385F2EEDDAE90015FEE3 /* DuplicateContactsView.swift */; };
+		111038692EF099AD0015FEE3 /* BackupsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038662EF099AD0015FEE3 /* BackupsListView.swift */; };
+		1110386A2EF099AD0015FEE3 /* AllContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038672EF099AD0015FEE3 /* AllContactsView.swift */; };
+		1110386B2EF099AD0015FEE3 /* BackupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038682EF099AD0015FEE3 /* BackupDetailView.swift */; };
 		11205BE32ED4D7A2003AFFF9 /* cleaner_cursorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */; };
 		11205BE52ED4D7A2003AFFF9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BE42ED4D7A2003AFFF9 /* ContentView.swift */; };
 		11205BE72ED4D7A3003AFFF9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 11205BE62ED4D7A3003AFFF9 /* Assets.xcassets */; };
@@ -79,6 +87,14 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimilarNamesView.swift; sourceTree = "<group>"; };
+		1110385B2EEDDAE90015FEE3 /* ContactsCleanerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactsCleanerView.swift; sourceTree = "<group>"; };
+		1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoNumberContactsView.swift; sourceTree = "<group>"; };
+		1110385E2EEDDAE90015FEE3 /* NoNameContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoNameContactsView.swift; sourceTree = "<group>"; };
+		1110385F2EEDDAE90015FEE3 /* DuplicateContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DuplicateContactsView.swift; sourceTree = "<group>"; };
+		111038662EF099AD0015FEE3 /* BackupsListView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackupsListView.swift; sourceTree = "<group>"; };
+		111038672EF099AD0015FEE3 /* AllContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AllContactsView.swift; sourceTree = "<group>"; };
+		111038682EF099AD0015FEE3 /* BackupDetailView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackupDetailView.swift; sourceTree = "<group>"; };
 		11205BDF2ED4D7A2003AFFF9 /* cleaner_cursor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = cleaner_cursor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = cleaner_cursorApp.swift; sourceTree = "<group>"; };
 		11205BE42ED4D7A2003AFFF9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -162,6 +178,29 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		111038582EEDDAE90015FEE3 /* Contacts */ = {
+			isa = PBXGroup;
+			children = (
+				111038592EEDDAE90015FEE3 /* Views */,
+			);
+			path = Contacts;
+			sourceTree = "<group>";
+		};
+		111038592EEDDAE90015FEE3 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				111038672EF099AD0015FEE3 /* AllContactsView.swift */,
+				111038682EF099AD0015FEE3 /* BackupDetailView.swift */,
+				111038662EF099AD0015FEE3 /* BackupsListView.swift */,
+				1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */,
+				1110385B2EEDDAE90015FEE3 /* ContactsCleanerView.swift */,
+				1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */,
+				1110385E2EEDDAE90015FEE3 /* NoNameContactsView.swift */,
+				1110385F2EEDDAE90015FEE3 /* DuplicateContactsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		11205BD62ED4D7A1003AFFF9 = {
 			isa = PBXGroup;
 			children = (
@@ -293,6 +332,7 @@
 		11205CFE2ED62451003AFFF9 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				111038582EEDDAE90015FEE3 /* Contacts */,
 				11289BEF2EEA1444005ED805 /* Swipe */,
 				116799402EDDF16400C73344 /* Videos */,
 				11205D382ED797FC003AFFF9 /* Photos */,
@@ -639,10 +679,14 @@
 				11205D212ED62451003AFFF9 /* AppFonts.swift in Sources */,
 				11205D4D2ED79C0D003AFFF9 /* HighlightsView.swift in Sources */,
 				11205D372ED761BB003AFFF9 /* DashboardViewModel.swift in Sources */,
+				1110386A2EF099AD0015FEE3 /* AllContactsView.swift in Sources */,
 				11205D1C2ED62451003AFFF9 /* Date+Extensions.swift in Sources */,
 				11205D1E2ED62451003AFFF9 /* AppSpacing.swift in Sources */,
 				11289BF42EEA1444005ED805 /* SwipeHubView.swift in Sources */,
 				11205D182ED62451003AFFF9 /* AppState.swift in Sources */,
+				111038602EEDDAE90015FEE3 /* SimilarNamesView.swift in Sources */,
+				111038652EEDDAE90015FEE3 /* DuplicateContactsView.swift in Sources */,
+				111038612EEDDAE90015FEE3 /* ContactsCleanerView.swift in Sources */,
 				11205D282ED62451003AFFF9 /* ContactsService.swift in Sources */,
 				11205D2A2ED62451003AFFF9 /* MainTabView.swift in Sources */,
 				11205BE52ED4D7A2003AFFF9 /* ContentView.swift in Sources */,
@@ -651,12 +695,15 @@
 				11205D262ED62451003AFFF9 /* SecretFolderService.swift in Sources */,
 				11205D1D2ED62451003AFFF9 /* HapticManager.swift in Sources */,
 				11205D442ED797FC003AFFF9 /* PhotosOverviewView.swift in Sources */,
+				111038622EEDDAE90015FEE3 /* NoNumberContactsView.swift in Sources */,
 				11205D192ED62451003AFFF9 /* Router.swift in Sources */,
 				11205D232ED62451003AFFF9 /* SubscriptionService.swift in Sources */,
 				11205D2F2ED62451003AFFF9 /* PrimaryCard.swift in Sources */,
 				11289BEE2EEA1430005ED805 /* SwipeProgressService.swift in Sources */,
+				1110386B2EF099AD0015FEE3 /* BackupDetailView.swift in Sources */,
 				11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */,
 				116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */,
+				111038642EEDDAE90015FEE3 /* NoNameContactsView.swift in Sources */,
 				11205D2D2ED62451003AFFF9 /* PrimaryButton.swift in Sources */,
 				11205D2C2ED62451003AFFF9 /* OnboardingView.swift in Sources */,
 				11205D242ED62451003AFFF9 /* StorageService.swift in Sources */,
@@ -672,6 +719,7 @@
 				11205D1B2ED62451003AFFF9 /* View+Extensions.swift in Sources */,
 				116799472EDDF16400C73344 /* ShortVideosView.swift in Sources */,
 				11289BF32EEA1444005ED805 /* SwipeSessionView.swift in Sources */,
+				111038692EF099AD0015FEE3 /* BackupsListView.swift in Sources */,
 				11205BE32ED4D7A2003AFFF9 /* cleaner_cursorApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
