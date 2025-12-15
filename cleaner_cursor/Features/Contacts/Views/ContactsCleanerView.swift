@@ -97,30 +97,6 @@ struct ContactsCleanerView: View {
             
             // Backups section
             backupsSection
-            
-            Divider()
-                .background(Color.gray.opacity(0.3))
-            
-            // Issues stats
-            HStack(spacing: 16) {
-                statsItem(
-                    count: totalIssues,
-                    label: "Issues",
-                    color: totalIssues > 0 ? AppColors.neonPink : .green
-                )
-                
-                statsItem(
-                    count: service.duplicateGroups.count,
-                    label: "Duplicates",
-                    color: .orange
-                )
-                
-                statsItem(
-                    count: service.noNameContacts.count + service.noNumberContacts.count,
-                    label: "Incomplete",
-                    color: .cyan
-                )
-            }
         }
         .padding(16)
         .background(
@@ -175,27 +151,6 @@ struct ContactsCleanerView: View {
                 .foregroundColor(.green)
             }
         }
-    }
-    
-    private func statsItem(count: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 4) {
-            Text("\(count)")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(color)
-            
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-    }
-    
-    private var totalIssues: Int {
-        service.duplicateGroups.count +
-        service.similarNameGroups.count +
-        service.noNameContacts.count +
-        service.noNumberContacts.count
     }
     
     // MARK: - Categories Section

@@ -747,6 +747,20 @@ struct ContactSimilarGroup: Identifiable {
     let contacts: [CNContact]
 }
 
+enum ContactRestoreError: LocalizedError {
+    case alreadyExists
+    case allAlreadyExist(count: Int)
+    
+    var errorDescription: String? {
+        switch self {
+        case .alreadyExists:
+            return "Contact already exists in your address book"
+        case .allAlreadyExist(let count):
+            return "All \(count) contacts already exist in your address book"
+        }
+    }
+}
+
 // MARK: - CNContact Extensions
 
 extension CNContact {
@@ -922,7 +936,7 @@ struct BackupSocialProfile: Codable {
         self.label = labeled.label
         self.service = labeled.value.service
         self.username = labeled.value.username
-        self.urlString = labeled.value.urlString ?? ""
+        self.urlString = labeled.value.urlString
     }
     
     func toLabeledValue() -> CNLabeledValue<CNSocialProfile> {
@@ -977,7 +991,7 @@ extension ContactsService {
         // Limit to 3 backups
         if backups.count >= maxBackups {
             // Remove oldest backup
-            await MainActor.run {
+            _ = await MainActor.run {
                 backups.removeLast()
             }
         }
@@ -1007,6 +1021,11 @@ extension ContactsService {
     // MARK: - Restore Single Contact
     
     func restoreContact(_ backupContact: BackupContact) async throws {
+        // Check if contact already exists
+        if contactExists(backupContact) {
+            throw ContactRestoreError.alreadyExists
+        }
+        
         let newContact = backupContact.toCNContact()
         let saveRequest = CNSaveRequest()
         saveRequest.add(newContact, toContainerWithIdentifier: nil)
@@ -1018,14 +1037,52 @@ extension ContactsService {
     
     func restoreAllContacts(from backup: ContactBackup) async throws {
         let saveRequest = CNSaveRequest()
+        var restoredCount = 0
+        var skippedCount = 0
         
         for backupContact in backup.contacts {
+            if contactExists(backupContact) {
+                skippedCount += 1
+                continue
+            }
             let newContact = backupContact.toCNContact()
             saveRequest.add(newContact, toContainerWithIdentifier: nil)
+            restoredCount += 1
         }
         
-        try store.execute(saveRequest)
+        if restoredCount == 0 && skippedCount > 0 {
+            throw ContactRestoreError.allAlreadyExist(count: skippedCount)
+        }
+        
+        if restoredCount > 0 {
+            try store.execute(saveRequest)
+        }
         await scanAllCategories()
+    }
+    
+    // MARK: - Check if Contact Exists
+    
+    private func contactExists(_ backupContact: BackupContact) -> Bool {
+        // Check by name and phone number
+        let name = "\(backupContact.givenName) \(backupContact.familyName)".trimmingCharacters(in: .whitespaces).lowercased()
+        let phones = Set(backupContact.phoneNumbers.map { normalizePhoneNumber($0.value) })
+        
+        for contact in contacts {
+            let existingName = "\(contact.givenName) \(contact.familyName)".trimmingCharacters(in: .whitespaces).lowercased()
+            let existingPhones = Set(contact.phoneNumbers.map { normalizePhoneNumber($0.value.stringValue) })
+            
+            // Match by name (if both have names)
+            if !name.isEmpty && !existingName.isEmpty && name == existingName {
+                return true
+            }
+            
+            // Match by phone number
+            if !phones.isEmpty && !existingPhones.isEmpty && !phones.isDisjoint(with: existingPhones) {
+                return true
+            }
+        }
+        
+        return false
     }
     
     // MARK: - Get Sorted Contacts
