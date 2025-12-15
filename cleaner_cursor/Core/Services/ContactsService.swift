@@ -20,6 +20,10 @@ final class ContactsService: ObservableObject {
     @Published var noNameContacts: [CNContact] = []
     @Published var noNumberContacts: [CNContact] = []
     
+    // Резервные копии
+    @Published var backups: [ContactBackup] = []
+    private let maxBackups = 3
+    
     // MARK: - Private
     
     private let store = CNContactStore()
@@ -55,10 +59,14 @@ final class ContactsService: ObservableObject {
         CNContactThumbnailImageDataKey as CNKeyDescriptor
     ]
     
+    // Backup storage
+    private let backupsKey = "contact_backups"
+    
     // MARK: - Init
     
     private init() {
         checkAuthorization()
+        loadBackups()
     }
     
     // MARK: - Authorization
@@ -765,5 +773,264 @@ extension CNContact {
     
     var primaryEmail: String? {
         emailAddresses.first?.value as String?
+    }
+}
+
+// MARK: - Contact Backup Model
+
+struct ContactBackup: Identifiable, Codable {
+    let id: String
+    let createdAt: Date
+    let contacts: [BackupContact]
+    
+    var contactCount: Int { contacts.count }
+    
+    var formattedDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: createdAt)
+    }
+}
+
+struct BackupContact: Identifiable, Codable {
+    let id: String
+    let givenName: String
+    let familyName: String
+    let middleName: String
+    let namePrefix: String
+    let nameSuffix: String
+    let nickname: String
+    let organizationName: String
+    let departmentName: String
+    let jobTitle: String
+    let phoneNumbers: [BackupPhone]
+    let emailAddresses: [BackupEmail]
+    let postalAddresses: [BackupAddress]
+    let urlAddresses: [BackupURL]
+    let socialProfiles: [BackupSocialProfile]
+    let birthday: BackupDate?
+    let imageData: Data?
+    
+    var displayName: String {
+        let name = "\(givenName) \(familyName)".trimmingCharacters(in: .whitespaces)
+        if name.isEmpty {
+            if !organizationName.isEmpty { return organizationName }
+            if let phone = phoneNumbers.first { return phone.value }
+            if let email = emailAddresses.first { return email.value }
+            return "No Name"
+        }
+        return name
+    }
+    
+    var primaryPhone: String? {
+        phoneNumbers.first?.value
+    }
+    
+    init(from contact: CNContact) {
+        self.id = contact.identifier
+        self.givenName = contact.givenName
+        self.familyName = contact.familyName
+        self.middleName = contact.middleName
+        self.namePrefix = contact.namePrefix
+        self.nameSuffix = contact.nameSuffix
+        self.nickname = contact.nickname
+        self.organizationName = contact.organizationName
+        self.departmentName = contact.departmentName
+        self.jobTitle = contact.jobTitle
+        self.phoneNumbers = contact.phoneNumbers.map { BackupPhone(label: $0.label, value: $0.value.stringValue) }
+        self.emailAddresses = contact.emailAddresses.map { BackupEmail(label: $0.label, value: $0.value as String) }
+        self.postalAddresses = contact.postalAddresses.map { BackupAddress(from: $0) }
+        self.urlAddresses = contact.urlAddresses.map { BackupURL(label: $0.label, value: $0.value as String) }
+        self.socialProfiles = contact.socialProfiles.map { BackupSocialProfile(from: $0) }
+        self.birthday = contact.birthday != nil ? BackupDate(from: contact.birthday!) : nil
+        self.imageData = contact.imageData
+    }
+    
+    func toCNContact() -> CNMutableContact {
+        let contact = CNMutableContact()
+        contact.givenName = givenName
+        contact.familyName = familyName
+        contact.middleName = middleName
+        contact.namePrefix = namePrefix
+        contact.nameSuffix = nameSuffix
+        contact.nickname = nickname
+        contact.organizationName = organizationName
+        contact.departmentName = departmentName
+        contact.jobTitle = jobTitle
+        contact.phoneNumbers = phoneNumbers.map { CNLabeledValue(label: $0.label, value: CNPhoneNumber(stringValue: $0.value)) }
+        contact.emailAddresses = emailAddresses.map { CNLabeledValue(label: $0.label, value: $0.value as NSString) }
+        contact.postalAddresses = postalAddresses.map { $0.toLabeledValue() }
+        contact.urlAddresses = urlAddresses.map { CNLabeledValue(label: $0.label, value: $0.value as NSString) }
+        contact.socialProfiles = socialProfiles.map { $0.toLabeledValue() }
+        if let birthday = birthday { contact.birthday = birthday.toDateComponents() }
+        if let imageData = imageData { contact.imageData = imageData }
+        return contact
+    }
+}
+
+struct BackupPhone: Codable {
+    let label: String?
+    let value: String
+}
+
+struct BackupEmail: Codable {
+    let label: String?
+    let value: String
+}
+
+struct BackupAddress: Codable {
+    let label: String?
+    let street: String
+    let city: String
+    let state: String
+    let postalCode: String
+    let country: String
+    
+    init(from labeled: CNLabeledValue<CNPostalAddress>) {
+        self.label = labeled.label
+        self.street = labeled.value.street
+        self.city = labeled.value.city
+        self.state = labeled.value.state
+        self.postalCode = labeled.value.postalCode
+        self.country = labeled.value.country
+    }
+    
+    func toLabeledValue() -> CNLabeledValue<CNPostalAddress> {
+        let address = CNMutablePostalAddress()
+        address.street = street
+        address.city = city
+        address.state = state
+        address.postalCode = postalCode
+        address.country = country
+        return CNLabeledValue(label: label, value: address)
+    }
+}
+
+struct BackupURL: Codable {
+    let label: String?
+    let value: String
+}
+
+struct BackupSocialProfile: Codable {
+    let label: String?
+    let service: String
+    let username: String
+    let urlString: String
+    
+    init(from labeled: CNLabeledValue<CNSocialProfile>) {
+        self.label = labeled.label
+        self.service = labeled.value.service
+        self.username = labeled.value.username
+        self.urlString = labeled.value.urlString ?? ""
+    }
+    
+    func toLabeledValue() -> CNLabeledValue<CNSocialProfile> {
+        let profile = CNSocialProfile(urlString: urlString, username: username, userIdentifier: nil, service: service)
+        return CNLabeledValue(label: label, value: profile)
+    }
+}
+
+struct BackupDate: Codable {
+    let year: Int?
+    let month: Int?
+    let day: Int?
+    
+    init(from components: DateComponents) {
+        self.year = components.year
+        self.month = components.month
+        self.day = components.day
+    }
+    
+    func toDateComponents() -> DateComponents {
+        var components = DateComponents()
+        components.year = year
+        components.month = month
+        components.day = day
+        return components
+    }
+}
+
+// MARK: - Backup Methods Extension
+
+extension ContactsService {
+    
+    // MARK: - Load/Save Backups
+    
+    func loadBackups() {
+        guard let data = UserDefaults.standard.data(forKey: backupsKey),
+              let decoded = try? JSONDecoder().decode([ContactBackup].self, from: data) else {
+            backups = []
+            return
+        }
+        backups = decoded.sorted { $0.createdAt > $1.createdAt }
+    }
+    
+    private func saveBackups() {
+        guard let data = try? JSONEncoder().encode(backups) else { return }
+        UserDefaults.standard.set(data, forKey: backupsKey)
+    }
+    
+    // MARK: - Create Backup
+    
+    func createBackup() async -> Bool {
+        // Limit to 3 backups
+        if backups.count >= maxBackups {
+            // Remove oldest backup
+            await MainActor.run {
+                backups.removeLast()
+            }
+        }
+        
+        let backupContacts = contacts.map { BackupContact(from: $0) }
+        let backup = ContactBackup(
+            id: UUID().uuidString,
+            createdAt: Date(),
+            contacts: backupContacts
+        )
+        
+        await MainActor.run {
+            backups.insert(backup, at: 0)
+            saveBackups()
+        }
+        
+        return true
+    }
+    
+    // MARK: - Delete Backup
+    
+    func deleteBackup(_ backup: ContactBackup) {
+        backups.removeAll { $0.id == backup.id }
+        saveBackups()
+    }
+    
+    // MARK: - Restore Single Contact
+    
+    func restoreContact(_ backupContact: BackupContact) async throws {
+        let newContact = backupContact.toCNContact()
+        let saveRequest = CNSaveRequest()
+        saveRequest.add(newContact, toContainerWithIdentifier: nil)
+        try store.execute(saveRequest)
+        await scanAllCategories()
+    }
+    
+    // MARK: - Restore All Contacts from Backup
+    
+    func restoreAllContacts(from backup: ContactBackup) async throws {
+        let saveRequest = CNSaveRequest()
+        
+        for backupContact in backup.contacts {
+            let newContact = backupContact.toCNContact()
+            saveRequest.add(newContact, toContainerWithIdentifier: nil)
+        }
+        
+        try store.execute(saveRequest)
+        await scanAllCategories()
+    }
+    
+    // MARK: - Get Sorted Contacts
+    
+    func getSortedContacts() -> [CNContact] {
+        contacts.sorted { $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending }
     }
 }

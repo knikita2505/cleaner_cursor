@@ -88,22 +88,20 @@ struct ContactsCleanerView: View {
     // MARK: - Stats Widget
     
     private var statsWidget: some View {
-        VStack(spacing: 12) {
-            HStack {
-                Image(systemName: "person.crop.circle.badge.checkmark")
-                    .font(.title2)
-                    .foregroundColor(AppColors.neonBlue)
-                
-                Text("\(service.contacts.count) contacts")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Spacer()
-            }
+        VStack(spacing: 16) {
+            // All contacts section
+            allContactsSection
             
             Divider()
                 .background(Color.gray.opacity(0.3))
             
+            // Backups section
+            backupsSection
+            
+            Divider()
+                .background(Color.gray.opacity(0.3))
+            
+            // Issues stats
             HStack(spacing: 16) {
                 statsItem(
                     count: totalIssues,
@@ -129,6 +127,54 @@ struct ContactsCleanerView: View {
             RoundedRectangle(cornerRadius: 16)
                 .fill(Color.white.opacity(0.05))
         )
+    }
+    
+    private var allContactsSection: some View {
+        HStack {
+            Image(systemName: "person.crop.circle.badge.checkmark")
+                .font(.title2)
+                .foregroundColor(AppColors.neonBlue)
+            
+            Text("\(service.contacts.count) contacts")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            NavigationLink(destination: AllContactsView()) {
+                HStack(spacing: 4) {
+                    Text("View all")
+                        .font(.subheadline)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .foregroundColor(AppColors.neonBlue)
+            }
+        }
+    }
+    
+    private var backupsSection: some View {
+        HStack {
+            Image(systemName: "externaldrive.fill")
+                .font(.title2)
+                .foregroundColor(.green)
+            
+            Text("\(service.backups.count) backups")
+                .font(.headline)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            NavigationLink(destination: BackupsListView()) {
+                HStack(spacing: 4) {
+                    Text("Manage")
+                        .font(.subheadline)
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                }
+                .foregroundColor(.green)
+            }
+        }
     }
     
     private func statsItem(count: Int, label: String, color: Color) -> some View {
