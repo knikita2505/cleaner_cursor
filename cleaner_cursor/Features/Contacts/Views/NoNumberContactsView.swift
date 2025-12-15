@@ -167,7 +167,7 @@ struct NoNumberContactRow: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 16) {
+            HStack(alignment: .top, spacing: 12) {
                 // Selection indicator
                 ZStack {
                     Circle()
@@ -180,19 +180,20 @@ struct NoNumberContactRow: View {
                             .frame(width: 16, height: 16)
                     }
                 }
+                .padding(.top, 4)
                 
                 // Avatar
                 ZStack {
                     Circle()
                         .fill(Color.cyan.opacity(0.2))
-                        .frame(width: 44, height: 44)
+                        .frame(width: 50, height: 50)
                     
                     if let imageData = contact.thumbnailImageData,
                        let uiImage = UIImage(data: imageData) {
                         Image(uiImage: uiImage)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 44, height: 44)
+                            .frame(width: 50, height: 50)
                             .clipShape(Circle())
                     } else {
                         Text(initials)
@@ -201,21 +202,51 @@ struct NoNumberContactRow: View {
                     }
                 }
                 
-                // Name
-                VStack(alignment: .leading, spacing: 4) {
+                // Info
+                VStack(alignment: .leading, spacing: 6) {
+                    // Name
                     Text(contact.displayName)
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    Text("No phone number")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                    // Available fields
+                    VStack(alignment: .leading, spacing: 4) {
+                        // Emails
+                        ForEach(emails, id: \.self) { email in
+                            ContactFieldRow(icon: "envelope.fill", text: email, color: .blue)
+                        }
+                        
+                        // Addresses
+                        ForEach(addresses, id: \.self) { address in
+                            ContactFieldRow(icon: "location.fill", text: address, color: .green)
+                        }
+                        
+                        // URLs
+                        ForEach(urls, id: \.self) { url in
+                            ContactFieldRow(icon: "link", text: url, color: .purple)
+                        }
+                        
+                        // Social profiles
+                        ForEach(socialProfiles, id: \.self) { profile in
+                            ContactFieldRow(icon: "bubble.left.fill", text: profile, color: .pink)
+                        }
+                        
+                        // Organization
+                        if let org = organization {
+                            ContactFieldRow(icon: "building.2.fill", text: org, color: .orange)
+                        }
+                        
+                        // If no additional fields
+                        if emails.isEmpty && addresses.isEmpty && urls.isEmpty && socialProfiles.isEmpty && organization == nil {
+                            Text("No additional info")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                                .italic()
+                        }
+                    }
                 }
                 
                 Spacer()
-                
-                Image(systemName: "phone.badge.minus")
-                    .foregroundColor(.cyan.opacity(0.5))
             }
             .padding(12)
             .background(
@@ -231,6 +262,61 @@ struct NoNumberContactRow: View {
         let last = contact.familyName.prefix(1)
         let combined = "\(first)\(last)"
         return combined.isEmpty ? "?" : combined.uppercased()
+    }
+    
+    private var emails: [String] {
+        contact.emailAddresses.map { $0.value as String }
+    }
+    
+    private var addresses: [String] {
+        contact.postalAddresses.compactMap { labeled in
+            let address = labeled.value
+            let parts = [address.street, address.city, address.country].filter { !$0.isEmpty }
+            return parts.isEmpty ? nil : parts.joined(separator: ", ")
+        }
+    }
+    
+    private var urls: [String] {
+        contact.urlAddresses.map { $0.value as String }
+    }
+    
+    private var socialProfiles: [String] {
+        contact.socialProfiles.map { "\($0.value.service): \($0.value.username)" }
+    }
+    
+    private var organization: String? {
+        let org = contact.organizationName
+        let job = contact.jobTitle
+        if !org.isEmpty && !job.isEmpty {
+            return "\(job) @ \(org)"
+        } else if !org.isEmpty {
+            return org
+        } else if !job.isEmpty {
+            return job
+        }
+        return nil
+    }
+}
+
+// MARK: - Contact Field Row
+
+struct ContactFieldRow: View {
+    let icon: String
+    let text: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(color)
+                .frame(width: 14)
+            
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.gray)
+                .lineLimit(1)
+        }
     }
 }
 
