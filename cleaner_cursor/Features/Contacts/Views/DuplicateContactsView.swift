@@ -570,23 +570,13 @@ struct MergeContactsSheet: View {
     }
     
     private func getAllUniquePhones() -> [String] {
-        var phones = Set<String>()
-        for contact in group.contacts {
-            for phone in contact.phoneNumbers {
-                phones.insert(phone.value.stringValue)
-            }
-        }
-        return Array(phones).sorted()
+        // Use service method that normalizes phone numbers correctly
+        return service.getUniquePhones(from: group.contacts)
     }
     
     private func getAllUniqueEmails() -> [String] {
-        var emails = Set<String>()
-        for contact in group.contacts {
-            for email in contact.emailAddresses {
-                emails.insert(email.value as String)
-            }
-        }
-        return Array(emails).sorted()
+        // Use service method for consistent deduplication
+        return service.getUniqueEmails(from: group.contacts)
     }
     
     private func mergeContacts() async {

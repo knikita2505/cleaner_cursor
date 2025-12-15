@@ -24,12 +24,34 @@ final class ContactsService: ObservableObject {
     
     private let store = CNContactStore()
     private let keysToFetch: [CNKeyDescriptor] = [
+        // Basic identification
         CNContactIdentifierKey as CNKeyDescriptor,
+        // Name fields
         CNContactGivenNameKey as CNKeyDescriptor,
         CNContactFamilyNameKey as CNKeyDescriptor,
+        CNContactMiddleNameKey as CNKeyDescriptor,
+        CNContactNamePrefixKey as CNKeyDescriptor,
+        CNContactNameSuffixKey as CNKeyDescriptor,
+        CNContactNicknameKey as CNKeyDescriptor,
+        // Organization
         CNContactOrganizationNameKey as CNKeyDescriptor,
+        CNContactDepartmentNameKey as CNKeyDescriptor,
+        CNContactJobTitleKey as CNKeyDescriptor,
+        // Contact info
         CNContactPhoneNumbersKey as CNKeyDescriptor,
         CNContactEmailAddressesKey as CNKeyDescriptor,
+        CNContactPostalAddressesKey as CNKeyDescriptor,
+        CNContactUrlAddressesKey as CNKeyDescriptor,
+        // Social & messaging
+        CNContactSocialProfilesKey as CNKeyDescriptor,
+        CNContactInstantMessageAddressesKey as CNKeyDescriptor,
+        // Dates & relations
+        CNContactDatesKey as CNKeyDescriptor,
+        CNContactRelationsKey as CNKeyDescriptor,
+        CNContactBirthdayKey as CNKeyDescriptor,
+        // Images (Note: CNContactNoteKey requires special entitlement)
+        CNContactImageDataKey as CNKeyDescriptor,
+        CNContactImageDataAvailableKey as CNKeyDescriptor,
         CNContactThumbnailImageDataKey as CNKeyDescriptor
     ]
     
@@ -95,14 +117,14 @@ final class ContactsService: ObservableObject {
     
     // MARK: - Fetch Contacts
     
-    func fetchContacts() {
+    private func fetchContactsSync() -> [CNContact] {
         // Re-check authorization status
         let status = CNContactStore.authorizationStatus(for: .contacts)
         print("📱 Authorization status before fetch: \(statusDescription(status))")
         
         guard status == .authorized else {
             print("❌ Not authorized to fetch contacts (status: \(statusDescription(status)))")
-            return
+            return []
         }
         
         var allContacts: [CNContact] = []
@@ -144,9 +166,7 @@ final class ContactsService: ObservableObject {
             }
         }
         
-        DispatchQueue.main.async {
-            self.contacts = allContacts
-        }
+        return allContacts
     }
     
     // MARK: - Scan All Categories
@@ -158,36 +178,49 @@ final class ContactsService: ObservableObject {
             self.isScanning = true
         }
         
-        // Fetch contacts on background thread
-        await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.fetchContacts()
-                continuation.resume()
-            }
-        }
-        
-        print("📱 Total contacts loaded: \(contacts.count)")
-        
-        // Now scan categories
-        let duplicates = findDuplicatesSync()
-        let similar = findSimilarNamesSync(excludeIds: Set(duplicates.flatMap { $0.contacts.map { $0.identifier } }))
-        let noName = findNoNameContactsSync()
-        let noNumber = findNoNumberContactsSync()
+        // Fetch and scan contacts on background thread, then update UI on main
+        let results = await Task.detached(priority: .userInitiated) { [self] () -> ScanResults in
+            let fetchedContacts = self.fetchContactsSync()
+            print("📱 Total contacts loaded: \(fetchedContacts.count)")
+            
+            let duplicates = self.findDuplicatesSync(in: fetchedContacts)
+            let duplicateIds = Set(duplicates.flatMap { $0.contacts.map { $0.identifier } })
+            let similar = self.findSimilarNamesSync(in: fetchedContacts, excludeIds: duplicateIds)
+            let noName = self.findNoNameContactsSync(in: fetchedContacts)
+            let noNumber = self.findNoNumberContactsSync(in: fetchedContacts)
+            
+            return ScanResults(
+                contacts: fetchedContacts,
+                duplicates: duplicates,
+                similar: similar,
+                noName: noName,
+                noNumber: noNumber
+            )
+        }.value
         
         await MainActor.run {
-            self.duplicateGroups = duplicates
-            self.similarNameGroups = similar
-            self.noNameContacts = noName
-            self.noNumberContacts = noNumber
+            self.contacts = results.contacts
+            self.duplicateGroups = results.duplicates
+            self.similarNameGroups = results.similar
+            self.noNameContacts = results.noName
+            self.noNumberContacts = results.noNumber
             self.isScanning = false
         }
         
-        print("📊 Scan complete: \(duplicates.count) duplicates, \(similar.count) similar, \(noName.count) no name, \(noNumber.count) no number")
+        print("📊 Scan complete: \(results.duplicates.count) duplicates, \(results.similar.count) similar, \(results.noName.count) no name, \(results.noNumber.count) no number")
+    }
+    
+    private struct ScanResults {
+        let contacts: [CNContact]
+        let duplicates: [ContactDuplicateGroup]
+        let similar: [ContactSimilarGroup]
+        let noName: [CNContact]
+        let noNumber: [CNContact]
     }
     
     // MARK: - Find Duplicates (by phone number)
     
-    private func findDuplicatesSync() -> [ContactDuplicateGroup] {
+    private func findDuplicatesSync(in contacts: [CNContact]) -> [ContactDuplicateGroup] {
         // Group contacts by normalized phone number
         var phoneToContacts: [String: [CNContact]] = [:]
         
@@ -221,15 +254,25 @@ final class ContactsService: ObservableObject {
                 // Mark as used
                 dedupedContacts.forEach { usedContactIds.insert($0.identifier) }
                 
+                // Sort contacts within group by name
+                let sortedContacts = dedupedContacts.sorted { $0.displayName.lowercased() < $1.displayName.lowercased() }
+                
                 result.append(ContactDuplicateGroup(
                     id: UUID().uuidString,
-                    contacts: dedupedContacts,
+                    contacts: sortedContacts,
                     matchType: .phone,
                     matchValue: phone
                 ))
                 
-                print("✅ Found duplicate group: \(dedupedContacts.map { $0.displayName })")
+                print("✅ Found duplicate group: \(sortedContacts.map { $0.displayName })")
             }
+        }
+        
+        // Sort groups by first contact's name
+        result.sort { group1, group2 in
+            let name1 = group1.contacts.first?.displayName.lowercased() ?? ""
+            let name2 = group2.contacts.first?.displayName.lowercased() ?? ""
+            return name1 < name2
         }
         
         return result
@@ -237,7 +280,7 @@ final class ContactsService: ObservableObject {
     
     // MARK: - Find Similar Names
     
-    private func findSimilarNamesSync(excludeIds: Set<String>) -> [ContactSimilarGroup] {
+    private func findSimilarNamesSync(in contacts: [CNContact], excludeIds: Set<String>) -> [ContactSimilarGroup] {
         var result: [ContactSimilarGroup] = []
         var processedIds = Set<String>()
         
@@ -278,11 +321,20 @@ final class ContactsService: ObservableObject {
             
             if similarContacts.count > 1 {
                 processedIds.insert(contact1.identifier)
+                // Sort contacts within group by name
+                let sortedContacts = similarContacts.sorted { $0.displayName.lowercased() < $1.displayName.lowercased() }
                 result.append(ContactSimilarGroup(
                     id: UUID().uuidString,
-                    contacts: similarContacts
+                    contacts: sortedContacts
                 ))
             }
+        }
+        
+        // Sort groups by first contact's name
+        result.sort { group1, group2 in
+            let name1 = group1.contacts.first?.displayName.lowercased() ?? ""
+            let name2 = group2.contacts.first?.displayName.lowercased() ?? ""
+            return name1 < name2
         }
         
         return result
@@ -290,7 +342,7 @@ final class ContactsService: ObservableObject {
     
     // MARK: - Find No Name Contacts
     
-    private func findNoNameContactsSync() -> [CNContact] {
+    private func findNoNameContactsSync(in contacts: [CNContact]) -> [CNContact] {
         let result = contacts.filter { contact in
             let hasGivenName = !contact.givenName.trimmingCharacters(in: .whitespaces).isEmpty
             let hasFamilyName = !contact.familyName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -302,13 +354,19 @@ final class ContactsService: ObservableObject {
             
             return !hasName && (hasPhone || hasEmail)
         }
-        print("📵 No name contacts: \(result.count)")
-        return result
+        // Sort by phone number
+        let sorted = result.sorted { c1, c2 in
+            let phone1 = c1.phoneNumbers.first?.value.stringValue ?? ""
+            let phone2 = c2.phoneNumbers.first?.value.stringValue ?? ""
+            return phone1 < phone2
+        }
+        print("📵 No name contacts: \(sorted.count)")
+        return sorted
     }
     
     // MARK: - Find No Number Contacts
     
-    private func findNoNumberContactsSync() -> [CNContact] {
+    private func findNoNumberContactsSync(in contacts: [CNContact]) -> [CNContact] {
         let result = contacts.filter { contact in
             let hasGivenName = !contact.givenName.trimmingCharacters(in: .whitespaces).isEmpty
             let hasFamilyName = !contact.familyName.trimmingCharacters(in: .whitespaces).isEmpty
@@ -318,8 +376,10 @@ final class ContactsService: ObservableObject {
             
             return hasName && !hasPhone
         }
-        print("📱 No number contacts: \(result.count)")
-        return result
+        // Sort alphabetically by name
+        let sorted = result.sorted { $0.displayName.lowercased() < $1.displayName.lowercased() }
+        print("📱 No number contacts: \(sorted.count)")
+        return sorted
     }
     
     // MARK: - Delete Contacts
@@ -346,48 +406,109 @@ final class ContactsService: ObservableObject {
         
         let mergedContact = CNMutableContact()
         
+        // === Name fields - pick longest/best ===
         var bestGivenName = ""
         var bestFamilyName = ""
+        var bestMiddleName = ""
+        var bestNamePrefix = ""
+        var bestNameSuffix = ""
+        var bestNickname = ""
         var bestOrganization = ""
+        var bestDepartment = ""
+        var bestJobTitle = ""
+        
+        // === Collection fields - merge all unique ===
         var allPhones: [CNLabeledValue<CNPhoneNumber>] = []
         var allEmails: [CNLabeledValue<NSString>] = []
+        var allAddresses: [CNLabeledValue<CNPostalAddress>] = []
+        var allUrls: [CNLabeledValue<NSString>] = []
+        var allSocialProfiles: [CNLabeledValue<CNSocialProfile>] = []
+        var allInstantMessages: [CNLabeledValue<CNInstantMessageAddress>] = []
+        var allDates: [CNLabeledValue<NSDateComponents>] = []
+        var allRelations: [CNLabeledValue<CNContactRelation>] = []
+        
+        // === Single value fields ===
+        var bestBirthday: DateComponents?
+        var bestImage: Data?
         
         for contact in contactsToMerge {
-            if contact.givenName.count > bestGivenName.count {
-                bestGivenName = contact.givenName
-            }
-            if contact.familyName.count > bestFamilyName.count {
-                bestFamilyName = contact.familyName
-            }
-            if contact.organizationName.count > bestOrganization.count {
-                bestOrganization = contact.organizationName
-            }
+            // Name fields - pick longest
+            if contact.givenName.count > bestGivenName.count { bestGivenName = contact.givenName }
+            if contact.familyName.count > bestFamilyName.count { bestFamilyName = contact.familyName }
+            if contact.middleName.count > bestMiddleName.count { bestMiddleName = contact.middleName }
+            if contact.namePrefix.count > bestNamePrefix.count { bestNamePrefix = contact.namePrefix }
+            if contact.nameSuffix.count > bestNameSuffix.count { bestNameSuffix = contact.nameSuffix }
+            if contact.nickname.count > bestNickname.count { bestNickname = contact.nickname }
+            if contact.organizationName.count > bestOrganization.count { bestOrganization = contact.organizationName }
+            if contact.departmentName.count > bestDepartment.count { bestDepartment = contact.departmentName }
+            if contact.jobTitle.count > bestJobTitle.count { bestJobTitle = contact.jobTitle }
+            // Note: contact.note requires special entitlement, skipped
             
+            // Collection fields
             allPhones.append(contentsOf: contact.phoneNumbers)
             allEmails.append(contentsOf: contact.emailAddresses)
+            allAddresses.append(contentsOf: contact.postalAddresses)
+            allUrls.append(contentsOf: contact.urlAddresses)
+            allSocialProfiles.append(contentsOf: contact.socialProfiles)
+            allInstantMessages.append(contentsOf: contact.instantMessageAddresses)
+            allDates.append(contentsOf: contact.dates)
+            allRelations.append(contentsOf: contact.contactRelations)
+            
+            // Single values - pick first non-nil
+            if bestBirthday == nil, let birthday = contact.birthday { bestBirthday = birthday }
+            if bestImage == nil, contact.imageDataAvailable, let imageData = contact.imageData { bestImage = imageData }
         }
         
+        // Set name fields
         mergedContact.givenName = bestGivenName
         mergedContact.familyName = bestFamilyName
+        mergedContact.middleName = bestMiddleName
+        mergedContact.namePrefix = bestNamePrefix
+        mergedContact.nameSuffix = bestNameSuffix
+        mergedContact.nickname = bestNickname
         mergedContact.organizationName = bestOrganization
+        mergedContact.departmentName = bestDepartment
+        mergedContact.jobTitle = bestJobTitle
+        // Note: mergedContact.note requires special entitlement, skipped
         
-        // Remove duplicate phones
-        var seenPhones = Set<String>()
-        mergedContact.phoneNumbers = allPhones.filter { phone in
-            let normalized = normalizePhoneNumber(phone.value.stringValue)
-            if seenPhones.contains(normalized) { return false }
-            seenPhones.insert(normalized)
-            return true
-        }
+        if let birthday = bestBirthday { mergedContact.birthday = birthday }
+        if let imageData = bestImage { mergedContact.imageData = imageData }
         
-        // Remove duplicate emails
+        // Deduplicate phones by normalized number
+        mergedContact.phoneNumbers = deduplicatePhones(allPhones)
+        
+        // Deduplicate emails
         var seenEmails = Set<String>()
         mergedContact.emailAddresses = allEmails.filter { email in
-            let normalized = (email.value as String).lowercased()
+            let normalized = (email.value as String).lowercased().trimmingCharacters(in: .whitespaces)
             if seenEmails.contains(normalized) { return false }
             seenEmails.insert(normalized)
             return true
         }
+        
+        // Deduplicate addresses
+        var seenAddresses = Set<String>()
+        mergedContact.postalAddresses = allAddresses.filter { address in
+            let key = "\(address.value.street)|\(address.value.city)|\(address.value.postalCode)"
+            if seenAddresses.contains(key) { return false }
+            seenAddresses.insert(key)
+            return true
+        }
+        
+        // Deduplicate URLs
+        var seenUrls = Set<String>()
+        mergedContact.urlAddresses = allUrls.filter { url in
+            let normalized = (url.value as String).lowercased()
+            if seenUrls.contains(normalized) { return false }
+            seenUrls.insert(normalized)
+            return true
+        }
+        
+        // Social profiles, IMs, dates, relations - just add all unique
+        mergedContact.socialProfiles = allSocialProfiles
+        mergedContact.instantMessageAddresses = allInstantMessages
+        mergedContact.dates = allDates
+        mergedContact.contactRelations = allRelations
         
         let saveRequest = CNSaveRequest()
         
@@ -404,16 +525,160 @@ final class ContactsService: ObservableObject {
         await scanAllCategories()
     }
     
+    /// Deduplicate phones - same digits = same phone, keep best formatted version
+    private func deduplicatePhones(_ phones: [CNLabeledValue<CNPhoneNumber>]) -> [CNLabeledValue<CNPhoneNumber>] {
+        var normalizedToPhone: [String: CNLabeledValue<CNPhoneNumber>] = [:]
+        
+        for phone in phones {
+            let normalized = normalizePhoneNumber(phone.value.stringValue)
+            if normalized.isEmpty { continue }
+            
+            // Keep the version with better formatting (longer original string usually means more formatting)
+            if let existing = normalizedToPhone[normalized] {
+                if phone.value.stringValue.count > existing.value.stringValue.count {
+                    normalizedToPhone[normalized] = phone
+                }
+            } else {
+                normalizedToPhone[normalized] = phone
+            }
+        }
+        
+        return Array(normalizedToPhone.values)
+    }
+    
+    /// Get unique phone count for UI preview
+    func getUniquePhoneCount(from contacts: [CNContact]) -> Int {
+        var seen = Set<String>()
+        for contact in contacts {
+            for phone in contact.phoneNumbers {
+                let normalized = normalizePhoneNumber(phone.value.stringValue)
+                if !normalized.isEmpty {
+                    seen.insert(normalized)
+                }
+            }
+        }
+        return seen.count
+    }
+    
+    /// Get unique phones for UI preview
+    func getUniquePhones(from contacts: [CNContact]) -> [String] {
+        var normalizedToFormatted: [String: String] = [:]
+        for contact in contacts {
+            for phone in contact.phoneNumbers {
+                let normalized = normalizePhoneNumber(phone.value.stringValue)
+                if !normalized.isEmpty {
+                    // Keep best formatted version
+                    if let existing = normalizedToFormatted[normalized] {
+                        if phone.value.stringValue.count > existing.count {
+                            normalizedToFormatted[normalized] = phone.value.stringValue
+                        }
+                    } else {
+                        normalizedToFormatted[normalized] = phone.value.stringValue
+                    }
+                }
+            }
+        }
+        return Array(normalizedToFormatted.values).sorted()
+    }
+    
+    /// Get unique emails for UI preview
+    func getUniqueEmails(from contacts: [CNContact]) -> [String] {
+        var seen = Set<String>()
+        var result: [String] = []
+        for contact in contacts {
+            for email in contact.emailAddresses {
+                let normalized = (email.value as String).lowercased().trimmingCharacters(in: .whitespaces)
+                if !seen.contains(normalized) {
+                    seen.insert(normalized)
+                    result.append(email.value as String)
+                }
+            }
+        }
+        return result.sorted()
+    }
+    
     // MARK: - Helpers
     
     private func normalizePhoneNumber(_ phone: String) -> String {
+        // Extract only digits
         let digits = phone.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
         
-        // Normalize Russian numbers: 8xxx -> 7xxx
-        if digits.count == 11 && digits.hasPrefix("8") {
-            return "7" + String(digits.dropFirst())
+        guard !digits.isEmpty else { return "" }
+        
+        // === USA / Canada / NANP (+1) ===
+        // Format: +1 XXX XXX XXXX (11 digits with country code)
+        // Local: XXX XXX XXXX (10 digits)
+        if digits.count == 11 && digits.hasPrefix("1") {
+            return digits // Keep as is: 1XXXXXXXXXX
+        }
+        if digits.count == 10 {
+            // Could be US local number, normalize to +1
+            return "1" + digits
         }
         
+        // === Russia (+7) ===
+        // Format: +7 XXX XXX XX XX (11 digits)
+        // Local with 8: 8 XXX XXX XX XX (11 digits, 8 = trunk code)
+        if digits.count == 11 && digits.hasPrefix("8") {
+            // Russian number starting with 8 -> normalize to 7
+            return "7" + String(digits.dropFirst())
+        }
+        if digits.count == 11 && digits.hasPrefix("7") {
+            return digits // Already normalized
+        }
+        
+        // === Japan (+81) ===
+        // Format: +81 XX XXXX XXXX (11-12 digits with country code)
+        // Local: 0XX XXXX XXXX (10-11 digits, 0 = trunk code)
+        if digits.count >= 10 && digits.count <= 11 && digits.hasPrefix("0") {
+            // Japanese local -> add country code
+            return "81" + String(digits.dropFirst())
+        }
+        if digits.hasPrefix("81") && digits.count >= 11 && digits.count <= 13 {
+            return digits
+        }
+        
+        // === Brazil (+55) ===
+        // Format: +55 XX XXXXX XXXX (13 digits with country code, mobile)
+        // Format: +55 XX XXXX XXXX (12 digits with country code, landline)
+        // Local: 0XX XXXXX XXXX
+        if digits.hasPrefix("55") && digits.count >= 12 && digits.count <= 13 {
+            return digits
+        }
+        if digits.count >= 10 && digits.count <= 11 && digits.hasPrefix("0") {
+            // Could be Brazilian local
+            return "55" + String(digits.dropFirst())
+        }
+        
+        // === UK (+44) ===
+        if digits.hasPrefix("44") && digits.count >= 11 && digits.count <= 12 {
+            return digits
+        }
+        if digits.count == 11 && digits.hasPrefix("0") {
+            // UK local format 0XXXXXXXXXX
+            return "44" + String(digits.dropFirst())
+        }
+        
+        // === Germany (+49) ===
+        if digits.hasPrefix("49") && digits.count >= 11 && digits.count <= 14 {
+            return digits
+        }
+        
+        // === China (+86) ===
+        if digits.hasPrefix("86") && digits.count == 13 {
+            return digits
+        }
+        if digits.count == 11 && digits.hasPrefix("1") {
+            // Chinese mobile: 1XX XXXX XXXX
+            return "86" + digits
+        }
+        
+        // === India (+91) ===
+        if digits.hasPrefix("91") && digits.count == 12 {
+            return digits
+        }
+        
+        // === Default: return digits as-is for comparison ===
         return digits
     }
     
