@@ -457,39 +457,73 @@ final class SecretSpaceService: ObservableObject {
     }
     
     private func saveVideoFromAsset(_ asset: PHAsset) async throws {
-        // Используем PHAssetResourceManager для экспорта видео напрямую
-        let resources = PHAssetResource.assetResources(for: asset)
-        
-        // Ищем видео ресурс (приоритет: fullSizeVideo > video)
-        guard let videoResource = resources.first(where: { $0.type == .fullSizeVideo }) 
-                ?? resources.first(where: { $0.type == .video }) else {
-            throw SecretSpaceError.failedToLoadVideo
-        }
-        
-        // Определяем расширение файла
-        let originalFilename = videoResource.originalFilename
-        let fileExtension = (originalFilename as NSString).pathExtension.lowercased()
-        let ext = fileExtension.isEmpty ? "mov" : fileExtension
-        
-        let filename = "\(UUID().uuidString).\(ext)"
+        let filename = "\(UUID().uuidString).mp4"
         let fileURL = self.videosURL.appendingPathComponent(filename)
         
-        let options = PHAssetResourceRequestOptions()
+        // Используем requestExportSession для надежного экспорта видео
+        let options = PHVideoRequestOptions()
+        options.deliveryMode = .highQualityFormat
         options.isNetworkAccessAllowed = true
+        options.version = .current
         
         return try await withCheckedThrowingContinuation { continuation in
-            PHAssetResourceManager.default().writeData(for: videoResource, toFile: fileURL, options: options) { [weak self] error in
-                if let error = error {
-                    continuation.resume(throwing: error)
+            PHImageManager.default().requestExportSession(
+                forVideo: asset,
+                options: options,
+                exportPreset: AVAssetExportPresetHighestQuality
+            ) { [weak self] exportSession, info in
+                guard let exportSession = exportSession else {
+                    // Fallback: попробуем через AVURLAsset
+                    self?.saveVideoFallback(asset: asset, to: fileURL, continuation: continuation)
                     return
                 }
                 
-                // Сохраняем дату создания
+                exportSession.outputURL = fileURL
+                exportSession.outputFileType = .mp4
+                
+                exportSession.exportAsynchronously {
+                    switch exportSession.status {
+                    case .completed:
+                        // Сохраняем дату создания
+                        if let self = self, let creationDate = asset.creationDate {
+                            try? self.fileManager.setAttributes([.creationDate: creationDate], ofItemAtPath: fileURL.path)
+                        }
+                        continuation.resume()
+                        
+                    case .failed, .cancelled:
+                        let error = exportSession.error ?? SecretSpaceError.failedToLoadVideo
+                        continuation.resume(throwing: error)
+                        
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    /// Fallback метод сохранения видео через AVURLAsset
+    private func saveVideoFallback(asset: PHAsset, to fileURL: URL, continuation: CheckedContinuation<Void, Error>) {
+        let options = PHVideoRequestOptions()
+        options.deliveryMode = .highQualityFormat
+        options.isNetworkAccessAllowed = true
+        
+        PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { [weak self] avAsset, _, _ in
+            guard let urlAsset = avAsset as? AVURLAsset else {
+                continuation.resume(throwing: SecretSpaceError.failedToLoadVideo)
+                return
+            }
+            
+            do {
+                try self?.fileManager.copyItem(at: urlAsset.url, to: fileURL)
+                
                 if let self = self, let creationDate = asset.creationDate {
                     try? self.fileManager.setAttributes([.creationDate: creationDate], ofItemAtPath: fileURL.path)
                 }
                 
                 continuation.resume()
+            } catch {
+                continuation.resume(throwing: error)
             }
         }
     }

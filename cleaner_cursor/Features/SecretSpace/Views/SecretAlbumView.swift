@@ -1,6 +1,7 @@
 import SwiftUI
 import PhotosUI
 import Photos
+import AVKit
 
 // MARK: - Secret Album View
 /// Галерея скрытых фото и видео согласно secret_album.md
@@ -434,7 +435,6 @@ struct MediaDetailView: View {
     let item: SecretMediaItem
     
     @Environment(\.dismiss) private var dismiss
-    @State private var image: UIImage?
     @State private var showShareSheet = false
     
     var body: some View {
@@ -442,24 +442,22 @@ struct MediaDetailView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
                 
-                if let image = image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                } else if item.type == .video {
-                    SecretVideoPlayerView(url: item.fileURL)
+                if item.type == .photo {
+                    PhotoDetailContent(item: item)
                 } else {
-                    ProgressView()
-                        .tint(.white)
+                    VideoDetailContent(item: item)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
+                    Button {
                         dismiss()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(.white.opacity(0.8))
                     }
-                    .foregroundColor(.white)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -467,16 +465,39 @@ struct MediaDetailView: View {
                         showShareSheet = true
                     } label: {
                         Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 18))
                             .foregroundColor(.white)
                     }
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
             .sheet(isPresented: $showShareSheet) {
-                if let image = image {
-                    ShareSheet(items: [image])
-                } else if item.type == .video {
+                // Для видео передаём URL файла, для фото - изображение
+                if item.type == .video {
                     ShareSheet(items: [item.fileURL])
+                } else if let image = SecretSpaceService.shared.loadImage(for: item) {
+                    ShareSheet(items: [image])
                 }
+            }
+        }
+    }
+}
+
+// MARK: - Photo Detail Content
+
+struct PhotoDetailContent: View {
+    let item: SecretMediaItem
+    @State private var image: UIImage?
+    
+    var body: some View {
+        Group {
+            if let image = image {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                ProgressView()
+                    .tint(.white)
             }
         }
         .onAppear {
@@ -485,30 +506,44 @@ struct MediaDetailView: View {
     }
     
     private func loadImage() {
-        if item.type == .photo {
-            image = SecretSpaceService.shared.loadImage(for: item)
-        } else {
-            image = SecretSpaceService.shared.loadVideoThumbnail(for: item)
+        DispatchQueue.global(qos: .userInitiated).async {
+            let loaded = SecretSpaceService.shared.loadImage(for: item)
+            DispatchQueue.main.async {
+                image = loaded
+            }
         }
     }
 }
 
-// MARK: - Secret Video Player View
+// MARK: - Video Detail Content
 
-struct SecretVideoPlayerView: View {
-    let url: URL
+struct VideoDetailContent: View {
+    let item: SecretMediaItem
+    @State private var player: AVPlayer?
     
     var body: some View {
-        // Простой placeholder - можно заменить на AVPlayer
-        VStack {
-            Image(systemName: "play.circle.fill")
-                .font(.system(size: 64))
-                .foregroundColor(.white)
-            
-            Text("Video Player")
-                .font(AppFonts.bodyL)
-                .foregroundColor(.white)
+        Group {
+            if let player = player {
+                VideoPlayer(player: player)
+                    .ignoresSafeArea()
+            } else {
+                ProgressView()
+                    .tint(.white)
+            }
         }
+        .onAppear {
+            setupPlayer()
+        }
+        .onDisappear {
+            player?.pause()
+            player = nil
+        }
+    }
+    
+    private func setupPlayer() {
+        let videoPlayer = AVPlayer(url: item.fileURL)
+        player = videoPlayer
+        videoPlayer.play()
     }
 }
 
