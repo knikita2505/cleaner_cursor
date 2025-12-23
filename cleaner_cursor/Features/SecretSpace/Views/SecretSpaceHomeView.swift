@@ -12,7 +12,6 @@ struct SecretSpaceHomeView: View {
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     
     @State private var showPasscodeSetup = false
-    @State private var showPasscodeChange = false
     @State private var showPaywall = false
     @State private var showUnlockSheet = false
     @State private var pendingDestination: SecretDestination?
@@ -23,6 +22,7 @@ struct SecretSpaceHomeView: View {
     enum SecretDestination: Hashable {
         case album
         case contacts
+        case protection
     }
     
     // MARK: - Body
@@ -56,6 +56,8 @@ struct SecretSpaceHomeView: View {
                     SecretAlbumView()
                 case .contacts:
                     SecretContactsView()
+                case .protection:
+                    ProtectionSettingsView()
                 }
             }
             .fullScreenCover(isPresented: $showPasscodeSetup) {
@@ -70,13 +72,6 @@ struct SecretSpaceHomeView: View {
                 }, onCancel: {
                     showPasscodeSetup = false
                     pendingDestination = nil
-                })
-            }
-            .fullScreenCover(isPresented: $showPasscodeChange) {
-                PasscodeView(mode: .change, onSuccess: {
-                    showPasscodeChange = false
-                }, onCancel: {
-                    showPasscodeChange = false
                 })
             }
             .fullScreenCover(isPresented: $showUnlockSheet) {
@@ -269,100 +264,57 @@ struct SecretSpaceHomeView: View {
     // MARK: - Protection Settings
     
     private var protectionView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Protection")
-                .font(AppFonts.subtitleL)
-                .foregroundColor(AppColors.textPrimary)
-            
-            VStack(spacing: 2) {
-                Button {
-                    if secretService.isPasscodeSet {
-                        showPasscodeChange = true
-                    } else {
-                        pendingDestination = nil
-                        showPasscodeSetup = true
-                    }
-                } label: {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(AppColors.accentPurple.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(AppColors.accentPurple)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(secretService.isPasscodeSet ? "Change Passcode" : "Set Passcode")
-                                .font(AppFonts.subtitleM)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            Text(secretService.isPasscodeSet ? "Update your 4-digit passcode" : "Create a 4-digit passcode")
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.textTertiary)
-                        }
-                        
-                        Spacer()
-                        
-                        if secretService.isPasscodeSet {
-                            Image(systemName: "checkmark.circle.fill")
-                                .font(.system(size: 20))
-                                .foregroundColor(AppColors.statusSuccess)
-                        }
-                        
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(AppColors.textTertiary.opacity(0.5))
-                    }
-                    .padding(AppSpacing.containerPadding)
+        NavigationLink(value: SecretDestination.protection) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(AppColors.accentPurple.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.accentPurple)
                 }
-                .disabled(!subscriptionService.isPremium)
                 
-                Divider()
-                    .background(AppColors.textTertiary.opacity(0.1))
-                    .padding(.leading, 72)
-                
-                if secretService.isBiometricAvailable {
-                    HStack(spacing: 14) {
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(AppColors.accentBlue.opacity(0.15))
-                                .frame(width: 44, height: 44)
-                            
-                            Image(systemName: secretService.biometricType.icon)
-                                .font(.system(size: 20))
-                                .foregroundColor(AppColors.accentBlue)
-                        }
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(secretService.biometricType.name)
-                                .font(AppFonts.subtitleM)
-                                .foregroundColor(AppColors.textPrimary)
-                            
-                            Text("Quick unlock")
-                                .font(AppFonts.caption)
-                                .foregroundColor(AppColors.textTertiary)
-                        }
-                        
-                        Spacer()
-                        
-                        Toggle("", isOn: Binding(
-                            get: { secretService.isFaceIDEnabled },
-                            set: { secretService.setFaceIDEnabled($0) }
-                        ))
-                        .tint(AppColors.accentBlue)
-                        .disabled(!secretService.isPasscodeSet || !subscriptionService.isPremium)
-                    }
-                    .padding(AppSpacing.containerPadding)
-                    .opacity(secretService.isPasscodeSet ? 1 : 0.5)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Protection")
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text(protectionSubtitle)
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.textTertiary)
                 }
+                
+                Spacer()
+                
+                if secretService.isPasscodeSet {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.statusSuccess)
+                }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
             }
+            .padding(AppSpacing.containerPadding)
             .background(AppColors.backgroundSecondary)
             .cornerRadius(AppSpacing.cardRadius)
-            .opacity(subscriptionService.isPremium ? 1 : 0.6)
         }
+        .buttonStyle(.plain)
+        .disabled(!subscriptionService.isPremium)
+        .opacity(subscriptionService.isPremium ? 1 : 0.6)
+    }
+    
+    private var protectionSubtitle: String {
+        if secretService.isPasscodeSet {
+            if secretService.isFaceIDEnabled {
+                return "Passcode + \(secretService.biometricType.name)"
+            }
+            return "Passcode enabled"
+        }
+        return "Set up passcode"
     }
     
     // MARK: - Status View

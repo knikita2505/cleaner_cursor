@@ -118,6 +118,8 @@ final class SecretSpaceService: ObservableObject {
             return .faceID
         case .touchID:
             return .touchID
+        case .none:
+            return .none
         @unknown default:
             return .none
         }

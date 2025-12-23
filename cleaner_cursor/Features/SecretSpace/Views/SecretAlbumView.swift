@@ -173,40 +173,29 @@ struct SecretAlbumView: View {
             
             if isSelectionMode && !selectedItems.isEmpty {
                 // Selection mode actions
-                HStack(spacing: 24) {
-                    Button {
-                        shareSelectedItems()
-                    } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: "square.and.arrow.up")
-                                .font(.system(size: 22))
-                            Text("Share")
-                                .font(AppFonts.caption)
-                        }
-                        .foregroundColor(AppColors.accentBlue)
-                    }
-                    
-                    Spacer()
-                    
+                VStack(spacing: 8) {
                     Text("\(selectedItems.count) selected")
                         .font(AppFonts.bodyM)
                         .foregroundColor(AppColors.textSecondary)
                     
-                    Spacer()
-                    
                     Button {
                         showDeleteConfirmation = true
                     } label: {
-                        VStack(spacing: 4) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 22))
-                            Text("Delete")
-                                .font(AppFonts.caption)
+                        HStack(spacing: 8) {
+                            Image(systemName: "trash.fill")
+                                .font(.system(size: 18))
+                            Text("Delete Selected")
+                                .font(AppFonts.subtitleM)
                         }
-                        .foregroundColor(AppColors.statusError)
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppColors.statusError)
+                        .cornerRadius(12)
                     }
+                    .buttonStyle(ScaleButtonStyle())
                 }
-                .padding(.horizontal, 24)
+                .padding(.horizontal, AppSpacing.screenPadding)
                 .padding(.vertical, 12)
             } else {
                 // Add button
@@ -316,15 +305,6 @@ struct SecretAlbumView: View {
         }
     }
     
-    private func shareSelectedItems() {
-        // Получаем первый выбранный элемент для Share Sheet
-        guard let firstId = selectedItems.first,
-              let item = allMedia.first(where: { $0.id == firstId }) else {
-            return
-        }
-        
-        selectedMediaItem = item
-    }
 }
 
 // MARK: - Media Grid Cell
@@ -436,48 +416,59 @@ struct MediaDetailView: View {
     
     @Environment(\.dismiss) private var dismiss
     @State private var showShareSheet = false
+    @State private var showControls = true
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                
-                if item.type == .photo {
-                    PhotoDetailContent(item: item)
-                } else {
-                    VideoDetailContent(item: item)
+        ZStack {
+            Color.black.ignoresSafeArea()
+            
+            // Content
+            if item.type == .photo {
+                PhotoDetailContent(item: item)
+            } else {
+                VideoDetailContent(item: item)
+            }
+            
+            // Overlay controls
+            if showControls {
+                VStack {
+                    HStack {
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.white.opacity(0.9), .black.opacity(0.3))
+                        }
+                        
+                        Spacer()
+                        
+                        Button {
+                            showShareSheet = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundStyle(.white.opacity(0.9), .black.opacity(0.3))
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    
+                    Spacer()
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
-                            .foregroundColor(.white.opacity(0.8))
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showShareSheet = true
-                    } label: {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.system(size: 18))
-                            .foregroundColor(.white)
-                    }
-                }
+        }
+        .statusBarHidden(true)
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showControls.toggle()
             }
-            .toolbarBackground(.hidden, for: .navigationBar)
-            .sheet(isPresented: $showShareSheet) {
-                // Для видео передаём URL файла, для фото - изображение
-                if item.type == .video {
-                    ShareSheet(items: [item.fileURL])
-                } else if let image = SecretSpaceService.shared.loadImage(for: item) {
-                    ShareSheet(items: [image])
-                }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if item.type == .video {
+                ShareSheet(items: [item.fileURL])
+            } else if let image = SecretSpaceService.shared.loadImage(for: item) {
+                ShareSheet(items: [image])
             }
         }
     }

@@ -244,9 +244,9 @@ struct PasscodeView: View {
     // MARK: - Keypad View
     
     private var keypadView: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
             ForEach(0..<3) { row in
-                HStack(spacing: 20) {
+                HStack(spacing: 24) {
                     ForEach(1...3, id: \.self) { col in
                         let number = row * 3 + col
                         keypadButton(String(number))
@@ -255,7 +255,7 @@ struct PasscodeView: View {
             }
             
             // Bottom row
-            HStack(spacing: 20) {
+            HStack(spacing: 24) {
                 // Biometric button
                 if mode == .unlock && secretService.isFaceIDEnabled && secretService.isBiometricAvailable && !isLocked {
                     Button {
@@ -263,17 +263,17 @@ struct PasscodeView: View {
                     } label: {
                         Circle()
                             .fill(Color.clear)
-                            .frame(width: 64, height: 64)
+                            .frame(width: 76, height: 76)
                             .overlay {
                                 Image(systemName: secretService.biometricType.icon)
-                                    .font(.system(size: 24))
+                                    .font(.system(size: 28))
                                     .foregroundColor(AppColors.accentBlue)
                             }
                     }
                 } else {
                     Circle()
                         .fill(Color.clear)
-                        .frame(width: 64, height: 64)
+                        .frame(width: 76, height: 76)
                 }
                 
                 keypadButton("0")
@@ -284,10 +284,10 @@ struct PasscodeView: View {
                 } label: {
                     Circle()
                         .fill(Color.clear)
-                        .frame(width: 64, height: 64)
+                        .frame(width: 76, height: 76)
                         .overlay {
                             Image(systemName: "delete.left")
-                                .font(.system(size: 22))
+                                .font(.system(size: 26))
                                 .foregroundColor(AppColors.textSecondary)
                         }
                 }
@@ -303,10 +303,10 @@ struct PasscodeView: View {
             ZStack {
                 Circle()
                     .fill(AppColors.backgroundSecondary)
-                    .frame(width: 64, height: 64)
+                    .frame(width: 76, height: 76)
                 
                 Text(digit)
-                    .font(.system(size: 28, weight: .medium))
+                    .font(.system(size: 34, weight: .medium))
                     .foregroundColor(AppColors.textPrimary)
             }
         }
