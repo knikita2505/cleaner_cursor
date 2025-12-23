@@ -293,61 +293,93 @@ struct ContactRow: View {
     
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 14) {
-                // Selection indicator or Avatar
-                if isSelectionMode {
-                    ZStack {
-                        Circle()
-                            .fill(isSelected ? AppColors.accentBlue : AppColors.textTertiary.opacity(0.3))
-                            .frame(width: 24, height: 24)
-                        
-                        if isSelected {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundColor(.white)
-                        }
-                    }
-                }
-                
-                // Avatar
-                ZStack {
-                    Circle()
-                        .fill(avatarColor(for: contact.name))
-                        .frame(width: 44, height: 44)
-                    
-                    Text(contact.initials)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                }
-                
-                // Info
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(contact.name)
-                        .font(AppFonts.subtitleM)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    if let phone = contact.phone, !phone.isEmpty {
-                        Text(phone)
-                            .font(AppFonts.bodyM)
-                            .foregroundColor(AppColors.textTertiary)
-                    } else if let email = contact.email, !email.isEmpty {
-                        Text(email)
-                            .font(AppFonts.bodyM)
-                            .foregroundColor(AppColors.textTertiary)
-                    }
-                }
-                
-                Spacer()
-                
-                if !isSelectionMode {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(AppColors.textTertiary.opacity(0.5))
-                }
-            }
-            .padding(.vertical, 8)
+            rowContent
         }
         .buttonStyle(.plain)
+        .contextMenu {
+            if !isSelectionMode {
+                if let phone = contact.phone, !phone.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = phone
+                        HapticManager.success()
+                    } label: {
+                        Label("Copy Phone", systemImage: "doc.on.doc")
+                    }
+                }
+                
+                if let email = contact.email, !email.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = email
+                        HapticManager.success()
+                    } label: {
+                        Label("Copy Email", systemImage: "envelope")
+                    }
+                }
+                
+                Button {
+                    UIPasteboard.general.string = contact.name
+                    HapticManager.success()
+                } label: {
+                    Label("Copy Name", systemImage: "person")
+                }
+            }
+        }
+    }
+    
+    private var rowContent: some View {
+        HStack(spacing: 14) {
+            // Selection indicator or Avatar
+            if isSelectionMode {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? AppColors.accentBlue : AppColors.textTertiary.opacity(0.3))
+                        .frame(width: 24, height: 24)
+                    
+                    if isSelected {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                    }
+                }
+            }
+            
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(avatarColor(for: contact.name))
+                    .frame(width: 44, height: 44)
+                
+                Text(contact.initials)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundColor(.white)
+            }
+            
+            // Info
+            VStack(alignment: .leading, spacing: 2) {
+                Text(contact.name)
+                    .font(AppFonts.subtitleM)
+                    .foregroundColor(AppColors.textPrimary)
+                
+                if let phone = contact.phone, !phone.isEmpty {
+                    Text(phone)
+                        .font(AppFonts.bodyM)
+                        .foregroundColor(AppColors.textTertiary)
+                } else if let email = contact.email, !email.isEmpty {
+                    Text(email)
+                        .font(AppFonts.bodyM)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+            }
+            
+            Spacer()
+            
+            if !isSelectionMode {
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
+            }
+        }
+        .padding(.vertical, 8)
     }
     
     private func avatarColor(for name: String) -> Color {
@@ -679,26 +711,61 @@ struct ContactDetailView: View {
         return colors[hash % colors.count]
     }
     
+    @State private var copiedField: String?
+    
     private func infoRow(icon: String, title: String, value: String) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.system(size: 18))
-                .foregroundColor(AppColors.accentBlue)
-                .frame(width: 24)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(AppFonts.caption)
-                    .foregroundColor(AppColors.textTertiary)
+        Button {
+            copyToClipboard(value, field: title)
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundColor(AppColors.accentBlue)
+                    .frame(width: 24)
                 
-                Text(value)
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textPrimary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                    
+                    Text(value)
+                        .font(AppFonts.bodyL)
+                        .foregroundColor(AppColors.textPrimary)
+                }
+                
+                Spacer()
+                
+                // Copied indicator
+                if copiedField == title {
+                    Text("Copied")
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.statusSuccess)
+                } else {
+                    Image(systemName: "doc.on.doc")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.textTertiary.opacity(0.5))
+                }
             }
-            
-            Spacer()
+            .padding(AppSpacing.containerPadding)
         }
-        .padding(AppSpacing.containerPadding)
+        .buttonStyle(.plain)
+    }
+    
+    private func copyToClipboard(_ value: String, field: String) {
+        UIPasteboard.general.string = value
+        HapticManager.success()
+        
+        withAnimation {
+            copiedField = field
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            withAnimation {
+                if copiedField == field {
+                    copiedField = nil
+                }
+            }
+        }
     }
     
     private func editableRow(icon: String, placeholder: String, text: Binding<String>) -> some View {

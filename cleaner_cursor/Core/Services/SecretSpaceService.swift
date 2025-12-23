@@ -19,6 +19,7 @@ final class SecretSpaceService: ObservableObject {
     @Published var isUnlocked: Bool = false
     @Published var isPasscodeSet: Bool = false
     @Published var isFaceIDEnabled: Bool = false
+    @Published var isLoadingData: Bool = false
     @Published var secretPhotos: [SecretMediaItem] = []
     @Published var secretVideos: [SecretMediaItem] = []
     @Published var secretContacts: [SecretContact] = []
@@ -52,7 +53,10 @@ final class SecretSpaceService: ObservableObject {
     private init() {
         setupSecretFolder()
         loadSettings()
-        loadSecretData()
+        // Загружаем данные в фоне после инициализации
+        Task {
+            await loadSecretDataAsync()
+        }
     }
     
     // MARK: - Setup
@@ -244,13 +248,92 @@ final class SecretSpaceService: ObservableObject {
     
     // MARK: - Load Secret Data
     
+    /// Синхронная загрузка (для обновления после изменений)
     func loadSecretData() {
-        loadSecretPhotos()
-        loadSecretVideos()
-        loadSecretContacts()
+        loadSecretPhotosSync()
+        loadSecretVideosSync()
+        loadSecretContactsSync()
     }
     
-    private func loadSecretPhotos() {
+    /// Асинхронная загрузка (для инициализации без блокировки UI)
+    func loadSecretDataAsync() async {
+        isLoadingData = true
+        
+        // Выполняем загрузку в background
+        let (photos, videos, contacts) = await Task.detached(priority: .userInitiated) { [self] in
+            let photos = self.loadPhotosFromDisk()
+            let videos = self.loadVideosFromDisk()
+            let contacts = self.loadContactsFromDisk()
+            return (photos, videos, contacts)
+        }.value
+        
+        // Обновляем на main thread
+        self.secretPhotos = photos
+        self.secretVideos = videos
+        self.secretContacts = contacts
+        self.isLoadingData = false
+    }
+    
+    // MARK: - Background Loading (nonisolated)
+    
+    private nonisolated func loadPhotosFromDisk() -> [SecretMediaItem] {
+        let photosPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SecretSpace/Photos", isDirectory: true)
+        
+        guard FileManager.default.fileExists(atPath: photosPath.path) else { return [] }
+        
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: photosPath, includingPropertiesForKeys: [.creationDateKey, .fileSizeKey])
+            return files.compactMap { url -> SecretMediaItem? in
+                let ext = url.pathExtension.lowercased()
+                let imageExtensions = ["jpg", "jpeg", "png", "heic", "heif", "gif", "webp"]
+                guard imageExtensions.contains(ext) else { return nil }
+                return SecretMediaItem(fileURL: url, type: .photo)
+            }.sorted { $0.creationDate > $1.creationDate }
+        } catch {
+            print("Error loading secret photos: \(error)")
+            return []
+        }
+    }
+    
+    private nonisolated func loadVideosFromDisk() -> [SecretMediaItem] {
+        let videosPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SecretSpace/Videos", isDirectory: true)
+        
+        guard FileManager.default.fileExists(atPath: videosPath.path) else { return [] }
+        
+        do {
+            let files = try FileManager.default.contentsOfDirectory(at: videosPath, includingPropertiesForKeys: [.creationDateKey, .fileSizeKey])
+            return files.compactMap { url -> SecretMediaItem? in
+                let ext = url.pathExtension.lowercased()
+                let videoExtensions = ["mov", "mp4", "m4v", "avi", "mkv"]
+                guard videoExtensions.contains(ext) else { return nil }
+                return SecretMediaItem(fileURL: url, type: .video)
+            }.sorted { $0.creationDate > $1.creationDate }
+        } catch {
+            print("Error loading secret videos: \(error)")
+            return []
+        }
+    }
+    
+    private nonisolated func loadContactsFromDisk() -> [SecretContact] {
+        let contactsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("SecretSpace/contacts.json")
+        
+        guard FileManager.default.fileExists(atPath: contactsPath.path) else { return [] }
+        
+        do {
+            let data = try Data(contentsOf: contactsPath)
+            return try JSONDecoder().decode([SecretContact].self, from: data)
+        } catch {
+            print("Error loading secret contacts: \(error)")
+            return []
+        }
+    }
+    
+    // MARK: - Sync Loading (for updates)
+    
+    private func loadSecretPhotosSync() {
         guard fileManager.fileExists(atPath: photosURL.path) else { return }
         
         do {
@@ -264,7 +347,7 @@ final class SecretSpaceService: ObservableObject {
         }
     }
     
-    private func loadSecretVideos() {
+    private func loadSecretVideosSync() {
         guard fileManager.fileExists(atPath: videosURL.path) else { return }
         
         do {
@@ -278,7 +361,7 @@ final class SecretSpaceService: ObservableObject {
         }
     }
     
-    private func loadSecretContacts() {
+    private func loadSecretContactsSync() {
         guard fileManager.fileExists(atPath: contactsURL.path) else {
             secretContacts = []
             return
@@ -374,32 +457,39 @@ final class SecretSpaceService: ObservableObject {
     }
     
     private func saveVideoFromAsset(_ asset: PHAsset) async throws {
-        let options = PHVideoRequestOptions()
-        options.deliveryMode = .highQualityFormat
+        // Используем PHAssetResourceManager для экспорта видео напрямую
+        let resources = PHAssetResource.assetResources(for: asset)
+        
+        // Ищем видео ресурс (приоритет: fullSizeVideo > video)
+        guard let videoResource = resources.first(where: { $0.type == .fullSizeVideo }) 
+                ?? resources.first(where: { $0.type == .video }) else {
+            throw SecretSpaceError.failedToLoadVideo
+        }
+        
+        // Определяем расширение файла
+        let originalFilename = videoResource.originalFilename
+        let fileExtension = (originalFilename as NSString).pathExtension.lowercased()
+        let ext = fileExtension.isEmpty ? "mov" : fileExtension
+        
+        let filename = "\(UUID().uuidString).\(ext)"
+        let fileURL = self.videosURL.appendingPathComponent(filename)
+        
+        let options = PHAssetResourceRequestOptions()
         options.isNetworkAccessAllowed = true
         
         return try await withCheckedThrowingContinuation { continuation in
-            PHImageManager.default().requestAVAsset(forVideo: asset, options: options) { [weak self] avAsset, _, info in
-                guard let self = self, let urlAsset = avAsset as? AVURLAsset else {
-                    continuation.resume(throwing: SecretSpaceError.failedToLoadVideo)
+            PHAssetResourceManager.default().writeData(for: videoResource, toFile: fileURL, options: options) { [weak self] error in
+                if let error = error {
+                    continuation.resume(throwing: error)
                     return
                 }
                 
-                let filename = "\(UUID().uuidString).mov"
-                let fileURL = self.videosURL.appendingPathComponent(filename)
-                
-                do {
-                    try self.fileManager.copyItem(at: urlAsset.url, to: fileURL)
-                    
-                    // Сохраняем дату создания
-                    if let creationDate = asset.creationDate {
-                        try self.fileManager.setAttributes([.creationDate: creationDate], ofItemAtPath: fileURL.path)
-                    }
-                    
-                    continuation.resume()
-                } catch {
-                    continuation.resume(throwing: error)
+                // Сохраняем дату создания
+                if let self = self, let creationDate = asset.creationDate {
+                    try? self.fileManager.setAttributes([.creationDate: creationDate], ofItemAtPath: fileURL.path)
                 }
+                
+                continuation.resume()
             }
         }
     }

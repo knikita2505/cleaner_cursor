@@ -13,34 +13,36 @@ struct SecretSpaceHomeView: View {
     
     @State private var showPasscodeSetup = false
     @State private var showPasscodeChange = false
-    @State private var showUnlock = false
     @State private var showPaywall = false
+    @State private var showUnlockSheet = false
+    @State private var pendingDestination: SecretDestination?
+    
+    // Навигация
+    @State private var navigationPath = NavigationPath()
+    
+    enum SecretDestination: Hashable {
+        case album
+        case contacts
+    }
     
     // MARK: - Body
     
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 AppColors.backgroundPrimary
                     .ignoresSafeArea()
                 
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Header
                         headerView
                         
-                        // Premium banner (if not premium)
                         if !subscriptionService.isPremium {
                             premiumBanner
                         }
                         
-                        // Sections
                         sectionsView
-                        
-                        // Protection settings
                         protectionView
-                        
-                        // Hidden items status
                         statusView
                     }
                     .padding(AppSpacing.screenPadding)
@@ -48,22 +50,48 @@ struct SecretSpaceHomeView: View {
             }
             .navigationTitle("")
             .navigationBarHidden(true)
-            .fullScreenCover(isPresented: $showPasscodeSetup) {
-                PasscodeView(mode: .create) {
-                    showPasscodeSetup = false
-                    // После создания пароля автоматически разблокируем
-                    secretService.unlock()
+            .navigationDestination(for: SecretDestination.self) { destination in
+                switch destination {
+                case .album:
+                    SecretAlbumView()
+                case .contacts:
+                    SecretContactsView()
                 }
+            }
+            .fullScreenCover(isPresented: $showPasscodeSetup) {
+                PasscodeView(mode: .create, onSuccess: {
+                    showPasscodeSetup = false
+                    if let dest = pendingDestination {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            navigationPath.append(dest)
+                            pendingDestination = nil
+                        }
+                    }
+                }, onCancel: {
+                    showPasscodeSetup = false
+                    pendingDestination = nil
+                })
             }
             .fullScreenCover(isPresented: $showPasscodeChange) {
-                PasscodeView(mode: .change) {
+                PasscodeView(mode: .change, onSuccess: {
                     showPasscodeChange = false
-                }
+                }, onCancel: {
+                    showPasscodeChange = false
+                })
             }
-            .fullScreenCover(isPresented: $showUnlock) {
-                PasscodeView(mode: .unlock) {
-                    showUnlock = false
-                }
+            .fullScreenCover(isPresented: $showUnlockSheet) {
+                PasscodeView(mode: .unlock, onSuccess: {
+                    showUnlockSheet = false
+                    if let dest = pendingDestination {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            navigationPath.append(dest)
+                            pendingDestination = nil
+                        }
+                    }
+                }, onCancel: {
+                    showUnlockSheet = false
+                    pendingDestination = nil
+                })
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
@@ -71,11 +99,27 @@ struct SecretSpaceHomeView: View {
         }
     }
     
+    // MARK: - Navigation
+    
+    private func handleSectionTap(_ destination: SecretDestination) {
+        guard subscriptionService.isPremium else {
+            showPaywall = true
+            return
+        }
+        
+        pendingDestination = destination
+        
+        if !secretService.isPasscodeSet {
+            showPasscodeSetup = true
+        } else {
+            showUnlockSheet = true
+        }
+    }
+    
     // MARK: - Header
     
     private var headerView: some View {
         VStack(spacing: 12) {
-            // Icon
             ZStack {
                 Circle()
                     .fill(AppColors.accentLilac.opacity(0.15))
@@ -152,112 +196,74 @@ struct SecretSpaceHomeView: View {
     
     private var sectionsView: some View {
         VStack(spacing: 12) {
-            // Secret Album
             sectionButton(
                 icon: "photo.on.rectangle.angled",
                 iconColor: AppColors.accentBlue,
                 title: "Secret Album",
                 subtitle: "\(secretService.secretPhotos.count + secretService.secretVideos.count) items",
-                destination: {
-                    AnyView(SecretAlbumView())
-                }
+                destination: .album
             )
             
-            // Secret Contacts
             sectionButton(
                 icon: "person.crop.circle.fill",
                 iconColor: AppColors.statusSuccess,
                 title: "Secret Contacts",
                 subtitle: "\(secretService.secretContacts.count) contacts",
-                destination: {
-                    AnyView(SecretContactsView())
-                }
+                destination: .contacts
             )
         }
     }
     
-    private func sectionButton<Destination: View>(
+    private func sectionButton(
         icon: String,
         iconColor: Color,
         title: String,
         subtitle: String,
-        destination: @escaping () -> Destination
+        destination: SecretDestination
     ) -> some View {
         Button {
-            handleSectionTap {
-                // Навигация обрабатывается через NavigationLink
-            }
+            handleSectionTap(destination)
         } label: {
-            NavigationLink {
-                if secretService.isUnlocked || !secretService.isPasscodeSet {
-                    destination()
-                } else {
-                    PasscodeView(mode: .unlock) {
-                        // После разблокировки покажем destination
-                    }
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(iconColor.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: icon)
+                        .font(.system(size: 20))
+                        .foregroundColor(iconColor)
                 }
-            } label: {
-                HStack(spacing: 14) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(iconColor.opacity(0.15))
-                            .frame(width: 44, height: 44)
-                        
-                        Image(systemName: icon)
-                            .font(.system(size: 20))
-                            .foregroundColor(iconColor)
-                    }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.textPrimary)
                     
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(title)
-                            .font(AppFonts.subtitleM)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        Text(subtitle)
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.textTertiary)
-                    }
-                    
-                    Spacer()
-                    
-                    // Lock indicator if locked
-                    if secretService.isPasscodeSet && !secretService.isUnlocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(AppColors.textTertiary)
-                    }
-                    
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(AppColors.textTertiary.opacity(0.5))
+                    Text(subtitle)
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.textTertiary)
                 }
-                .padding(AppSpacing.containerPadding)
-                .background(AppColors.backgroundSecondary)
-                .cornerRadius(AppSpacing.cardRadius)
+                
+                Spacer()
+                
+                if secretService.isPasscodeSet {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
             }
+            .padding(AppSpacing.containerPadding)
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(AppSpacing.cardRadius)
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.98))
         .disabled(!subscriptionService.isPremium)
         .opacity(subscriptionService.isPremium ? 1 : 0.6)
-    }
-    
-    private func handleSectionTap(action: @escaping () -> Void) {
-        guard subscriptionService.isPremium else {
-            showPaywall = true
-            return
-        }
-        
-        if !secretService.isPasscodeSet {
-            showPasscodeSetup = true
-            return
-        }
-        
-        if !secretService.isUnlocked {
-            showUnlock = true
-            return
-        }
-        
-        action()
     }
     
     // MARK: - Protection Settings
@@ -269,11 +275,11 @@ struct SecretSpaceHomeView: View {
                 .foregroundColor(AppColors.textPrimary)
             
             VStack(spacing: 2) {
-                // Set Passcode
                 Button {
                     if secretService.isPasscodeSet {
                         showPasscodeChange = true
                     } else {
+                        pendingDestination = nil
                         showPasscodeSetup = true
                     }
                 } label: {
@@ -318,7 +324,6 @@ struct SecretSpaceHomeView: View {
                     .background(AppColors.textTertiary.opacity(0.1))
                     .padding(.leading, 72)
                 
-                // Face ID / Touch ID
                 if secretService.isBiometricAvailable {
                     HStack(spacing: 14) {
                         ZStack {
@@ -336,7 +341,7 @@ struct SecretSpaceHomeView: View {
                                 .font(AppFonts.subtitleM)
                                 .foregroundColor(AppColors.textPrimary)
                             
-                            Text("Quick unlock with \(secretService.biometricType.name)")
+                            Text("Quick unlock")
                                 .font(AppFonts.caption)
                                 .foregroundColor(AppColors.textTertiary)
                         }
@@ -384,4 +389,3 @@ struct SecretSpaceHomeView_Previews: PreviewProvider {
             .environmentObject(AppState.shared)
     }
 }
-

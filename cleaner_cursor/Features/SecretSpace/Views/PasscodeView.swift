@@ -12,6 +12,7 @@ struct PasscodeView: View {
     
     let mode: PasscodeMode
     let onSuccess: () -> Void
+    var onCancel: (() -> Void)?
     
     @State private var passcode: String = ""
     @State private var confirmPasscode: String = ""
@@ -19,7 +20,16 @@ struct PasscodeView: View {
     @State private var errorMessage: String?
     @State private var shake: Bool = false
     
+    // Блокировка после неверных попыток
+    @State private var failedAttempts: Int = 0
+    @State private var isLocked: Bool = false
+    @State private var lockEndTime: Date?
+    @State private var remainingLockTime: Int = 0
+    @State private var lockTimer: Timer?
+    
     private let passcodeLength = 4
+    private let maxFailedAttempts = 5
+    private let lockDurationSeconds = 180 // 3 минуты
     
     // MARK: - Body
     
@@ -28,69 +38,169 @@ struct PasscodeView: View {
             AppColors.backgroundPrimary
                 .ignoresSafeArea()
             
-            VStack(spacing: 32) {
+            VStack(spacing: 0) {
+                // Top bar with close button
+                HStack {
+                    Spacer()
+                    Button {
+                        handleCancel()
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundColor(AppColors.textTertiary.opacity(0.6))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 16)
+                
                 Spacer()
                 
-                // Icon
-                iconView
-                
-                // Title
-                titleView
-                
-                // Dots
-                dotsView
-                    .modifier(ShakeEffect(animatableData: shake ? 1 : 0))
-                
-                // Error message
-                if let error = errorMessage {
-                    Text(error)
-                        .font(AppFonts.bodyM)
+                // Main content - fixed height container
+                VStack(spacing: 24) {
+                    // Icon
+                    ZStack {
+                        Circle()
+                            .fill(isLocked ? AppColors.statusError.opacity(0.15) : AppColors.accentLilac.opacity(0.15))
+                            .frame(width: 72, height: 72)
+                        
+                        Image(systemName: isLocked ? "lock.fill" : iconName)
+                            .font(.system(size: 32))
+                            .foregroundColor(isLocked ? AppColors.statusError : AppColors.accentLilac)
+                    }
+                    
+                    // Title
+                    VStack(spacing: 6) {
+                        Text(isLocked ? "Too Many Attempts" : titleText)
+                            .font(AppFonts.titleM)
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Text(isLocked ? "Try again in \(formatTime(remainingLockTime))" : subtitleText)
+                            .font(AppFonts.bodyM)
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                    
+                    // Dots
+                    if !isLocked {
+                        HStack(spacing: 16) {
+                            ForEach(0..<passcodeLength, id: \.self) { index in
+                                Circle()
+                                    .fill(index < currentPasscode.count ? AppColors.accentBlue : AppColors.textTertiary.opacity(0.3))
+                                    .frame(width: 14, height: 14)
+                            }
+                        }
+                        .modifier(ShakeEffect(animatableData: shake ? 1 : 0))
+                    }
+                    
+                    // Error message - fixed height to prevent layout shift
+                    Text(errorMessage ?? " ")
+                        .font(AppFonts.caption)
                         .foregroundColor(AppColors.statusError)
+                        .frame(height: 16)
+                        .opacity(errorMessage != nil ? 1 : 0)
                 }
+                .frame(height: 220)
                 
                 Spacer()
                 
                 // Keypad
                 keypadView
+                    .opacity(isLocked ? 0.3 : 1)
+                    .disabled(isLocked)
                 
-                // Cancel button
-                if mode != .unlock {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textTertiary)
-                    .padding(.bottom, 24)
-                }
+                Spacer()
+                    .frame(height: 40)
             }
-            .padding(.horizontal, 24)
         }
         .navigationBarHidden(true)
         .onAppear {
-            // Попытка Face ID при разблокировке
-            if mode == .unlock && secretService.isFaceIDEnabled {
-                Task {
-                    if await secretService.authenticateWithBiometrics() {
-                        onSuccess()
-                    }
-                }
+            checkLockStatus()
+            attemptBiometricAuth()
+        }
+        .onDisappear {
+            lockTimer?.invalidate()
+        }
+    }
+    
+    // MARK: - Biometric Auth
+    
+    private func attemptBiometricAuth() {
+        guard mode == .unlock && secretService.isFaceIDEnabled && !isLocked else { return }
+        
+        Task {
+            if await secretService.authenticateWithBiometrics() {
+                onSuccess()
             }
         }
     }
     
-    // MARK: - Icon View
+    // MARK: - Cancel Handler
     
-    private var iconView: some View {
-        ZStack {
-            Circle()
-                .fill(AppColors.accentLilac.opacity(0.15))
-                .frame(width: 80, height: 80)
-            
-            Image(systemName: iconName)
-                .font(.system(size: 36))
-                .foregroundColor(AppColors.accentLilac)
+    private func handleCancel() {
+        lockTimer?.invalidate()
+        if let onCancel = onCancel {
+            onCancel()
+        } else {
+            dismiss()
         }
     }
+    
+    private func formatTime(_ seconds: Int) -> String {
+        let minutes = seconds / 60
+        let secs = seconds % 60
+        return String(format: "%d:%02d", minutes, secs)
+    }
+    
+    // MARK: - Lock Status
+    
+    private func checkLockStatus() {
+        if let endTime = UserDefaults.standard.object(forKey: "passcode_lock_end_time") as? Date {
+            if endTime > Date() {
+                isLocked = true
+                lockEndTime = endTime
+                startLockTimer()
+            } else {
+                clearLock()
+            }
+        }
+        failedAttempts = UserDefaults.standard.integer(forKey: "passcode_failed_attempts")
+    }
+    
+    private func startLockTimer() {
+        updateRemainingTime()
+        lockTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { _ in
+            updateRemainingTime()
+        }
+    }
+    
+    private func updateRemainingTime() {
+        guard let endTime = lockEndTime else { return }
+        let remaining = Int(endTime.timeIntervalSince(Date()))
+        if remaining <= 0 {
+            clearLock()
+        } else {
+            remainingLockTime = remaining
+        }
+    }
+    
+    private func clearLock() {
+        isLocked = false
+        lockEndTime = nil
+        remainingLockTime = 0
+        failedAttempts = 0
+        lockTimer?.invalidate()
+        UserDefaults.standard.removeObject(forKey: "passcode_lock_end_time")
+        UserDefaults.standard.set(0, forKey: "passcode_failed_attempts")
+    }
+    
+    private func activateLock() {
+        let endTime = Date().addingTimeInterval(TimeInterval(lockDurationSeconds))
+        lockEndTime = endTime
+        isLocked = true
+        UserDefaults.standard.set(endTime, forKey: "passcode_lock_end_time")
+        startLockTimer()
+    }
+    
+    // MARK: - Computed Properties
     
     private var iconName: String {
         switch mode {
@@ -103,21 +213,6 @@ struct PasscodeView: View {
         }
     }
     
-    // MARK: - Title View
-    
-    private var titleView: some View {
-        VStack(spacing: 8) {
-            Text(titleText)
-                .font(AppFonts.titleL)
-                .foregroundColor(AppColors.textPrimary)
-            
-            Text(subtitleText)
-                .font(AppFonts.bodyM)
-                .foregroundColor(AppColors.textTertiary)
-                .multilineTextAlignment(.center)
-        }
-    }
-    
     private var titleText: String {
         switch mode {
         case .create:
@@ -125,33 +220,20 @@ struct PasscodeView: View {
         case .confirm:
             return "Enter Passcode"
         case .unlock:
-            return "Unlock Secret Space"
+            return "Enter Passcode"
         case .change:
-            return isConfirming ? "Enter New Passcode" : "Enter Current Passcode"
+            return isConfirming ? "New Passcode" : "Current Passcode"
         }
     }
     
     private var subtitleText: String {
         switch mode {
         case .create:
-            return isConfirming ? "Enter your passcode again" : "Create a 4-digit passcode to protect your data"
+            return isConfirming ? "Re-enter your passcode" : "Create a 4-digit passcode"
         case .confirm, .unlock:
             return "Enter your 4-digit passcode"
         case .change:
-            return isConfirming ? "Create a new 4-digit passcode" : "Verify your current passcode"
-        }
-    }
-    
-    // MARK: - Dots View
-    
-    private var dotsView: some View {
-        HStack(spacing: 20) {
-            ForEach(0..<passcodeLength, id: \.self) { index in
-                Circle()
-                    .fill(index < currentPasscode.count ? AppColors.accentBlue : AppColors.textTertiary.opacity(0.3))
-                    .frame(width: 16, height: 16)
-                    .animation(.easeInOut(duration: 0.1), value: currentPasscode.count)
-            }
+            return isConfirming ? "Enter new passcode" : "Verify current passcode"
         }
     }
     
@@ -162,9 +244,9 @@ struct PasscodeView: View {
     // MARK: - Keypad View
     
     private var keypadView: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             ForEach(0..<3) { row in
-                HStack(spacing: 24) {
+                HStack(spacing: 20) {
                     ForEach(1...3, id: \.self) { col in
                         let number = row * 3 + col
                         keypadButton(String(number))
@@ -172,31 +254,26 @@ struct PasscodeView: View {
                 }
             }
             
-            // Bottom row: Biometric, 0, Delete
-            HStack(spacing: 24) {
-                // Biometric button (only in unlock mode)
-                if mode == .unlock && secretService.isFaceIDEnabled && secretService.isBiometricAvailable {
+            // Bottom row
+            HStack(spacing: 20) {
+                // Biometric button
+                if mode == .unlock && secretService.isFaceIDEnabled && secretService.isBiometricAvailable && !isLocked {
                     Button {
-                        Task {
-                            if await secretService.authenticateWithBiometrics() {
-                                onSuccess()
-                            }
-                        }
+                        attemptBiometricAuth()
                     } label: {
-                        ZStack {
-                            Circle()
-                                .fill(Color.clear)
-                                .frame(width: 72, height: 72)
-                            
-                            Image(systemName: secretService.biometricType.icon)
-                                .font(.system(size: 28))
-                                .foregroundColor(AppColors.accentBlue)
-                        }
+                        Circle()
+                            .fill(Color.clear)
+                            .frame(width: 64, height: 64)
+                            .overlay {
+                                Image(systemName: secretService.biometricType.icon)
+                                    .font(.system(size: 24))
+                                    .foregroundColor(AppColors.accentBlue)
+                            }
                     }
                 } else {
                     Circle()
                         .fill(Color.clear)
-                        .frame(width: 72, height: 72)
+                        .frame(width: 64, height: 64)
                 }
                 
                 keypadButton("0")
@@ -205,19 +282,18 @@ struct PasscodeView: View {
                 Button {
                     deleteDigit()
                 } label: {
-                    ZStack {
-                        Circle()
-                            .fill(Color.clear)
-                            .frame(width: 72, height: 72)
-                        
-                        Image(systemName: "delete.left.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(AppColors.textSecondary)
-                    }
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 64, height: 64)
+                        .overlay {
+                            Image(systemName: "delete.left")
+                                .font(.system(size: 22))
+                                .foregroundColor(AppColors.textSecondary)
+                        }
                 }
+                .disabled(isLocked)
             }
         }
-        .padding(.bottom, 24)
     }
     
     private func keypadButton(_ digit: String) -> some View {
@@ -227,33 +303,34 @@ struct PasscodeView: View {
             ZStack {
                 Circle()
                     .fill(AppColors.backgroundSecondary)
-                    .frame(width: 72, height: 72)
+                    .frame(width: 64, height: 64)
                 
                 Text(digit)
-                    .font(.system(size: 32, weight: .medium))
+                    .font(.system(size: 28, weight: .medium))
                     .foregroundColor(AppColors.textPrimary)
             }
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.95))
+        .disabled(isLocked)
     }
     
     // MARK: - Input Handling
     
     private func addDigit(_ digit: String) {
+        guard !isLocked else { return }
+        
         HapticManager.lightImpact()
         errorMessage = nil
         
         if isConfirming {
             guard confirmPasscode.count < passcodeLength else { return }
             confirmPasscode += digit
-            
             if confirmPasscode.count == passcodeLength {
                 handleConfirmComplete()
             }
         } else {
             guard passcode.count < passcodeLength else { return }
             passcode += digit
-            
             if passcode.count == passcodeLength {
                 handlePasscodeComplete()
             }
@@ -262,13 +339,9 @@ struct PasscodeView: View {
     
     private func deleteDigit() {
         if isConfirming {
-            if !confirmPasscode.isEmpty {
-                confirmPasscode.removeLast()
-            }
+            if !confirmPasscode.isEmpty { confirmPasscode.removeLast() }
         } else {
-            if !passcode.isEmpty {
-                passcode.removeLast()
-            }
+            if !passcode.isEmpty { passcode.removeLast() }
         }
         errorMessage = nil
     }
@@ -276,18 +349,16 @@ struct PasscodeView: View {
     private func handlePasscodeComplete() {
         switch mode {
         case .create:
-            // Переходим к подтверждению
-            withAnimation {
-                isConfirming = true
-            }
+            withAnimation { isConfirming = true }
             
         case .confirm, .unlock:
             if secretService.verifyPasscode(passcode) {
                 HapticManager.success()
                 secretService.unlock()
+                clearLock()
                 onSuccess()
             } else {
-                showError("Incorrect passcode")
+                handleFailedAttempt()
             }
             
         case .change:
@@ -297,8 +368,21 @@ struct PasscodeView: View {
                     passcode = ""
                 }
             } else {
-                showError("Incorrect passcode")
+                handleFailedAttempt()
             }
+        }
+    }
+    
+    private func handleFailedAttempt() {
+        failedAttempts += 1
+        UserDefaults.standard.set(failedAttempts, forKey: "passcode_failed_attempts")
+        
+        if failedAttempts >= maxFailedAttempts {
+            activateLock()
+            showError("Locked for 3 minutes")
+        } else {
+            let remaining = maxFailedAttempts - failedAttempts
+            showError("\(remaining) attempts remaining")
         }
     }
     
@@ -310,7 +394,7 @@ struct PasscodeView: View {
                     HapticManager.success()
                     onSuccess()
                 } else {
-                    showError("Failed to save passcode")
+                    showError("Failed to save")
                 }
             } else {
                 showError("Passcodes don't match")
@@ -322,7 +406,7 @@ struct PasscodeView: View {
                 HapticManager.success()
                 onSuccess()
             } else {
-                showError("Failed to save passcode")
+                showError("Failed to save")
             }
             
         default:
@@ -335,15 +419,10 @@ struct PasscodeView: View {
         errorMessage = message
         passcode = ""
         confirmPasscode = ""
-        isConfirming = false
+        if mode == .create { isConfirming = false }
         
-        // Shake animation
-        withAnimation(.default) {
-            shake = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            shake = false
-        }
+        withAnimation(.default) { shake = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { shake = false }
     }
 }
 
@@ -371,7 +450,6 @@ struct ShakeEffect: GeometryEffect {
 
 struct PasscodeView_Previews: PreviewProvider {
     static var previews: some View {
-        PasscodeView(mode: .create) { }
+        PasscodeView(mode: .unlock) { }
     }
 }
-
