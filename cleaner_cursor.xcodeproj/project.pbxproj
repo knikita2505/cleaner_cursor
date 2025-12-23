@@ -15,6 +15,12 @@
 		111038692EF099AD0015FEE3 /* BackupsListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038662EF099AD0015FEE3 /* BackupsListView.swift */; };
 		1110386A2EF099AD0015FEE3 /* AllContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038672EF099AD0015FEE3 /* AllContactsView.swift */; };
 		1110386B2EF099AD0015FEE3 /* BackupDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038682EF099AD0015FEE3 /* BackupDetailView.swift */; };
+		1110386D2EF9DE240015FEE3 /* SecretSpaceService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110386C2EF9DE240015FEE3 /* SecretSpaceService.swift */; };
+		111038742EF9DE350015FEE3 /* SecretSpaceHomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038702EF9DE350015FEE3 /* SecretSpaceHomeView.swift */; };
+		111038752EF9DE350015FEE3 /* SecretContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038712EF9DE350015FEE3 /* SecretContactsView.swift */; };
+		111038762EF9DE350015FEE3 /* SecretAlbumView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038722EF9DE350015FEE3 /* SecretAlbumView.swift */; };
+		111038772EF9DE350015FEE3 /* PasscodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038732EF9DE350015FEE3 /* PasscodeView.swift */; };
+		111038792EFB1E050015FEE3 /* ProtectionSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 111038782EFB1E050015FEE3 /* ProtectionSettingsView.swift */; };
 		11205BE32ED4D7A2003AFFF9 /* cleaner_cursorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */; };
 		11205BE52ED4D7A2003AFFF9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BE42ED4D7A2003AFFF9 /* ContentView.swift */; };
 		11205BE72ED4D7A3003AFFF9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 11205BE62ED4D7A3003AFFF9 /* Assets.xcassets */; };
@@ -95,6 +101,12 @@
 		111038662EF099AD0015FEE3 /* BackupsListView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackupsListView.swift; sourceTree = "<group>"; };
 		111038672EF099AD0015FEE3 /* AllContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AllContactsView.swift; sourceTree = "<group>"; };
 		111038682EF099AD0015FEE3 /* BackupDetailView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackupDetailView.swift; sourceTree = "<group>"; };
+		1110386C2EF9DE240015FEE3 /* SecretSpaceService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretSpaceService.swift; sourceTree = "<group>"; };
+		111038702EF9DE350015FEE3 /* SecretSpaceHomeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretSpaceHomeView.swift; sourceTree = "<group>"; };
+		111038712EF9DE350015FEE3 /* SecretContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretContactsView.swift; sourceTree = "<group>"; };
+		111038722EF9DE350015FEE3 /* SecretAlbumView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretAlbumView.swift; sourceTree = "<group>"; };
+		111038732EF9DE350015FEE3 /* PasscodeView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PasscodeView.swift; sourceTree = "<group>"; };
+		111038782EFB1E050015FEE3 /* ProtectionSettingsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProtectionSettingsView.swift; sourceTree = "<group>"; };
 		11205BDF2ED4D7A2003AFFF9 /* cleaner_cursor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = cleaner_cursor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = cleaner_cursorApp.swift; sourceTree = "<group>"; };
 		11205BE42ED4D7A2003AFFF9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -197,6 +209,26 @@
 				1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */,
 				1110385E2EEDDAE90015FEE3 /* NoNameContactsView.swift */,
 				1110385F2EEDDAE90015FEE3 /* DuplicateContactsView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		1110386E2EF9DE350015FEE3 /* SecretSpace */ = {
+			isa = PBXGroup;
+			children = (
+				1110386F2EF9DE350015FEE3 /* Views */,
+			);
+			path = SecretSpace;
+			sourceTree = "<group>";
+		};
+		1110386F2EF9DE350015FEE3 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				111038782EFB1E050015FEE3 /* ProtectionSettingsView.swift */,
+				111038702EF9DE350015FEE3 /* SecretSpaceHomeView.swift */,
+				111038712EF9DE350015FEE3 /* SecretContactsView.swift */,
+				111038722EF9DE350015FEE3 /* SecretAlbumView.swift */,
+				111038732EF9DE350015FEE3 /* PasscodeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -316,6 +348,7 @@
 		11205CF62ED62451003AFFF9 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				1110386C2EF9DE240015FEE3 /* SecretSpaceService.swift */,
 				11289BED2EEA1430005ED805 /* SwipeProgressService.swift */,
 				116799522EE2052C00C73344 /* ScanResultsCache.swift */,
 				11205CF72ED62451003AFFF9 /* BatteryService.swift */,
@@ -332,6 +365,7 @@
 		11205CFE2ED62451003AFFF9 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				1110386E2EF9DE350015FEE3 /* SecretSpace */,
 				111038582EEDDAE90015FEE3 /* Contacts */,
 				11289BEF2EEA1444005ED805 /* Swipe */,
 				116799402EDDF16400C73344 /* Videos */,
@@ -667,6 +701,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				11205D272ED62451003AFFF9 /* PhotoService.swift in Sources */,
+				111038762EF9DE350015FEE3 /* SecretAlbumView.swift in Sources */,
 				11205D452ED797FD003AFFF9 /* BigFilesView.swift in Sources */,
 				11205D2B2ED62451003AFFF9 /* PaywallView.swift in Sources */,
 				11205BEC2ED4D7A3003AFFF9 /* Persistence.swift in Sources */,
@@ -701,16 +736,21 @@
 				11205D2F2ED62451003AFFF9 /* PrimaryCard.swift in Sources */,
 				11289BEE2EEA1430005ED805 /* SwipeProgressService.swift in Sources */,
 				1110386B2EF099AD0015FEE3 /* BackupDetailView.swift in Sources */,
+				111038752EF9DE350015FEE3 /* SecretContactsView.swift in Sources */,
 				11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */,
 				116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */,
 				111038642EEDDAE90015FEE3 /* NoNameContactsView.swift in Sources */,
+				1110386D2EF9DE240015FEE3 /* SecretSpaceService.swift in Sources */,
 				11205D2D2ED62451003AFFF9 /* PrimaryButton.swift in Sources */,
+				111038772EF9DE350015FEE3 /* PasscodeView.swift in Sources */,
 				11205D2C2ED62451003AFFF9 /* OnboardingView.swift in Sources */,
 				11205D242ED62451003AFFF9 /* StorageService.swift in Sources */,
 				11205D292ED62451003AFFF9 /* DashboardView.swift in Sources */,
+				111038792EFB1E050015FEE3 /* ProtectionSettingsView.swift in Sources */,
 				11205D222ED62451003AFFF9 /* BatteryService.swift in Sources */,
 				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
 				11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */,
+				111038742EF9DE350015FEE3 /* SecretSpaceHomeView.swift in Sources */,
 				11205D432ED797FC003AFFF9 /* PhotoCategoryViews.swift in Sources */,
 				11205D312ED62451003AFFF9 /* GradientBackgrounds.swift in Sources */,
 				11205D412ED797FC003AFFF9 /* LivePhotosView.swift in Sources */,

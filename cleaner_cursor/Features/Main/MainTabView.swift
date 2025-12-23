@@ -18,8 +18,8 @@ struct MainTabView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             TabView(selection: $appState.selectedTab) {
-                // 1. Hide Tab (Secret Folder) - leftmost
-                SecretFolderPlaceholder()
+                // 1. Hide Tab (Secret Space) - leftmost
+                SecretSpaceHomeView()
                     .tabItem {
                         Label(AppTab.hide.title, systemImage: AppTab.hide.icon)
                     }
@@ -174,37 +174,6 @@ struct MainTabView: View {
 struct SwipeCleanTab: View {
     var body: some View {
         SwipeHubView()
-    }
-}
-
-
-struct SecretFolderPlaceholder: View {
-    var body: some View {
-        ZStack {
-            AppColors.backgroundPrimary
-                .ignoresSafeArea()
-            
-            VStack(spacing: 24) {
-                ZStack {
-                    Circle()
-                        .fill(AppColors.accentLilac.opacity(0.15))
-                        .frame(width: 100, height: 100)
-                    
-                    Image(systemName: "lock.shield.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(AppColors.accentLilac)
-                }
-                
-                Text("Secret Folder")
-                    .font(AppFonts.titleL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Text("Hide your private photos & videos\nComing soon...")
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
-        }
     }
 }
 

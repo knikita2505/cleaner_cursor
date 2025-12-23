@@ -8,6 +8,9 @@ enum AppFonts {
     
     // MARK: - Titles (Заголовки)
     
+    /// Large Title: 34pt Bold (for main headers)
+    static let largeTitle = Font.system(size: 34, weight: .bold, design: .default)
+    
     /// Title XL: 32pt Bold
     static let titleXL = Font.system(size: 32, weight: .bold, design: .default)
     

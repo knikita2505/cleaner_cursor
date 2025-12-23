@@ -12,7 +12,7 @@ final class SubscriptionService: ObservableObject {
     @Published var products: [Product] = []
     @Published var purchasedProductIDs: Set<String> = []
     @Published var isLoading: Bool = false
-    @Published var isPremium: Bool = false
+    @Published var isPremium: Bool = true // TODO: Change back to false for production
     
     // MARK: - Product IDs
     
@@ -134,7 +134,8 @@ final class SubscriptionService: ObservableObject {
         }
         
         purchasedProductIDs = purchasedIDs
-        isPremium = !purchasedIDs.isEmpty
+        // TODO: Uncomment for production
+        // isPremium = !purchasedIDs.isEmpty
     }
     
     // MARK: - Verification
