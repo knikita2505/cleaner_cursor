@@ -164,7 +164,7 @@ struct BatteryInsightsView: View {
                 
                 Divider()
                     .background(AppColors.textTertiary.opacity(0.1))
-                    .padding(.leading, 60)
+                    .padding(.leading, 52)
                 
                 statRow(
                     icon: batteryService.isCharging ? "bolt.fill" : "powerplug.fill",
@@ -175,7 +175,7 @@ struct BatteryInsightsView: View {
                 
                 Divider()
                     .background(AppColors.textTertiary.opacity(0.1))
-                    .padding(.leading, 60)
+                    .padding(.leading, 52)
                 
                 statRow(
                     icon: "leaf.fill",
@@ -190,19 +190,19 @@ struct BatteryInsightsView: View {
     }
     
     private func statRow(icon: String, title: String, value: String, color: Color) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 8)
                     .fill(color.opacity(0.15))
-                    .frame(width: 44, height: 44)
+                    .frame(width: 36, height: 36)
                 
                 Image(systemName: icon)
-                    .font(.system(size: 20))
+                    .font(.system(size: 16))
                     .foregroundColor(color)
             }
             
             Text(title)
-                .font(AppFonts.bodyL)
+                .font(AppFonts.bodyM)
                 .foregroundColor(AppColors.textPrimary)
             
             Spacer()
@@ -211,7 +211,8 @@ struct BatteryInsightsView: View {
                 .font(AppFonts.subtitleM)
                 .foregroundColor(color)
         }
-        .padding(AppSpacing.containerPadding)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
     
     // MARK: - Tips Section
