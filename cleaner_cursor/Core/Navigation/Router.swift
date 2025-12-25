@@ -92,6 +92,15 @@ enum FullScreenCover: Identifiable {
     }
 }
 
+// MARK: - More Destination
+
+enum MoreDestination: Hashable {
+    case deviceHealth
+    case batteryInsights
+    case systemTips
+    case dashboard
+}
+
 // MARK: - Navigation View Modifier
 
 struct NavigationDestinationModifier: ViewModifier {
@@ -112,7 +121,7 @@ struct NavigationDestinationModifier: ViewModifier {
                 case .storageOverview:
                     Text("Storage Overview") // TODO: Implement
                 case .battery:
-                    Text("Battery") // TODO: Implement
+                    BatteryInsightsView()
                 }
             }
             .navigationDestination(for: PhotosDestination.self) { destination in
@@ -171,6 +180,18 @@ struct NavigationDestinationModifier: ViewModifier {
                     BigFilesView()
                 case .highlights:
                     HighlightsView()
+                }
+            }
+            .navigationDestination(for: MoreDestination.self) { destination in
+                switch destination {
+                case .deviceHealth:
+                    DeviceHealthView()
+                case .batteryInsights:
+                    BatteryInsightsView()
+                case .systemTips:
+                    SystemTipsView()
+                case .dashboard:
+                    DashboardView()
                 }
             }
     }
