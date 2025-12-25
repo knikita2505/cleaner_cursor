@@ -183,6 +183,7 @@ struct SwipeCleanTab: View {
 struct MoreView: View {
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var subscriptionService = SubscriptionService.shared
+    @StateObject private var healthService = DeviceHealthService.shared
     
     var body: some View {
         NavigationStack(path: $appState.morePath) {
@@ -197,8 +198,11 @@ struct MoreView: View {
                             premiumBanner
                         }
                         
-                        // Email Section
-                        emailSection
+                        // Device Health Section
+                        deviceHealthSection
+                        
+                        // Tools Section
+                        toolsSection
                     }
                     .padding(AppSpacing.screenPadding)
                 }
@@ -247,51 +251,96 @@ struct MoreView: View {
         .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
-    private var emailSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Tools")
-                .font(AppFonts.subtitleL)
-                .foregroundColor(AppColors.textPrimary)
-            
-            VStack(spacing: 2) {
-                // Email Cleaner
+    // MARK: - Device Health Section
+    
+    private var deviceHealthSection: some View {
+        VStack(spacing: 2) {
+            // Device Health
+            NavigationLink(value: MoreDestination.deviceHealth) {
                 HStack(spacing: 14) {
+                    // Score indicator
                     ZStack {
-                        RoundedRectangle(cornerRadius: 10)
-                            .fill(AppColors.statusWarning.opacity(0.15))
+                        Circle()
+                            .stroke(healthService.healthStatus.color.opacity(0.3), lineWidth: 3)
                             .frame(width: 44, height: 44)
                         
-                        Image(systemName: "envelope.fill")
-                            .font(.system(size: 20))
-                            .foregroundColor(AppColors.statusWarning)
+                        Circle()
+                            .trim(from: 0, to: CGFloat(healthService.healthScore) / 100)
+                            .stroke(healthService.healthStatus.color, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                            .frame(width: 44, height: 44)
+                            .rotationEffect(.degrees(-90))
+                        
+                        Text("\(healthService.healthScore)")
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundColor(healthService.healthStatus.color)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Email Cleaner")
+                        Text("Device Health")
                             .font(AppFonts.subtitleM)
-                            .foregroundColor(AppColors.textSecondary)
+                            .foregroundColor(AppColors.textPrimary)
                         
-                        Text("Clean spam & unsubscribe")
+                        Text(healthService.healthStatus.title)
                             .font(AppFonts.caption)
-                            .foregroundColor(AppColors.textTertiary)
+                            .foregroundColor(healthService.healthStatus.color)
                     }
                     
                     Spacer()
                     
-                    Text("Soon")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(AppColors.textTertiary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(AppColors.textTertiary.opacity(0.1))
-                        .cornerRadius(6)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(AppColors.textTertiary.opacity(0.5))
                 }
                 .padding(AppSpacing.containerPadding)
-                .opacity(0.6)
+                .contentShape(Rectangle())
             }
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
+            .buttonStyle(.plain)
         }
+        .background(AppColors.backgroundSecondary)
+        .cornerRadius(AppSpacing.cardRadius)
+    }
+    
+    // MARK: - Tools Section
+    
+    private var toolsSection: some View {
+        VStack(spacing: 2) {
+            // Email Cleaner
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(AppColors.accentPurple.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: "envelope.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.accentPurple)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Email Cleaner")
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.textSecondary)
+                    
+                    Text("Clean spam & unsubscribe")
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                
+                Spacer()
+                
+                Text("Soon")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(AppColors.textTertiary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(AppColors.textTertiary.opacity(0.1))
+                    .cornerRadius(6)
+            }
+            .padding(AppSpacing.containerPadding)
+            .opacity(0.6)
+        }
+        .background(AppColors.backgroundSecondary)
+        .cornerRadius(AppSpacing.cardRadius)
     }
 }
 
