@@ -688,8 +688,9 @@ class ShortVideosViewModel: ObservableObject {
         isLoading = true
         
         Task {
+            let videoService = VideoService.shared
             let result = await Task.detached(priority: .userInitiated) {
-                let fetchResult = VideoService.shared.fetchShortVideos()
+                let fetchResult = videoService.fetchShortVideos()
                 var videos: [VideoAsset] = []
                 fetchResult.enumerateObjects { asset, _, _ in
                     videos.append(VideoAsset(asset: asset))

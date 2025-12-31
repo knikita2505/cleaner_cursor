@@ -158,6 +158,7 @@ final class SecretFolderService: ObservableObject {
         switch biometricType {
         case .faceID: return "Face ID"
         case .touchID: return "Touch ID"
+        case .opticID: return "Optic ID"
         case .none: return "Biometrics"
         @unknown default: return "Biometrics"
         }

@@ -119,6 +119,7 @@ final class ContactsService: ObservableObject {
         case .restricted: return "restricted"
         case .denied: return "denied"
         case .authorized: return "authorized"
+        case .limited: return "limited"
         @unknown default: return "unknown(\(status.rawValue))"
         }
     }

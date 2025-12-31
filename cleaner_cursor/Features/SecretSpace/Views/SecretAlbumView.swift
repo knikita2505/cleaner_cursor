@@ -393,18 +393,17 @@ struct MediaGridCell: View {
     }
     
     private func loadThumbnail() {
-        DispatchQueue.global(qos: .userInitiated).async {
+        let currentItem = item
+        Task {
             let image: UIImage?
             
-            if item.type == .photo {
-                image = SecretSpaceService.shared.loadImage(for: item)
+            if currentItem.type == .photo {
+                image = SecretSpaceService.shared.loadImage(for: currentItem)
             } else {
-                image = SecretSpaceService.shared.loadVideoThumbnail(for: item)
+                image = SecretSpaceService.shared.loadVideoThumbnail(for: currentItem)
             }
             
-            DispatchQueue.main.async {
-                self.thumbnail = image
-            }
+            self.thumbnail = image
         }
     }
 }
@@ -497,11 +496,10 @@ struct PhotoDetailContent: View {
     }
     
     private func loadImage() {
-        DispatchQueue.global(qos: .userInitiated).async {
-            let loaded = SecretSpaceService.shared.loadImage(for: item)
-            DispatchQueue.main.async {
-                image = loaded
-            }
+        let currentItem = item
+        Task {
+            let loaded = SecretSpaceService.shared.loadImage(for: currentItem)
+            image = loaded
         }
     }
 }

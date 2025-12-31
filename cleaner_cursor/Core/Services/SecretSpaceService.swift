@@ -118,6 +118,8 @@ final class SecretSpaceService: ObservableObject {
             return .faceID
         case .touchID:
             return .touchID
+        case .opticID:
+            return .faceID // Vision Pro uses opticID, treat as faceID
         case .none:
             return .none
         @unknown default:
@@ -468,6 +470,9 @@ final class SecretSpaceService: ObservableObject {
         options.isNetworkAccessAllowed = true
         options.version = .current
         
+        let fm = FileManager.default
+        let creationDate = asset.creationDate
+        
         return try await withCheckedThrowingContinuation { continuation in
             PHImageManager.default().requestExportSession(
                 forVideo: asset,
@@ -487,8 +492,8 @@ final class SecretSpaceService: ObservableObject {
                     switch exportSession.status {
                     case .completed:
                         // Сохраняем дату создания
-                        if let self = self, let creationDate = asset.creationDate {
-                            try? self.fileManager.setAttributes([.creationDate: creationDate], ofItemAtPath: fileURL.path)
+                        if let creationDate = creationDate {
+                            try? fm.setAttributes([.creationDate: creationDate], ofItemAtPath: fileURL.path)
                         }
                         continuation.resume()
                         

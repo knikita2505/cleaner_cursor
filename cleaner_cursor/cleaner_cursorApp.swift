@@ -56,7 +56,7 @@ struct RootView: View {
         .sheet(isPresented: $appState.showPaywall) {
             PaywallView()
         }
-        .onChange(of: appState.showOnboarding) { newValue in
+        .onChange(of: appState.showOnboarding) { oldValue, newValue in
             if !newValue {
                 // Onboarding completed, check if we need to show permissions
                 checkPermissionsStatus()
