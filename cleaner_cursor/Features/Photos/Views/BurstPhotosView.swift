@@ -680,8 +680,21 @@ final class BurstPhotosViewModel: ObservableObject {
         processingProgress = 0
         
         do {
+            // Calculate bytes freed
+            let bytesFreed = assetsToDelete.reduce(Int64(0)) { total, asset in
+                let resources = PHAssetResource.assetResources(for: asset)
+                return total + (resources.first?.value(forKey: "fileSize") as? Int64 ?? 0)
+            }
+            
             try await photoService.deletePhotos(assetsToDelete)
             processingProgress = 1.0
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .burstPhotos,
+                itemsCount: assetsToDelete.count,
+                bytesFreed: bytesFreed
+            )
             
             SubscriptionService.shared.recordCleaning(count: assetsToDelete.count)
             

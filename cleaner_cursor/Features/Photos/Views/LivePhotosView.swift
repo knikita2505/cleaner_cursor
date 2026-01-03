@@ -841,6 +841,16 @@ final class LivePhotosViewModel: ObservableObject {
         }
         
         if !successIds.isEmpty {
+            // Calculate bytes freed (estimate ~2MB per Live Photo video component)
+            let bytesFreed = Int64(successIds.count) * 2_000_000
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .livePhotos,
+                itemsCount: successIds.count,
+                bytesFreed: bytesFreed
+            )
+            
             SubscriptionService.shared.recordCleaning(count: successIds.count)
         }
         

@@ -688,8 +688,9 @@ class ShortVideosViewModel: ObservableObject {
         isLoading = true
         
         Task {
+            let videoService = VideoService.shared
             let result = await Task.detached(priority: .userInitiated) {
-                let fetchResult = VideoService.shared.fetchShortVideos()
+                let fetchResult = videoService.fetchShortVideos()
                 var videos: [VideoAsset] = []
                 fetchResult.enumerateObjects { asset, _, _ in
                     videos.append(VideoAsset(asset: asset))
@@ -732,6 +733,14 @@ class ShortVideosViewModel: ObservableObject {
         
         do {
             try await videoService.deleteVideos([video.asset])
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .shortVideos,
+                itemsCount: 1,
+                bytesFreed: video.fileSize
+            )
+            
             withAnimation {
                 videos.removeAll { $0.id == video.id }
             }
@@ -745,12 +754,22 @@ class ShortVideosViewModel: ObservableObject {
     }
     
     func deleteSelected() async {
-        let assetsToDelete = videos.filter { selectedIds.contains($0.id) }.map { $0.asset }
+        let videosToDelete = videos.filter { selectedIds.contains($0.id) }
+        let assetsToDelete = videosToDelete.map { $0.asset }
+        let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
         
         isProcessing = true
         
         do {
             try await videoService.deleteVideos(assetsToDelete)
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .shortVideos,
+                itemsCount: assetsToDelete.count,
+                bytesFreed: bytesFreed
+            )
+            
             withAnimation {
                 videos.removeAll { selectedIds.contains($0.id) }
             }

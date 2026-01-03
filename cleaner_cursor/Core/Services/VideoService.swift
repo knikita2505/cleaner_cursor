@@ -115,14 +115,16 @@ final class VideoService: ObservableObject {
         exportSession.outputFileType = .mp4
         exportSession.shouldOptimizeForNetworkUse = true
         
-        exportSession.exportAsynchronously {
-            switch exportSession.status {
-            case .completed:
-                completion(.success(outputURL))
-            case .failed, .cancelled:
-                completion(.failure(exportSession.error ?? VideoServiceError.exportFailed))
-            default:
-                break
+        Task {
+            do {
+                try await exportSession.export(to: outputURL, as: .mp4)
+                await MainActor.run {
+                    completion(.success(outputURL))
+                }
+            } catch {
+                await MainActor.run {
+                    completion(.failure(error))
+                }
             }
         }
     }

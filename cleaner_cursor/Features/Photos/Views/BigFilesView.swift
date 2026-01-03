@@ -459,7 +459,20 @@ final class BigFilesViewModel: ObservableObject {
         }
         
         do {
+            // Calculate bytes freed
+            let bytesFreed = selectedIndices.reduce(Int64(0)) { total, index in
+                guard index < files.count else { return total }
+                return total + files[index].size
+            }
+            
             try await photoService.deletePhotos(assetsToDelete)
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .bigFiles,
+                itemsCount: assetsToDelete.count,
+                bytesFreed: bytesFreed
+            )
             
             // Remove deleted items
             files = files.enumerated()

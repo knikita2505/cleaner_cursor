@@ -99,6 +99,7 @@ enum MoreDestination: Hashable {
     case batteryInsights
     case systemTips
     case dashboard
+    case cleaningHistory
 }
 
 // MARK: - Navigation View Modifier
@@ -192,6 +193,8 @@ struct NavigationDestinationModifier: ViewModifier {
                     SystemTipsView()
                 case .dashboard:
                     DashboardView()
+                case .cleaningHistory:
+                    CleaningHistoryView()
                 }
             }
     }

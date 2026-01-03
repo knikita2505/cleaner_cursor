@@ -148,6 +148,14 @@ struct NoNameContactsView: View {
         
         do {
             try await service.deleteContacts(contactsToDelete)
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .contacts,
+                itemsCount: contactsToDelete.count,
+                bytesFreed: 0
+            )
+            
             selectedContacts.removeAll()
         } catch {
             errorMessage = error.localizedDescription

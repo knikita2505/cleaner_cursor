@@ -767,7 +767,17 @@ class SwipeSessionViewModel: ObservableObject {
             let photosToDelete = monthGroup.photos.filter { idsToDelete.contains($0.id) }
             
             do {
+                // Calculate bytes before deletion
+                let bytesFreed = photosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
+                
                 try await photoService.deletePhotoAssets(photosToDelete)
+                
+                // Record to history
+                CleaningHistoryService.shared.recordCleaning(
+                    type: .swipePhotos,
+                    itemsCount: photosToDelete.count,
+                    bytesFreed: bytesFreed
+                )
                 
                 // Clear deleted IDs from progress (they no longer exist)
                 progressService.clearDeletedIds(monthKey: monthGroup.monthKey)

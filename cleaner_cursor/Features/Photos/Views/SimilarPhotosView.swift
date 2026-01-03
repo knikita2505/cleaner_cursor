@@ -770,6 +770,19 @@ final class SimilarPhotosViewModel: ObservableObject {
                 deleteProgress = Double(deletedCount) / Double(allAssetsToDelete.count)
             }
             
+            // Calculate bytes freed
+            let bytesFreed = allAssetsToDelete.reduce(Int64(0)) { total, asset in
+                let resources = PHAssetResource.assetResources(for: asset)
+                return total + (resources.first?.value(forKey: "fileSize") as? Int64 ?? 0)
+            }
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .similarPhotos,
+                itemsCount: allAssetsToDelete.count,
+                bytesFreed: bytesFreed
+            )
+            
             HapticManager.success()
             SubscriptionService.shared.recordCleaning(count: allAssetsToDelete.count)
             
