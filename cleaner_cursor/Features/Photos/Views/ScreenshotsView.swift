@@ -397,7 +397,17 @@ class ScreenshotsViewModel: ObservableObject {
         }
         
         do {
+            // Calculate bytes before deletion
+            let bytesFreed = assetsToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
+            
             try await photoService.deletePhotoAssets(assetsToDelete)
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .screenshots,
+                itemsCount: assetsToDelete.count,
+                bytesFreed: bytesFreed
+            )
             
             // Remove deleted items
             screenshots = screenshots.enumerated().compactMap { index, asset in

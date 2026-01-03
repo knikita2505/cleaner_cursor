@@ -667,6 +667,14 @@ struct MergeContactsSheet: View {
         
         do {
             try await service.deleteContacts([contact])
+            
+            // Record to history
+            CleaningHistoryService.shared.recordCleaning(
+                type: .contacts,
+                itemsCount: 1,
+                bytesFreed: 0
+            )
+            
             UINotificationFeedbackGenerator().notificationOccurred(.success)
             // If only one contact left, dismiss
             if group.contacts.count <= 2 {

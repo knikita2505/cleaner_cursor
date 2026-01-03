@@ -201,6 +201,9 @@ struct MoreView: View {
                         // Device Health Section
                         deviceHealthSection
                         
+                        // Cleaning History Section
+                        cleaningHistorySection
+                        
                         // Tools Section
                         toolsSection
                     }
@@ -296,6 +299,45 @@ struct MoreView: View {
             }
             .buttonStyle(.plain)
         }
+        .background(AppColors.backgroundSecondary)
+        .cornerRadius(AppSpacing.cardRadius)
+    }
+    
+    // MARK: - Cleaning History Section
+    
+    private var cleaningHistorySection: some View {
+        NavigationLink(value: MoreDestination.cleaningHistory) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(AppColors.statusSuccess.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    
+                    Image(systemName: "clock.arrow.circlepath")
+                        .font(.system(size: 20))
+                        .foregroundColor(AppColors.statusSuccess)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cleaning History")
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    Text("Track your progress")
+                        .font(AppFonts.caption)
+                        .foregroundColor(AppColors.textTertiary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
+            }
+            .padding(AppSpacing.containerPadding)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
         .background(AppColors.backgroundSecondary)
         .cornerRadius(AppSpacing.cardRadius)
     }
