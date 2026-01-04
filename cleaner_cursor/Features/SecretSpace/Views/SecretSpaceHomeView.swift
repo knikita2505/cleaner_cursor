@@ -277,7 +277,7 @@ struct SecretSpaceHomeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Protection")
+                    Text("Access Settings")
                         .font(AppFonts.subtitleM)
                         .foregroundColor(AppColors.textPrimary)
                     

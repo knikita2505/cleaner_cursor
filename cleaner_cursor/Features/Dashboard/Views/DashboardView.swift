@@ -13,7 +13,6 @@ struct DashboardView: View {
     @EnvironmentObject private var appState: AppState
     
     @State private var showPaywall: Bool = false
-    @State private var showSettings: Bool = false
     @State private var animateStorage: Bool = false
     
     private let columns = [
@@ -63,9 +62,6 @@ struct DashboardView: View {
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
-            .sheet(isPresented: $showSettings) {
-                SettingsView()
-            }
         }
     }
     
@@ -107,17 +103,6 @@ struct DashboardView: View {
                 }
                 .buttonStyle(ScaleButtonStyle())
             }
-            
-            // Settings Button
-            Button {
-                showSettings = true
-            } label: {
-                Image(systemName: "gearshape.fill")
-                    .font(.system(size: 22))
-                    .foregroundColor(AppColors.textSecondary)
-                    .padding(8)
-            }
-            .buttonStyle(ScaleButtonStyle())
         }
         .padding(.top, 8)
     }

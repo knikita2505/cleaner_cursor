@@ -419,3 +419,4 @@ struct CleaningHistoryView_Previews: PreviewProvider {
         }
     }
 }
+

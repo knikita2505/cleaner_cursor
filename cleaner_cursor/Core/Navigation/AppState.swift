@@ -184,7 +184,6 @@ enum DashboardDestination: Hashable {
     case photosCleaner
     case videosCleaner
     case contactsCleaner
-    case emailCleaner
     case secretFolder
     case storageOverview
     case battery

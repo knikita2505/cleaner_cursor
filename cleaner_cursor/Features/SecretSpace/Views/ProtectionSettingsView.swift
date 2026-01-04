@@ -37,7 +37,7 @@ struct ProtectionSettingsView: View {
                 .padding(AppSpacing.screenPadding)
             }
         }
-        .navigationTitle("Protection")
+        .navigationTitle("Access Settings")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $showPasscodeSetup) {
             PasscodeView(mode: .create, onSuccess: {
