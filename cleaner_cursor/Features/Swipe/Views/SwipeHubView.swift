@@ -35,7 +35,8 @@ struct SwipeHubView: View {
                 SwipeSessionView(monthGroup: month)
             }
             .onAppear {
-                // Refresh on appear to update progress
+                // Invalidate cache and refresh to ensure fresh data
+                SwipeHubViewModel.invalidateCache()
                 refreshTrigger = UUID()
                 Task {
                     await viewModel.loadPhotos()

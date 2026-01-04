@@ -91,6 +91,11 @@ struct SwipeSessionView: View {
         } message: {
             Text("You have \(viewModel.sessionDecisions.count) unsaved decisions. If you leave now, your progress won't be saved.")
         }
+        .alert("Deletion Cancelled", isPresented: $viewModel.showDeleteError) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.deleteErrorMessage)
+        }
         .onAppear {
             viewModel.loadPhotos()
         }
@@ -385,8 +390,10 @@ struct SwipeSessionView: View {
                     isLoading: viewModel.isDeleting
                 ) {
                     Task {
-                        await viewModel.applySession()
-                        dismiss()
+                        let success = await viewModel.applySession()
+                        if success {
+                            dismiss()
+                        }
                     }
                 }
                 
@@ -664,6 +671,8 @@ class SwipeSessionViewModel: ObservableObject {
     @Published var isDeleting = false
     @Published var showSummary = false
     @Published var sessionDecisions: [(photoId: String, decision: SwipeDecision)] = []
+    @Published var showDeleteError = false
+    @Published var deleteErrorMessage = ""
     
     // MARK: - Properties
     
@@ -749,11 +758,12 @@ class SwipeSessionViewModel: ObservableObject {
     }
     
     /// Apply session - save progress and optionally delete photos
-    func applySession() async {
+    func applySession() async -> Bool {
         isDeleting = true
         
-        // 1. Save all decisions to progress service
-        for decision in sessionDecisions {
+        // 1. Save only "keep" decisions first (these are safe)
+        let keptDecisions = sessionDecisions.filter { $0.decision == .keep }
+        for decision in keptDecisions {
             progressService.updateProgress(
                 monthKey: monthGroup.monthKey,
                 photoId: decision.photoId,
@@ -772,6 +782,15 @@ class SwipeSessionViewModel: ObservableObject {
                 
                 try await photoService.deletePhotoAssets(photosToDelete)
                 
+                // Success - now save delete decisions to progress
+                for decision in sessionDecisions.filter({ $0.decision == .delete }) {
+                    progressService.updateProgress(
+                        monthKey: monthGroup.monthKey,
+                        photoId: decision.photoId,
+                        decision: decision.decision
+                    )
+                }
+                
                 // Record to history
                 CleaningHistoryService.shared.recordCleaning(
                     type: .swipePhotos,
@@ -786,15 +805,21 @@ class SwipeSessionViewModel: ObservableObject {
                 SwipeHubViewModel.invalidateCache()
                 
                 HapticManager.success()
+                isDeleting = false
+                return true
             } catch {
                 print("Failed to delete photos: \(error)")
+                deleteErrorMessage = "Photo deletion was cancelled. Please allow deletion to complete the cleanup."
+                showDeleteError = true
                 HapticManager.error()
+                isDeleting = false
+                return false
             }
         } else {
             HapticManager.success()
+            isDeleting = false
+            return true
         }
-        
-        isDeleting = false
     }
 }
 
