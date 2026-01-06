@@ -513,8 +513,10 @@ struct DuplicatePhotoItem: View {
                     .padding(6)
                 }
                 .cornerRadius(12)
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fit)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

@@ -395,6 +395,7 @@ struct BurstGroupCard: View {
             .padding(AppSpacing.containerPadding)
             .background(AppColors.backgroundSecondary)
             .cornerRadius(AppSpacing.cardRadius)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -585,6 +586,7 @@ struct BurstPhotoCell: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

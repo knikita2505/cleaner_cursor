@@ -525,8 +525,10 @@ struct SimilarPhotoItem: View {
                     }
                     .padding(6)
                 }
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fit)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

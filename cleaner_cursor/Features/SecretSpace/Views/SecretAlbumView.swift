@@ -383,8 +383,10 @@ struct MediaGridCell: View {
                         }
                     }
                 }
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fill)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onAppear {
@@ -729,8 +731,10 @@ struct AssetPickerCell: View {
                         Spacer()
                     }
                 }
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fill)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onAppear {

@@ -300,6 +300,7 @@ struct ScreenshotCell: View {
                         .fill(AppColors.accentBlue.opacity(0.2))
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onAppear {
