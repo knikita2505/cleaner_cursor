@@ -9,11 +9,13 @@ struct DashboardView: View {
     // MARK: - Properties
     
     @ObservedObject private var viewModel = DashboardViewModel.shared
+    @ObservedObject private var photoService = PhotoService.shared
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     @EnvironmentObject private var appState: AppState
     
     @State private var showPaywall: Bool = false
     @State private var animateStorage: Bool = false
+    @State private var hasAppeared: Bool = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -29,21 +31,25 @@ struct DashboardView: View {
                 AppColors.backgroundPrimary
                     .ignoresSafeArea()
                 
-                ScrollView(showsIndicators: false) {
-                    VStack(spacing: 20) {
-                        // Header
-                        headerSection
-                        
-                        // Storage Summary
-                        storageSummaryCard
-                        
-                        // Categories Grid
-                        categoriesGrid
-                        
-                        Spacer(minLength: 100)
+                if !photoService.isAuthorized {
+                    permissionRequiredView
+                } else {
+                    ScrollView(showsIndicators: false) {
+                        VStack(spacing: 20) {
+                            // Header
+                            headerSection
+                            
+                            // Storage Summary
+                            storageSummaryCard
+                            
+                            // Categories Grid
+                            categoriesGrid
+                            
+                            Spacer(minLength: 100)
+                        }
+                        .padding(.horizontal, AppSpacing.screenPadding)
+                        .padding(.top, 8)
                     }
-                    .padding(.horizontal, AppSpacing.screenPadding)
-                    .padding(.top, 8)
                 }
             }
             .navigationBarHidden(true)
@@ -54,14 +60,70 @@ struct DashboardView: View {
                     animateStorage = true
                 }
                 
-                // Start background scan AFTER UI is rendered (не блокирует UI)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    viewModel.startScanIfNeeded()
+                guard !hasAppeared else {
+                    // Just refresh authorization status on subsequent appears
+                    photoService.checkAuthorizationStatus()
+                    return
+                }
+                hasAppeared = true
+                
+                Task {
+                    // Check/request authorization
+                    if !photoService.isAuthorized {
+                        _ = await photoService.requestAuthorization()
+                    }
+                    
+                    // Start scan if authorized
+                    if photoService.isAuthorized {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            viewModel.startScanIfNeeded()
+                        }
+                    }
                 }
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
             }
+        }
+    }
+    
+    // MARK: - Permission Required View
+    
+    private var permissionRequiredView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.system(size: 80))
+                .foregroundColor(AppColors.textTertiary)
+            
+            Text("Photos Access Required")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Text("To clean your photo library, we need access to your photos and videos.")
+                .font(.body)
+                .foregroundColor(AppColors.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Open Settings")
+                    .font(.headline)
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(AppColors.accentBlue)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 32)
+            
+            Spacer()
         }
     }
     
