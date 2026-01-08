@@ -388,23 +388,14 @@ struct SimilarGroupSection: View {
                                     // Top badges
                                     VStack {
                                         HStack {
-                                            // Status indicator
-                                            if !asset.isMarkedForDeletion {
-                                                Circle()
-                                                    .fill(AppColors.statusSuccess)
-                                                    .frame(width: 26, height: 26)
-                                                    .overlay(
-                                                        Image(systemName: "checkmark")
-                                                            .font(.system(size: 13, weight: .bold))
-                                                            .foregroundColor(.white)
-                                                    )
-                                            } else {
+                                            // Status indicator - only show trash for items to delete
+                                            if asset.isMarkedForDeletion {
                                                 Circle()
                                                     .fill(AppColors.statusError)
                                                     .frame(width: 26, height: 26)
                                                     .overlay(
-                                                        Image(systemName: "xmark")
-                                                            .font(.system(size: 13, weight: .bold))
+                                                        Image(systemName: "trash.fill")
+                                                            .font(.system(size: 12, weight: .bold))
                                                             .foregroundColor(.white)
                                                     )
                                             }
@@ -482,8 +473,7 @@ struct SimilarPhotoItem: View {
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .stroke(
-                                    asset.isMarkedForDeletion ? AppColors.statusError : 
-                                        (isBest ? AppColors.statusSuccess : Color.clear),
+                                    asset.isMarkedForDeletion ? AppColors.statusError : AppColors.statusSuccess,
                                     lineWidth: 3
                                 )
                         )
@@ -491,22 +481,15 @@ struct SimilarPhotoItem: View {
                     
                     // Top badges
                     HStack {
-                        if isBest && !asset.isMarkedForDeletion {
-                            Text("Best")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(AppColors.statusSuccess)
-                                .cornerRadius(6)
-                        } else if asset.isMarkedForDeletion {
+                        // Show trash icon only for photos marked for deletion
+                        if asset.isMarkedForDeletion {
                             ZStack {
                                 Circle()
                                     .fill(AppColors.statusError)
                                     .frame(width: 26, height: 26)
                                 
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 13, weight: .bold))
+                                Image(systemName: "trash.fill")
+                                    .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             }
                         }
@@ -525,8 +508,10 @@ struct SimilarPhotoItem: View {
                     }
                     .padding(6)
                 }
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fit)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

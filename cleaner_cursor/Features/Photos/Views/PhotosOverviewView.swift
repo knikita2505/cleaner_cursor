@@ -8,6 +8,7 @@ struct PhotosOverviewView: View {
     // MARK: - Properties
     
     @StateObject private var viewModel = PhotosOverviewViewModel()
+    @ObservedObject private var photoService = PhotoService.shared
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     @Environment(\.dismiss) private var dismiss
     
@@ -18,25 +19,29 @@ struct PhotosOverviewView: View {
             AppColors.backgroundPrimary
                 .ignoresSafeArea()
             
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 20) {
-                    // Summary Card
-                    summaryCard
-                    
-                    // Categories List
-                    categoriesList
-                    
-                    // Rescan Button
-                    rescanButton
-                    
-                    Spacer(minLength: 40)
+            if !photoService.isAuthorized {
+                permissionRequiredView
+            } else {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 20) {
+                        // Summary Card
+                        summaryCard
+                        
+                        // Categories List
+                        categoriesList
+                        
+                        // Rescan Button
+                        rescanButton
+                        
+                        Spacer(minLength: 40)
+                    }
+                    .padding(AppSpacing.screenPadding)
                 }
-                .padding(AppSpacing.screenPadding)
-            }
-            
-            // Loading Overlay
-            if viewModel.isScanning {
-                scanningOverlay
+                
+                // Loading Overlay
+                if viewModel.isScanning {
+                    scanningOverlay
+                }
             }
         }
         .navigationTitle("Photos Cleaner")
@@ -52,9 +57,52 @@ struct PhotosOverviewView: View {
             }
         }
         .onAppear {
+            photoService.checkAuthorizationStatus()
             Task {
-            await viewModel.scanAllCategories()
+                if photoService.isAuthorized {
+                    await viewModel.scanAllCategories()
+                }
             }
+        }
+    }
+    
+    // MARK: - Permission Required View
+    
+    private var permissionRequiredView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.system(size: 80))
+                .foregroundColor(AppColors.textTertiary)
+            
+            Text("Photos Access Required")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Text("To clean your photo library, we need access to your photos and videos.")
+                .font(.body)
+                .foregroundColor(AppColors.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Open Settings")
+                    .font(.headline)
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(AppColors.accentBlue)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 32)
+            
+            Spacer()
         }
     }
     

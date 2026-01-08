@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		110E27032F0DA75200AFEA92 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110E27002F0DA75200AFEA92 /* SplashView.swift */; };
 		111038602EEDDAE90015FEE3 /* SimilarNamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */; };
 		111038612EEDDAE90015FEE3 /* ContactsCleanerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385B2EEDDAE90015FEE3 /* ContactsCleanerView.swift */; };
 		111038622EEDDAE90015FEE3 /* NoNumberContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */; };
@@ -75,6 +76,8 @@
 		116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799522EE2052C00C73344 /* ScanResultsCache.swift */; };
 		11D645362F09971D00FA080C /* CleaningHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645352F09971D00FA080C /* CleaningHistoryService.swift */; };
 		11D6453A2F09975F00FA080C /* CleaningHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645372F09975F00FA080C /* CleaningHistoryView.swift */; };
+		11D645402F0B8A1000FA080C /* FeatureTipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */; };
+		11D645422F0B8A2000FA080C /* FeatureTipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645412F0B8A2000FA080C /* FeatureTipView.swift */; };
 		11F50A712EFD6BA40001F911 /* DeviceHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */; };
 		11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */; };
 		11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A752EFD6BB30001F911 /* SystemTipsView.swift */; };
@@ -99,6 +102,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		110E27002F0DA75200AFEA92 /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SimilarNamesView.swift; sourceTree = "<group>"; };
 		1110385B2EEDDAE90015FEE3 /* ContactsCleanerView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactsCleanerView.swift; sourceTree = "<group>"; };
 		1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoNumberContactsView.swift; sourceTree = "<group>"; };
@@ -171,6 +175,8 @@
 		116799522EE2052C00C73344 /* ScanResultsCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScanResultsCache.swift; sourceTree = "<group>"; };
 		11D645352F09971D00FA080C /* CleaningHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningHistoryService.swift; sourceTree = "<group>"; };
 		11D645372F09975F00FA080C /* CleaningHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningHistoryView.swift; sourceTree = "<group>"; };
+		11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTipService.swift; sourceTree = "<group>"; };
+		11D645412F0B8A2000FA080C /* FeatureTipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTipView.swift; sourceTree = "<group>"; };
 		11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthService.swift; sourceTree = "<group>"; };
 		11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BatteryInsightsView.swift; sourceTree = "<group>"; };
 		11F50A752EFD6BB30001F911 /* SystemTipsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemTipsView.swift; sourceTree = "<group>"; };
@@ -202,6 +208,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		110E27012F0DA75200AFEA92 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				110E27002F0DA75200AFEA92 /* SplashView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		110E27022F0DA75200AFEA92 /* Splash */ = {
+			isa = PBXGroup;
+			children = (
+				110E27012F0DA75200AFEA92 /* Views */,
+			);
+			path = Splash;
+			sourceTree = "<group>";
+		};
 		111038582EEDDAE90015FEE3 /* Contacts */ = {
 			isa = PBXGroup;
 			children = (
@@ -361,6 +383,7 @@
 			isa = PBXGroup;
 			children = (
 				11D645352F09971D00FA080C /* CleaningHistoryService.swift */,
+				11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */,
 				11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */,
 				1110386C2EF9DE240015FEE3 /* SecretSpaceService.swift */,
 				11289BED2EEA1430005ED805 /* SwipeProgressService.swift */,
@@ -379,6 +402,7 @@
 		11205CFE2ED62451003AFFF9 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				110E27022F0DA75200AFEA92 /* Splash */,
 				11D645392F09975F00FA080C /* CleaningHistory */,
 				11F50A722EFD6BB30001F911 /* DeviceHealth */,
 				1110386E2EF9DE350015FEE3 /* SecretSpace */,
@@ -455,6 +479,7 @@
 			isa = PBXGroup;
 			children = (
 				11205D0B2ED62451003AFFF9 /* Components */,
+				11D645412F0B8A2000FA080C /* FeatureTipView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -791,6 +816,8 @@
 				111038752EF9DE350015FEE3 /* SecretContactsView.swift in Sources */,
 				11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */,
 				11D645362F09971D00FA080C /* CleaningHistoryService.swift in Sources */,
+				11D645402F0B8A1000FA080C /* FeatureTipService.swift in Sources */,
+				11D645422F0B8A2000FA080C /* FeatureTipView.swift in Sources */,
 				116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */,
 				111038642EEDDAE90015FEE3 /* NoNameContactsView.swift in Sources */,
 				1110386D2EF9DE240015FEE3 /* SecretSpaceService.swift in Sources */,
@@ -803,6 +830,7 @@
 				11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */,
 				11F50A712EFD6BA40001F911 /* DeviceHealthService.swift in Sources */,
 				11205D222ED62451003AFFF9 /* BatteryService.swift in Sources */,
+				110E27032F0DA75200AFEA92 /* SplashView.swift in Sources */,
 				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
 				11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */,
 				11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */,

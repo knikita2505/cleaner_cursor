@@ -380,23 +380,14 @@ struct DuplicateGroupSection: View {
                                     // Top badges
                                     VStack {
                                         HStack {
-                                            // Status indicator
-                                            if group.isKept(index) {
-                                                Circle()
-                                                    .fill(AppColors.statusSuccess)
-                                                    .frame(width: 26, height: 26)
-                                                    .overlay(
-                                                        Image(systemName: "checkmark")
-                                                            .font(.system(size: 13, weight: .bold))
-                                                            .foregroundColor(.white)
-                                                    )
-                                            } else {
+                                            // Status indicator - only show trash for items to delete
+                                            if !group.isKept(index) {
                                                 Circle()
                                                     .fill(AppColors.statusError)
                                                     .frame(width: 26, height: 26)
                                                     .overlay(
-                                                        Image(systemName: "xmark")
-                                                            .font(.system(size: 13, weight: .bold))
+                                                        Image(systemName: "trash.fill")
+                                                            .font(.system(size: 12, weight: .bold))
                                                             .foregroundColor(.white)
                                                     )
                                             }
@@ -478,22 +469,15 @@ struct DuplicatePhotoItem: View {
                     
                     // Top badges
                     HStack {
-                        if isKept {
-                            Text("Keep")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(AppColors.statusSuccess)
-                                .cornerRadius(6)
-                        } else {
+                        // Show trash icon only for photos marked for deletion
+                        if !isKept {
                             ZStack {
                                 Circle()
                                     .fill(AppColors.statusError)
                                     .frame(width: 26, height: 26)
                                 
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 13, weight: .bold))
+                                Image(systemName: "trash.fill")
+                                    .font(.system(size: 12, weight: .bold))
                                     .foregroundColor(.white)
                             }
                         }
@@ -513,8 +497,10 @@ struct DuplicatePhotoItem: View {
                     .padding(6)
                 }
                 .cornerRadius(12)
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fit)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

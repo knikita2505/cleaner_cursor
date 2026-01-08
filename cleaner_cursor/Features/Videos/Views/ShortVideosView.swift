@@ -636,6 +636,7 @@ struct ShortVideoCell: View {
                 }
             }
             .cornerRadius(12)
+            .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
         .onAppear {

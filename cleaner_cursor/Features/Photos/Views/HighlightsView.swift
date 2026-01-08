@@ -463,6 +463,7 @@ struct HighlightPhotoCell: View {
                     }
                 }
             }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

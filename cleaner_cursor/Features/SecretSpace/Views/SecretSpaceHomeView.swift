@@ -15,9 +15,13 @@ struct SecretSpaceHomeView: View {
     @State private var showPaywall = false
     @State private var showUnlockSheet = false
     @State private var pendingDestination: SecretDestination?
+    @State private var showFeatureTip: Bool = false
+    @State private var hasAppeared: Bool = false
     
     // Навигация
     @State private var navigationPath = NavigationPath()
+    
+    private let tipService = FeatureTipService.shared
     
     enum SecretDestination: Hashable {
         case album
@@ -90,6 +94,23 @@ struct SecretSpaceHomeView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .fullScreenCover(isPresented: $showFeatureTip) {
+                FeatureTipView(tipData: .secretSpace) {
+                    tipService.markTipAsShown(for: .secretSpace)
+                    showFeatureTip = false
+                }
+            }
+            .onAppear {
+                guard !hasAppeared else { return }
+                hasAppeared = true
+                
+                // Show feature tip on first visit
+                if tipService.shouldShowTip(for: .secretSpace) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
+                    }
+                }
             }
         }
     }
@@ -277,7 +298,7 @@ struct SecretSpaceHomeView: View {
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Protection")
+                    Text("Access Settings")
                         .font(AppFonts.subtitleM)
                         .foregroundColor(AppColors.textPrimary)
                     

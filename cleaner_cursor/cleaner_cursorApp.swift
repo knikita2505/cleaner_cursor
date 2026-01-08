@@ -23,19 +23,20 @@ struct CleanerApp: App {
 struct RootView: View {
     
     @EnvironmentObject private var appState: AppState
+    @State private var showSplash: Bool = true
     @State private var showPermissions: Bool = false
     @State private var permissionsCompleted: Bool = false
     
     var body: some View {
         ZStack {
             // Main Content
-            if !appState.showOnboarding && permissionsCompleted {
+            if !showSplash && !appState.showOnboarding && permissionsCompleted {
                 MainTabView()
                     .transition(.opacity)
             }
             
             // Permissions Screen
-            if !appState.showOnboarding && showPermissions && !permissionsCompleted {
+            if !showSplash && !appState.showOnboarding && showPermissions && !permissionsCompleted {
                 PermissionsRequestView(onComplete: {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         permissionsCompleted = true
@@ -46,11 +47,27 @@ struct RootView: View {
             }
             
             // Onboarding Overlay
-            if appState.showOnboarding {
+            if !showSplash && appState.showOnboarding {
                 OnboardingView()
                     .transition(.opacity)
             }
+            
+            // Splash Screen
+            if showSplash {
+                SplashView(onComplete: {
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        showSplash = false
+                    }
+                    
+                    // Check permissions after splash
+                    if !appState.showOnboarding {
+                        checkPermissionsStatus()
+                    }
+                })
+                .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: showSplash)
         .animation(.easeInOut(duration: 0.3), value: appState.showOnboarding)
         .animation(.easeInOut(duration: 0.3), value: permissionsCompleted)
         .sheet(isPresented: $appState.showPaywall) {
@@ -63,9 +80,27 @@ struct RootView: View {
             }
         }
         .onAppear {
-            // Check if we already have permissions or completed onboarding before
-            if !appState.showOnboarding {
-                checkPermissionsStatus()
+            // Start background loading during splash
+            startBackgroundLoading()
+        }
+    }
+    
+    private func startBackgroundLoading() {
+        let photoService = PhotoService.shared
+        
+        Task(priority: .userInitiated) {
+            // Check if we have photo access
+            let photoStatus = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+            
+            if photoStatus == .authorized || photoStatus == .limited {
+                // Start quick counts immediately
+                await MainActor.run {
+                    photoService.updateQuickCounts()
+                }
+                
+                // Start heavy scans in background
+                await photoService.scanDuplicatesIfNeeded()
+                await photoService.scanSimilarIfNeeded()
             }
         }
     }

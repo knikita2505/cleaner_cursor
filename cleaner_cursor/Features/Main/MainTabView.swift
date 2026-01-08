@@ -56,41 +56,11 @@ struct MainTabView: View {
                     .tag(AppTab.more)
             }
             .tint(AppColors.accentBlue)
-            
-            // Neon indicator line
-            tabIndicator
         }
         .gesture(swipeGesture)
         .onAppear {
             setupTabBarAppearance()
         }
-    }
-    
-    // MARK: - Tab Indicator
-    
-    private var tabIndicator: some View {
-        GeometryReader { geo in
-            let tabWidth = geo.size.width / CGFloat(tabOrder.count)
-            let currentIndex = tabOrder.firstIndex(of: appState.selectedTab) ?? 2
-            let indicatorX = tabWidth * CGFloat(currentIndex) + tabWidth / 2
-            
-            // Neon horizontal line - positioned at top border of tab bar
-            RoundedRectangle(cornerRadius: 1.5)
-                .fill(
-                    LinearGradient(
-                        colors: [AppColors.neonBlue, AppColors.neonPink],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .frame(width: 36, height: 3)
-                .shadow(color: AppColors.neonBlue.opacity(0.8), radius: 4, x: 0, y: 0)
-                .shadow(color: AppColors.neonPink.opacity(0.5), radius: 8, x: 0, y: 0)
-                .position(x: indicatorX, y: 1.5)
-                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: appState.selectedTab)
-                .allowsHitTesting(false)
-        }
-        .frame(height: 49)
     }
     
     // MARK: - Swipe Gesture
@@ -204,8 +174,8 @@ struct MoreView: View {
                         // Cleaning History Section
                         cleaningHistorySection
                         
-                        // Tools Section
-                        toolsSection
+                        // Settings Section
+                        settingsSection
                     }
                     .padding(AppSpacing.screenPadding)
                 }
@@ -342,102 +312,81 @@ struct MoreView: View {
         .cornerRadius(AppSpacing.cardRadius)
     }
     
-    // MARK: - Tools Section
+    // MARK: - Settings Section
     
-    private var toolsSection: some View {
-        VStack(spacing: 2) {
-            // Email Cleaner
+    private var settingsSection: some View {
+        NavigationLink(value: MoreDestination.settings) {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(AppColors.accentPurple.opacity(0.15))
+                        .fill(AppColors.textSecondary.opacity(0.15))
                         .frame(width: 44, height: 44)
                     
-                    Image(systemName: "envelope.fill")
+                    Image(systemName: "gearshape.fill")
                         .font(.system(size: 20))
-                        .foregroundColor(AppColors.accentPurple)
+                        .foregroundColor(AppColors.textSecondary)
                 }
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Email Cleaner")
+                    Text("Settings")
                         .font(AppFonts.subtitleM)
-                        .foregroundColor(AppColors.textSecondary)
+                        .foregroundColor(AppColors.textPrimary)
                     
-                    Text("Clean spam & unsubscribe")
+                    Text("App preferences")
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.textTertiary)
                 }
                 
                 Spacer()
                 
-                Text("Soon")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(AppColors.textTertiary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(AppColors.textTertiary.opacity(0.1))
-                    .cornerRadius(6)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
             }
             .padding(AppSpacing.containerPadding)
-            .opacity(0.6)
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .background(AppColors.backgroundSecondary)
         .cornerRadius(AppSpacing.cardRadius)
     }
 }
 
-// MARK: - Settings View (Sheet from Dashboard)
+// MARK: - Settings View
 /// Настройки приложения
 
 struct SettingsView: View {
-    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var appState: AppState
     @ObservedObject private var subscriptionService = SubscriptionService.shared
     
     var body: some View {
-        NavigationStack {
-            ZStack {
-                AppColors.backgroundPrimary
-                    .ignoresSafeArea()
-                
-                ScrollView {
-                    VStack(spacing: 16) {
-                        // Premium Banner
-                        if !subscriptionService.isPremium {
-                            premiumBanner
-                        }
-                        
-                        // Settings List
-                        settingsList
-                        
-                        // Debug Section
-                        #if DEBUG
-                        debugSection
-                        #endif
-                        
-                        // App Info
-                        appInfo
+        ZStack {
+            AppColors.backgroundPrimary
+                .ignoresSafeArea()
+            
+            ScrollView {
+                VStack(spacing: 16) {
+                    // Premium Banner
+                    if !subscriptionService.isPremium {
+                        premiumBanner
                     }
-                    .padding(AppSpacing.screenPadding)
+                    
+                    // Settings List
+                    settingsList
+                    
+                    // App Info
+                    appInfo
                 }
-            }
-            .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                    .foregroundColor(AppColors.accentBlue)
-                }
+                .padding(AppSpacing.screenPadding)
             }
         }
+        .navigationTitle("Settings")
+        .navigationBarTitleDisplayMode(.inline)
     }
     
     private var premiumBanner: some View {
         Button {
             appState.presentPaywall()
-            dismiss()
         } label: {
             HStack(spacing: 16) {
                 ZStack {
@@ -477,8 +426,6 @@ struct SettingsView: View {
         VStack(spacing: 2) {
             settingsRow(icon: "bell.fill", title: "Notifications", color: AppColors.statusError)
             settingsRow(icon: "globe", title: "Language", color: AppColors.accentBlue)
-            settingsRow(icon: "star.fill", title: "Rate App", color: AppColors.statusWarning)
-            settingsRow(icon: "square.and.arrow.up", title: "Share App", color: AppColors.statusSuccess)
             settingsRow(icon: "questionmark.circle.fill", title: "Help & Support", color: AppColors.accentPurple)
             settingsRow(icon: "doc.text.fill", title: "Privacy Policy", color: AppColors.textTertiary)
             settingsRow(icon: "doc.text.fill", title: "Terms of Use", color: AppColors.textTertiary)
@@ -512,58 +459,6 @@ struct SettingsView: View {
         }
     }
     
-    private var debugSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Debug")
-                .font(AppFonts.caption)
-                .foregroundColor(AppColors.textTertiary)
-                .padding(.horizontal, 4)
-            
-            VStack(spacing: 2) {
-                Button {
-                    appState.resetOnboarding()
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppColors.statusWarning)
-                            .frame(width: 28)
-                        
-                        Text("Reset Onboarding")
-                            .font(AppFonts.bodyL)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal, AppSpacing.containerPadding)
-                    .padding(.vertical, 14)
-                }
-                
-                Button {
-                    appState.presentPaywall()
-                    dismiss()
-                } label: {
-                    HStack {
-                        Image(systemName: "creditcard")
-                            .font(.system(size: 18))
-                            .foregroundColor(AppColors.accentPurple)
-                            .frame(width: 28)
-                        
-                        Text("Show Paywall")
-                            .font(AppFonts.bodyL)
-                            .foregroundColor(AppColors.textPrimary)
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal, AppSpacing.containerPadding)
-                    .padding(.vertical, 14)
-                }
-            }
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
-        }
-    }
     
     private var appInfo: some View {
         VStack(spacing: 8) {

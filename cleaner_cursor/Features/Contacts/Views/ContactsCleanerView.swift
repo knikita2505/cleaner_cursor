@@ -8,8 +8,10 @@ struct ContactsCleanerView: View {
     @ObservedObject private var service = ContactsService.shared
     @State private var hasAppeared = false
     @State private var showBackupSuggestion = false
+    @State private var showFeatureTip: Bool = false
     
     private let backupSuggestionKey = "contacts_backup_suggested"
+    private let tipService = FeatureTipService.shared
     
     var body: some View {
         ZStack {
@@ -28,6 +30,13 @@ struct ContactsCleanerView: View {
             guard !hasAppeared else { return }
             hasAppeared = true
             
+            // Show feature tip on first visit
+            if tipService.shouldShowTip(for: .contacts) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showFeatureTip = true
+                }
+            }
+            
             Task {
                 // Check/request authorization
                 if !service.isAuthorized {
@@ -40,12 +49,25 @@ struct ContactsCleanerView: View {
                     print("🔍 Starting scan...")
                     await service.scanAllCategories()
                     
-                    // Show backup suggestion on first visit
-                    if !UserDefaults.standard.bool(forKey: backupSuggestionKey) && service.contacts.count > 0 {
+                    // Show backup suggestion on first visit (only if tip is not showing)
+                    if !showFeatureTip && !UserDefaults.standard.bool(forKey: backupSuggestionKey) && service.contacts.count > 0 {
                         showBackupSuggestion = true
                     }
                 } else {
                     print("❌ Not authorized, skipping scan")
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showFeatureTip) {
+            FeatureTipView(tipData: .contacts) {
+                tipService.markTipAsShown(for: .contacts)
+                showFeatureTip = false
+                
+                // Show backup suggestion after tip is dismissed
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    if !UserDefaults.standard.bool(forKey: backupSuggestionKey) && service.contacts.count > 0 {
+                        showBackupSuggestion = true
+                    }
                 }
             }
         }

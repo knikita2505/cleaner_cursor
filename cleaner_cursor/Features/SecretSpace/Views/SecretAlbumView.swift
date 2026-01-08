@@ -23,6 +23,7 @@ struct SecretAlbumView: View {
     @State private var isImporting = false
     @State private var importProgress: String = ""
     @State private var deleteOriginals = true
+    @State private var showPermissionAlert = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -93,6 +94,42 @@ struct SecretAlbumView: View {
         } message: {
             Text("These items will be permanently deleted from Secret Album.")
         }
+        .alert("Photos Access Required", isPresented: $showPermissionAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+        } message: {
+            Text("To import photos and videos, please allow access to your photo library in Settings.")
+        }
+    }
+    
+    // MARK: - Permission Check
+    
+    private func checkPhotoPermissionAndShowPicker() {
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        
+        switch status {
+        case .authorized, .limited:
+            showPhotoPicker = true
+        case .notDetermined:
+            Task {
+                let newStatus = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+                await MainActor.run {
+                    if newStatus == .authorized || newStatus == .limited {
+                        showPhotoPicker = true
+                    } else {
+                        showPermissionAlert = true
+                    }
+                }
+            }
+        case .denied, .restricted:
+            showPermissionAlert = true
+        @unknown default:
+            showPermissionAlert = true
+        }
     }
     
     // MARK: - Empty State
@@ -123,7 +160,7 @@ struct SecretAlbumView: View {
             }
             
             Button {
-                showPhotoPicker = true
+                checkPhotoPermissionAndShowPicker()
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "plus")
@@ -200,7 +237,7 @@ struct SecretAlbumView: View {
             } else {
                 // Add button
                 Button {
-                    showPhotoPicker = true
+                    checkPhotoPermissionAndShowPicker()
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "plus.circle.fill")
@@ -383,8 +420,10 @@ struct MediaGridCell: View {
                         }
                     }
                 }
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fill)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onAppear {
@@ -729,8 +768,10 @@ struct AssetPickerCell: View {
                         Spacer()
                     }
                 }
+                .contentShape(Rectangle())
             }
             .aspectRatio(1, contentMode: .fill)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .onAppear {

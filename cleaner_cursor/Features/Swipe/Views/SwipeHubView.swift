@@ -9,8 +9,13 @@ struct SwipeHubView: View {
     // MARK: - Properties
     
     @StateObject private var viewModel = SwipeHubViewModel()
+    @ObservedObject private var photoService = PhotoService.shared
     @ObservedObject private var progressService = SwipeProgressService.shared
     @State private var refreshTrigger = UUID()
+    @State private var hasAppeared: Bool = false
+    @State private var showFeatureTip: Bool = false
+    
+    private let tipService = FeatureTipService.shared
     
     // MARK: - Body
     
@@ -20,7 +25,9 @@ struct SwipeHubView: View {
                 AppColors.backgroundPrimary
                     .ignoresSafeArea()
                 
-                if viewModel.isLoading {
+                if !photoService.isAuthorized {
+                    permissionRequiredView
+                } else if viewModel.isLoading {
                     LoadingStateView(title: "Loading photos...")
                 } else if viewModel.monthGroups.isEmpty {
                     emptyState
@@ -35,12 +42,82 @@ struct SwipeHubView: View {
                 SwipeSessionView(monthGroup: month)
             }
             .onAppear {
-                // Refresh on appear to update progress
+                // Invalidate cache and refresh to ensure fresh data
+                SwipeHubViewModel.invalidateCache()
                 refreshTrigger = UUID()
+                
+                guard !hasAppeared else {
+                    // Just refresh authorization status on subsequent appears
+                    photoService.checkAuthorizationStatus()
+                    return
+                }
+                hasAppeared = true
+                
+                // Show feature tip on first visit
+                if tipService.shouldShowTip(for: .swipe) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
+                    }
+                }
+                
                 Task {
-                    await viewModel.loadPhotos()
+                    // Check/request authorization
+                    if !photoService.isAuthorized {
+                        _ = await photoService.requestAuthorization()
+                    }
+                    
+                    // Load photos if authorized
+                    if photoService.isAuthorized {
+                        await viewModel.loadPhotos()
+                    }
                 }
             }
+            .fullScreenCover(isPresented: $showFeatureTip) {
+                FeatureTipView(tipData: .swipe) {
+                    tipService.markTipAsShown(for: .swipe)
+                    showFeatureTip = false
+                }
+            }
+        }
+    }
+    
+    // MARK: - Permission Required View
+    
+    private var permissionRequiredView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.system(size: 80))
+                .foregroundColor(AppColors.textTertiary)
+            
+            Text("Photos Access Required")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Text("To swipe through your photos, we need access to your photo library.")
+                .font(.body)
+                .foregroundColor(AppColors.textTertiary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+            
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Open Settings")
+                    .font(.headline)
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(AppColors.accentBlue)
+                    .cornerRadius(12)
+            }
+            .padding(.horizontal, 32)
+            
+            Spacer()
         }
     }
     

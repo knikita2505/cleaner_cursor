@@ -100,6 +100,7 @@ enum MoreDestination: Hashable {
     case systemTips
     case dashboard
     case cleaningHistory
+    case settings
 }
 
 // MARK: - Navigation View Modifier
@@ -115,8 +116,6 @@ struct NavigationDestinationModifier: ViewModifier {
                     Text("Videos Cleaner") // TODO: Implement
                 case .contactsCleaner:
                     Text("Contacts Cleaner") // TODO: Implement
-                case .emailCleaner:
-                    Text("Email Cleaner") // TODO: Implement
                 case .secretFolder:
                     Text("Secret Folder") // TODO: Implement
                 case .storageOverview:
@@ -195,6 +194,8 @@ struct NavigationDestinationModifier: ViewModifier {
                     DashboardView()
                 case .cleaningHistory:
                     CleaningHistoryView()
+                case .settings:
+                    SettingsView()
                 }
             }
     }
