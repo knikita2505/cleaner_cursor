@@ -12,6 +12,11 @@ struct DeviceHealthView: View {
     @StateObject private var batteryService = BatteryService.shared
     @EnvironmentObject private var appState: AppState
     
+    @State private var hasAppeared: Bool = false
+    @State private var showFeatureTip: Bool = false
+    
+    private let tipService = FeatureTipService.shared
+    
     // MARK: - Body
     
     var body: some View {
@@ -37,6 +42,22 @@ struct DeviceHealthView: View {
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             healthService.refresh()
+            
+            guard !hasAppeared else { return }
+            hasAppeared = true
+            
+            // Show feature tip on first visit
+            if tipService.shouldShowTip(for: .deviceHealth) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showFeatureTip = true
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showFeatureTip) {
+            FeatureTipView(tipData: .deviceHealth) {
+                tipService.markTipAsShown(for: .deviceHealth)
+                showFeatureTip = false
+            }
         }
     }
     

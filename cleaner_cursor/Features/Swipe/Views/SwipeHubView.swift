@@ -13,6 +13,9 @@ struct SwipeHubView: View {
     @ObservedObject private var progressService = SwipeProgressService.shared
     @State private var refreshTrigger = UUID()
     @State private var hasAppeared: Bool = false
+    @State private var showFeatureTip: Bool = false
+    
+    private let tipService = FeatureTipService.shared
     
     // MARK: - Body
     
@@ -50,6 +53,13 @@ struct SwipeHubView: View {
                 }
                 hasAppeared = true
                 
+                // Show feature tip on first visit
+                if tipService.shouldShowTip(for: .swipe) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
+                    }
+                }
+                
                 Task {
                     // Check/request authorization
                     if !photoService.isAuthorized {
@@ -60,6 +70,12 @@ struct SwipeHubView: View {
                     if photoService.isAuthorized {
                         await viewModel.loadPhotos()
                     }
+                }
+            }
+            .fullScreenCover(isPresented: $showFeatureTip) {
+                FeatureTipView(tipData: .swipe) {
+                    tipService.markTipAsShown(for: .swipe)
+                    showFeatureTip = false
                 }
             }
         }

@@ -76,6 +76,8 @@
 		116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799522EE2052C00C73344 /* ScanResultsCache.swift */; };
 		11D645362F09971D00FA080C /* CleaningHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645352F09971D00FA080C /* CleaningHistoryService.swift */; };
 		11D6453A2F09975F00FA080C /* CleaningHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645372F09975F00FA080C /* CleaningHistoryView.swift */; };
+		11D645402F0B8A1000FA080C /* FeatureTipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */; };
+		11D645422F0B8A2000FA080C /* FeatureTipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645412F0B8A2000FA080C /* FeatureTipView.swift */; };
 		11F50A712EFD6BA40001F911 /* DeviceHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */; };
 		11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */; };
 		11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A752EFD6BB30001F911 /* SystemTipsView.swift */; };
@@ -173,6 +175,8 @@
 		116799522EE2052C00C73344 /* ScanResultsCache.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ScanResultsCache.swift; sourceTree = "<group>"; };
 		11D645352F09971D00FA080C /* CleaningHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningHistoryService.swift; sourceTree = "<group>"; };
 		11D645372F09975F00FA080C /* CleaningHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleaningHistoryView.swift; sourceTree = "<group>"; };
+		11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTipService.swift; sourceTree = "<group>"; };
+		11D645412F0B8A2000FA080C /* FeatureTipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTipView.swift; sourceTree = "<group>"; };
 		11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthService.swift; sourceTree = "<group>"; };
 		11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BatteryInsightsView.swift; sourceTree = "<group>"; };
 		11F50A752EFD6BB30001F911 /* SystemTipsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemTipsView.swift; sourceTree = "<group>"; };
@@ -379,6 +383,7 @@
 			isa = PBXGroup;
 			children = (
 				11D645352F09971D00FA080C /* CleaningHistoryService.swift */,
+				11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */,
 				11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */,
 				1110386C2EF9DE240015FEE3 /* SecretSpaceService.swift */,
 				11289BED2EEA1430005ED805 /* SwipeProgressService.swift */,
@@ -474,6 +479,7 @@
 			isa = PBXGroup;
 			children = (
 				11205D0B2ED62451003AFFF9 /* Components */,
+				11D645412F0B8A2000FA080C /* FeatureTipView.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -810,6 +816,8 @@
 				111038752EF9DE350015FEE3 /* SecretContactsView.swift in Sources */,
 				11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */,
 				11D645362F09971D00FA080C /* CleaningHistoryService.swift in Sources */,
+				11D645402F0B8A1000FA080C /* FeatureTipService.swift in Sources */,
+				11D645422F0B8A2000FA080C /* FeatureTipView.swift in Sources */,
 				116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */,
 				111038642EEDDAE90015FEE3 /* NoNameContactsView.swift in Sources */,
 				1110386D2EF9DE240015FEE3 /* SecretSpaceService.swift in Sources */,

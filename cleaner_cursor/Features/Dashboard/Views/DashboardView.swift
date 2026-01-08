@@ -16,11 +16,13 @@ struct DashboardView: View {
     @State private var showPaywall: Bool = false
     @State private var animateStorage: Bool = false
     @State private var hasAppeared: Bool = false
+    @State private var showFeatureTip: Bool = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 12),
         GridItem(.flexible(), spacing: 12)
     ]
+    private let tipService = FeatureTipService.shared
     
     // MARK: - Body
     
@@ -67,6 +69,13 @@ struct DashboardView: View {
                 }
                 hasAppeared = true
                 
+                // Show feature tip on first visit
+                if tipService.shouldShowTip(for: .cleanPhotos) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
+                    }
+                }
+                
                 Task {
                     // Check/request authorization
                     if !photoService.isAuthorized {
@@ -83,6 +92,12 @@ struct DashboardView: View {
             }
             .sheet(isPresented: $showPaywall) {
                 PaywallView()
+            }
+            .fullScreenCover(isPresented: $showFeatureTip) {
+                FeatureTipView(tipData: .cleanPhotos) {
+                    tipService.markTipAsShown(for: .cleanPhotos)
+                    showFeatureTip = false
+                }
             }
         }
     }
