@@ -87,6 +87,7 @@ struct RootView: View {
     
     private func startBackgroundLoading() {
         let photoService = PhotoService.shared
+        let notificationService = NotificationService.shared
         
         Task(priority: .userInitiated) {
             // Check if we have photo access
@@ -102,6 +103,9 @@ struct RootView: View {
                 await photoService.scanDuplicatesIfNeeded()
                 await photoService.scanSimilarIfNeeded()
             }
+            
+            // Maintain notification schedule if enabled
+            await notificationService.maintainScheduleIfNeeded()
         }
     }
     

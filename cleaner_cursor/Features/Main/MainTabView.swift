@@ -424,7 +424,6 @@ struct SettingsView: View {
     
     private var settingsList: some View {
         VStack(spacing: 2) {
-            settingsRow(icon: "bell.fill", title: "Notifications", color: AppColors.statusError)
             settingsRow(icon: "globe", title: "Language", color: AppColors.accentBlue)
             settingsRow(icon: "questionmark.circle.fill", title: "Help & Support", color: AppColors.accentPurple)
             settingsRow(icon: "doc.text.fill", title: "Privacy Policy", color: AppColors.textTertiary)
