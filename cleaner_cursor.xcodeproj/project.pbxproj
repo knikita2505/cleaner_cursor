@@ -1017,7 +1017,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = cleaner_cursor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Phone Cleaner";
+				INFOPLIST_KEY_CFBundleDisplayName = MagicSwipe;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1050,7 +1050,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = cleaner_cursor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Phone Cleaner";
+				INFOPLIST_KEY_CFBundleDisplayName = MagicSwipe;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
