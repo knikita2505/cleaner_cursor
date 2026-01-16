@@ -97,6 +97,11 @@ struct DashboardView: View {
                 FeatureTipView(tipData: .cleanPhotos) {
                     tipService.markTipAsShown(for: .cleanPhotos)
                     showFeatureTip = false
+                    
+                    // Request notification permission after onboarding
+                    Task {
+                        await NotificationService.shared.enableNotifications()
+                    }
                 }
             }
         }
