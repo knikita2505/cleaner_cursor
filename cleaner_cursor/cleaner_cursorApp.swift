@@ -11,7 +11,6 @@ struct CleanerApp: App {
         WindowGroup {
             RootView()
                 .environmentObject(AppState.shared)
-                .environmentObject(SubscriptionService.shared)
                 .preferredColorScheme(.dark)
         }
     }
@@ -70,9 +69,6 @@ struct RootView: View {
         .animation(.easeInOut(duration: 0.3), value: showSplash)
         .animation(.easeInOut(duration: 0.3), value: appState.showOnboarding)
         .animation(.easeInOut(duration: 0.3), value: permissionsCompleted)
-        .sheet(isPresented: $appState.showPaywall) {
-            PaywallView()
-        }
         .onChange(of: appState.showOnboarding) { oldValue, newValue in
             if !newValue {
                 // Onboarding completed, check if we need to show permissions
@@ -284,6 +280,5 @@ struct RootView_Previews: PreviewProvider {
     static var previews: some View {
         RootView()
             .environmentObject(AppState.shared)
-            .environmentObject(SubscriptionService.shared)
     }
 }

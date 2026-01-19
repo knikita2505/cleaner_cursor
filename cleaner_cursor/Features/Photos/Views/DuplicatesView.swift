@@ -750,7 +750,6 @@ final class DuplicatesViewModel: ObservableObject {
             )
             
             HapticManager.success()
-            SubscriptionService.shared.recordCleaning(count: allAssetsToDelete.count)
             
             // Сбрасываем прогресс бар
             isDeleting = false

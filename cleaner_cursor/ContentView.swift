@@ -8,9 +8,8 @@ struct ContentView: View {
     var body: some View {
         RootView()
             .environmentObject(AppState.shared)
-            .environmentObject(SubscriptionService.shared)
-            }
-        }
+    }
+}
 
 // MARK: - Preview
 

@@ -485,8 +485,6 @@ final class BigFilesViewModel: ObservableObject {
             
             selectedIndices.removeAll()
             
-            SubscriptionService.shared.recordCleaning(count: assetsToDelete.count)
-            
         } catch {
             print("Failed to delete files: \(error)")
         }

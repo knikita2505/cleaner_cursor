@@ -851,7 +851,6 @@ final class LivePhotosViewModel: ObservableObject {
                 bytesFreed: bytesFreed
             )
             
-            SubscriptionService.shared.recordCleaning(count: successIds.count)
         }
         
         isProcessing = false

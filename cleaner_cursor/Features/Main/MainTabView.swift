@@ -152,7 +152,6 @@ struct SwipeCleanTab: View {
 
 struct MoreView: View {
     @EnvironmentObject private var appState: AppState
-    @ObservedObject private var subscriptionService = SubscriptionService.shared
     @StateObject private var healthService = DeviceHealthService.shared
     
     var body: some View {
@@ -163,11 +162,6 @@ struct MoreView: View {
                 
                 ScrollView {
                     VStack(spacing: 16) {
-                        // Premium Banner
-                        if !subscriptionService.isPremium {
-                            premiumBanner
-                        }
-                        
                         // Device Health Section
                         deviceHealthSection
                         
@@ -184,44 +178,6 @@ struct MoreView: View {
             .navigationBarTitleDisplayMode(.inline)
             .withNavigationDestinations()
         }
-    }
-    
-    private var premiumBanner: some View {
-        Button {
-            appState.presentPaywall()
-        } label: {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(AppGradients.ctaGradient)
-                        .frame(width: 48, height: 48)
-                    
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Unlock Premium")
-                        .font(AppFonts.subtitleL)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text("Get unlimited access")
-                        .font(AppFonts.bodyM)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            .padding(AppSpacing.containerPadding)
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
-        }
-        .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
     // MARK: - Device Health Section
@@ -357,7 +313,6 @@ struct MoreView: View {
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
-    @ObservedObject private var subscriptionService = SubscriptionService.shared
     
     var body: some View {
         ZStack {
@@ -366,11 +321,6 @@ struct SettingsView: View {
             
             ScrollView {
                 VStack(spacing: 16) {
-                    // Premium Banner
-                    if !subscriptionService.isPremium {
-                        premiumBanner
-                    }
-                    
                     // Settings List
                     settingsList
                     
@@ -382,44 +332,6 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-    }
-    
-    private var premiumBanner: some View {
-        Button {
-            appState.presentPaywall()
-        } label: {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(AppGradients.ctaGradient)
-                        .frame(width: 48, height: 48)
-                    
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Unlock Premium")
-                        .font(AppFonts.subtitleL)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text("Get unlimited access")
-                        .font(AppFonts.bodyM)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            .padding(AppSpacing.containerPadding)
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
-        }
-        .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
     private var settingsList: some View {
@@ -461,7 +373,7 @@ struct SettingsView: View {
     
     private var appInfo: some View {
         VStack(spacing: 8) {
-            Text("Cleaner")
+            Text("Magic Swipe")
                 .font(AppFonts.subtitleM)
                 .foregroundColor(AppColors.textSecondary)
             

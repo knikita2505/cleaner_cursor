@@ -9,10 +9,8 @@ struct SecretSpaceHomeView: View {
     
     @EnvironmentObject private var appState: AppState
     @StateObject private var secretService = SecretSpaceService.shared
-    @ObservedObject private var subscriptionService = SubscriptionService.shared
     
     @State private var showPasscodeSetup = false
-    @State private var showPaywall = false
     @State private var showUnlockSheet = false
     @State private var pendingDestination: SecretDestination?
     @State private var showFeatureTip: Bool = false
@@ -40,11 +38,6 @@ struct SecretSpaceHomeView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         headerView
-                        
-                        if !subscriptionService.isPremium {
-                            premiumBanner
-                        }
-                        
                         sectionsView
                         protectionView
                         statusView
@@ -92,9 +85,6 @@ struct SecretSpaceHomeView: View {
                     pendingDestination = nil
                 })
             }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
-            }
             .fullScreenCover(isPresented: $showFeatureTip) {
                 FeatureTipView(tipData: .secretSpace) {
                     tipService.markTipAsShown(for: .secretSpace)
@@ -118,11 +108,6 @@ struct SecretSpaceHomeView: View {
     // MARK: - Navigation
     
     private func handleSectionTap(_ destination: SecretDestination) {
-        guard subscriptionService.isPremium else {
-            showPaywall = true
-            return
-        }
-        
         pendingDestination = destination
         
         if !secretService.isPasscodeSet {
@@ -156,56 +141,6 @@ struct SecretSpaceHomeView: View {
                 .foregroundColor(AppColors.textTertiary)
                 .multilineTextAlignment(.center)
         }
-    }
-    
-    // MARK: - Premium Banner
-    
-    private var premiumBanner: some View {
-        Button {
-            showPaywall = true
-        } label: {
-            HStack(spacing: 16) {
-                ZStack {
-                    Circle()
-                        .fill(AppGradients.ctaGradient)
-                        .frame(width: 48, height: 48)
-                    
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 22))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Start Free Trial")
-                        .font(AppFonts.subtitleL)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text("Secret Space is a Premium feature")
-                        .font(AppFonts.bodyM)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary)
-            }
-            .padding(AppSpacing.containerPadding)
-            .background(
-                LinearGradient(
-                    colors: [AppColors.accentPurple.opacity(0.2), AppColors.accentBlue.opacity(0.1)],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .cornerRadius(AppSpacing.cardRadius)
-            .overlay(
-                RoundedRectangle(cornerRadius: AppSpacing.cardRadius)
-                    .stroke(AppColors.accentPurple.opacity(0.3), lineWidth: 1)
-            )
-        }
-        .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
     // MARK: - Sections
@@ -278,8 +213,6 @@ struct SecretSpaceHomeView: View {
             .cornerRadius(AppSpacing.cardRadius)
         }
         .buttonStyle(ScaleButtonStyle(scale: 0.98))
-        .disabled(!subscriptionService.isPremium)
-        .opacity(subscriptionService.isPremium ? 1 : 0.6)
     }
     
     // MARK: - Protection Settings
@@ -324,8 +257,6 @@ struct SecretSpaceHomeView: View {
             .cornerRadius(AppSpacing.cardRadius)
         }
         .buttonStyle(.plain)
-        .disabled(!subscriptionService.isPremium)
-        .opacity(subscriptionService.isPremium ? 1 : 0.6)
     }
     
     private var protectionSubtitle: String {
