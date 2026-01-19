@@ -698,8 +698,6 @@ final class BurstPhotosViewModel: ObservableObject {
                 bytesFreed: bytesFreed
             )
             
-            SubscriptionService.shared.recordCleaning(count: assetsToDelete.count)
-            
             // Reload
             await load()
             

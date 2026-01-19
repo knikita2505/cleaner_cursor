@@ -42,7 +42,6 @@
 		11205D202ED62451003AFFF9 /* AppGradients.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CF42ED62451003AFFF9 /* AppGradients.swift */; };
 		11205D212ED62451003AFFF9 /* AppFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CF52ED62451003AFFF9 /* AppFonts.swift */; };
 		11205D222ED62451003AFFF9 /* BatteryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CF72ED62451003AFFF9 /* BatteryService.swift */; };
-		11205D232ED62451003AFFF9 /* SubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CF82ED62451003AFFF9 /* SubscriptionService.swift */; };
 		11205D242ED62451003AFFF9 /* StorageService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CF92ED62451003AFFF9 /* StorageService.swift */; };
 		11205D252ED62451003AFFF9 /* VideoService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CFA2ED62451003AFFF9 /* VideoService.swift */; };
 		11205D262ED62451003AFFF9 /* SecretFolderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CFB2ED62451003AFFF9 /* SecretFolderService.swift */; };
@@ -50,7 +49,6 @@
 		11205D282ED62451003AFFF9 /* ContactsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205CFD2ED62451003AFFF9 /* ContactsService.swift */; };
 		11205D292ED62451003AFFF9 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D012ED62451003AFFF9 /* DashboardView.swift */; };
 		11205D2A2ED62451003AFFF9 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D032ED62451003AFFF9 /* MainTabView.swift */; };
-		11205D2B2ED62451003AFFF9 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D062ED62451003AFFF9 /* PaywallView.swift */; };
 		11205D2C2ED62451003AFFF9 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D092ED62451003AFFF9 /* OnboardingView.swift */; };
 		11205D2D2ED62451003AFFF9 /* PrimaryButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D0D2ED62451003AFFF9 /* PrimaryButton.swift */; };
 		11205D2E2ED62451003AFFF9 /* ProgressBars.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205D0F2ED62451003AFFF9 /* ProgressBars.swift */; };
@@ -141,7 +139,6 @@
 		11205CF42ED62451003AFFF9 /* AppGradients.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppGradients.swift; sourceTree = "<group>"; };
 		11205CF52ED62451003AFFF9 /* AppFonts.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AppFonts.swift; sourceTree = "<group>"; };
 		11205CF72ED62451003AFFF9 /* BatteryService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BatteryService.swift; sourceTree = "<group>"; };
-		11205CF82ED62451003AFFF9 /* SubscriptionService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SubscriptionService.swift; sourceTree = "<group>"; };
 		11205CF92ED62451003AFFF9 /* StorageService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StorageService.swift; sourceTree = "<group>"; };
 		11205CFA2ED62451003AFFF9 /* VideoService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = VideoService.swift; sourceTree = "<group>"; };
 		11205CFB2ED62451003AFFF9 /* SecretFolderService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecretFolderService.swift; sourceTree = "<group>"; };
@@ -149,7 +146,6 @@
 		11205CFD2ED62451003AFFF9 /* ContactsService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ContactsService.swift; sourceTree = "<group>"; };
 		11205D012ED62451003AFFF9 /* DashboardView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		11205D032ED62451003AFFF9 /* MainTabView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
-		11205D062ED62451003AFFF9 /* PaywallView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		11205D092ED62451003AFFF9 /* OnboardingView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		11205D0D2ED62451003AFFF9 /* PrimaryButton.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PrimaryButton.swift; sourceTree = "<group>"; };
 		11205D0F2ED62451003AFFF9 /* ProgressBars.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ProgressBars.swift; sourceTree = "<group>"; };
@@ -392,7 +388,6 @@
 				11289BED2EEA1430005ED805 /* SwipeProgressService.swift */,
 				116799522EE2052C00C73344 /* ScanResultsCache.swift */,
 				11205CF72ED62451003AFFF9 /* BatteryService.swift */,
-				11205CF82ED62451003AFFF9 /* SubscriptionService.swift */,
 				11205CF92ED62451003AFFF9 /* StorageService.swift */,
 				11205CFA2ED62451003AFFF9 /* VideoService.swift */,
 				11205CFB2ED62451003AFFF9 /* SecretFolderService.swift */,
@@ -457,7 +452,6 @@
 		11205D052ED62451003AFFF9 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				11205D062ED62451003AFFF9 /* PaywallView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -782,7 +776,6 @@
 				11205D272ED62451003AFFF9 /* PhotoService.swift in Sources */,
 				111038762EF9DE350015FEE3 /* SecretAlbumView.swift in Sources */,
 				11205D452ED797FD003AFFF9 /* BigFilesView.swift in Sources */,
-				11205D2B2ED62451003AFFF9 /* PaywallView.swift in Sources */,
 				11205BEC2ED4D7A3003AFFF9 /* Persistence.swift in Sources */,
 				11205D4E2ED79C0D003AFFF9 /* BurstPhotosView.swift in Sources */,
 				11205D462ED797FD003AFFF9 /* ScreenshotsView.swift in Sources */,
@@ -812,7 +805,6 @@
 				11205D442ED797FC003AFFF9 /* PhotosOverviewView.swift in Sources */,
 				111038622EEDDAE90015FEE3 /* NoNumberContactsView.swift in Sources */,
 				11205D192ED62451003AFFF9 /* Router.swift in Sources */,
-				11205D232ED62451003AFFF9 /* SubscriptionService.swift in Sources */,
 				11205D2F2ED62451003AFFF9 /* PrimaryCard.swift in Sources */,
 				11289BEE2EEA1430005ED805 /* SwipeProgressService.swift in Sources */,
 				1110386B2EF099AD0015FEE3 /* BackupDetailView.swift in Sources */,
@@ -1017,7 +1009,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = cleaner_cursor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Phone Cleaner";
+				INFOPLIST_KEY_CFBundleDisplayName = MagicSwipe;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -1050,7 +1042,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = cleaner_cursor/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = "Phone Cleaner";
+				INFOPLIST_KEY_CFBundleDisplayName = MagicSwipe;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;

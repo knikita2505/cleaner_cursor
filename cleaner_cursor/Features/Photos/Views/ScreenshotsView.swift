@@ -9,7 +9,6 @@ struct ScreenshotsView: View {
     // MARK: - Properties
     
     @StateObject private var viewModel = ScreenshotsViewModel()
-    @ObservedObject private var subscriptionService = SubscriptionService.shared
     @Environment(\.dismiss) private var dismiss
     
     @State private var showDeleteConfirmation: Bool = false

@@ -86,7 +86,7 @@ struct SplashView: View {
                 
                 // App name and tagline
                 VStack(spacing: 12) {
-                    Text("Cleaner")
+                    Text("Magic Swipe")
                         .font(.system(size: 36, weight: .bold, design: .rounded))
                         .foregroundColor(AppColors.textPrimary)
                     
@@ -265,4 +265,5 @@ struct SplashView_Previews: PreviewProvider {
         SplashView(onComplete: {})
     }
 }
+
 

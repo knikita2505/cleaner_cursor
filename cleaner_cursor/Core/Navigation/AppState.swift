@@ -14,12 +14,6 @@ final class AppState: ObservableObject {
     /// Текущий таб
     @Published var selectedTab: AppTab = .clean
     
-    /// Показывать ли paywall
-    @Published var showPaywall: Bool = false
-    
-    /// Paywall вариант (A/B тестирование)
-    @Published var paywallVariant: PaywallVariant = .a
-    
     /// Навигационный путь для dashboard
     @Published var dashboardPath = NavigationPath()
     
@@ -49,15 +43,6 @@ final class AppState: ObservableObject {
     
     private func loadState() {
         showOnboarding = !UserDefaults.standard.bool(forKey: hasSeenOnboardingKey)
-        
-        // Determine paywall variant (simple A/B)
-        if UserDefaults.standard.object(forKey: "paywallVariant") == nil {
-            paywallVariant = Bool.random() ? .a : .b
-            UserDefaults.standard.set(paywallVariant.rawValue, forKey: "paywallVariant")
-        } else {
-            let variantString = UserDefaults.standard.string(forKey: "paywallVariant") ?? "a"
-            paywallVariant = PaywallVariant(rawValue: variantString) ?? .a
-        }
     }
     
     func completeOnboarding() {
@@ -92,14 +77,6 @@ final class AppState: ObservableObject {
     
     func navigateToMore() {
         selectedTab = .more
-    }
-    
-    func presentPaywall() {
-        showPaywall = true
-    }
-    
-    func dismissPaywall() {
-        showPaywall = false
     }
     
     // MARK: - Permission Requests
@@ -137,13 +114,6 @@ enum AppTab: String, CaseIterable, Identifiable {
     }
     
     var title: String { rawValue }
-}
-
-// MARK: - Paywall Variant
-
-enum PaywallVariant: String {
-    case a = "a"
-    case b = "b"
 }
 
 // MARK: - Permission Type

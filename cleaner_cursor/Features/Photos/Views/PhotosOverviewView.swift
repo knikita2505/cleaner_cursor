@@ -9,7 +9,6 @@ struct PhotosOverviewView: View {
     
     @StateObject private var viewModel = PhotosOverviewViewModel()
     @ObservedObject private var photoService = PhotoService.shared
-    @ObservedObject private var subscriptionService = SubscriptionService.shared
     @Environment(\.dismiss) private var dismiss
     
     // MARK: - Body

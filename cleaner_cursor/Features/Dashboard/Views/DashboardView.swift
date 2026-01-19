@@ -10,10 +10,8 @@ struct DashboardView: View {
     
     @ObservedObject private var viewModel = DashboardViewModel.shared
     @ObservedObject private var photoService = PhotoService.shared
-    @ObservedObject private var subscriptionService = SubscriptionService.shared
     @EnvironmentObject private var appState: AppState
     
-    @State private var showPaywall: Bool = false
     @State private var animateStorage: Bool = false
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
@@ -90,9 +88,6 @@ struct DashboardView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
-            }
             .fullScreenCover(isPresented: $showFeatureTip) {
                 FeatureTipView(tipData: .cleanPhotos) {
                     tipService.markTipAsShown(for: .cleanPhotos)
@@ -157,34 +152,12 @@ struct DashboardView: View {
                     .font(AppFonts.caption)
                     .foregroundColor(AppColors.textTertiary)
                 
-                Text("Clean Your Phone")
+                Text("Magic Swipe")
                     .font(AppFonts.titleM)
                     .foregroundColor(AppColors.textPrimary)
             }
             
             Spacer()
-            
-            // Premium Button
-            if !subscriptionService.isPremium {
-                Button {
-                    showPaywall = true
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                        
-                        Text("Premium")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundColor(AppColors.premiumGold)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .background(AppColors.neonBlue)
-                    .cornerRadius(20)
-                    .shadow(color: AppColors.neonBlue.opacity(0.4), radius: 8, x: 0, y: 4)
-                }
-                .buttonStyle(ScaleButtonStyle())
-            }
         }
         .padding(.top, 8)
     }
@@ -296,10 +269,7 @@ struct DashboardView: View {
             
             LazyVGrid(columns: columns, spacing: 12) {
                 ForEach(viewModel.categories) { category in
-                    CategoryCard(
-                        category: category,
-                        isLocked: !subscriptionService.isPremium && !subscriptionService.canCleanMore
-                    ) {
+                    CategoryCard(category: category) {
                         navigateToCategory(category)
                     }
                 }
@@ -310,12 +280,6 @@ struct DashboardView: View {
     // MARK: - Navigation
     
     private func navigateToCategory(_ category: MediaCategory) {
-        // Check subscription limits
-        if !subscriptionService.isPremium && !subscriptionService.canCleanMore {
-            showPaywall = true
-            return
-        }
-        
         switch category.id {
         case "duplicates":
             appState.dashboardPath.append(PhotoCategoryNav.duplicates)
@@ -353,7 +317,6 @@ enum PhotoCategoryNav: String, Hashable {
 
 struct CategoryCard: View {
     let category: MediaCategory
-    let isLocked: Bool
     let action: () -> Void
     
     var body: some View {
@@ -366,7 +329,6 @@ struct CategoryCard: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(height: 110)
                         .clipped()
-                        .opacity(isLocked ? 0.5 : 1.0)
                 } else {
                     // Dark gray placeholder (одинаковый для всех при сканировании или пустых)
                     Color(white: 0.2).opacity(0.8)
@@ -387,16 +349,6 @@ struct CategoryCard: View {
                     startPoint: .top,
                     endPoint: .bottom
                 )
-                
-                // Lock overlay
-                if isLocked && !category.isLoading {
-                    Color.black.opacity(0.5)
-                    
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
                 
                 // Text content at bottom
                 VStack(alignment: .leading, spacing: 4) {

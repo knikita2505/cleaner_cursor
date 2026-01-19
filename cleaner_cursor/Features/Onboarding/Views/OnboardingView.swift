@@ -98,7 +98,7 @@ struct OnboardingView: View {
         OnboardingPageView(
             icon: "sparkles",
             iconColor: AppColors.accentGlow,
-            title: "Welcome to Cleaner",
+            title: "Welcome to Magic Swipe",
             subtitle: "The smartest way to free up space on your iPhone and keep it organized."
         )
     }
