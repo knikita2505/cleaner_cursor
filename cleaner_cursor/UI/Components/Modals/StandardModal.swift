@@ -91,8 +91,8 @@ struct PermissionModal: View {
         iconColor: Color = AppColors.accentBlue,
         title: String,
         description: String,
-        primaryButtonTitle: String = "Allow Access",
-        secondaryButtonTitle: String? = "Not Now",
+        primaryButtonTitle: String = "Continue",
+        secondaryButtonTitle: String? = nil,
         primaryAction: @escaping () -> Void,
         secondaryAction: (() -> Void)? = nil
     ) {
@@ -265,8 +265,7 @@ struct StandardModal_Previews: PreviewProvider {
                     iconColor: AppColors.accentPurple,
                     title: "Access Your Photos",
                     description: "We need access to your photos to find duplicates and help you free up space.",
-                    primaryAction: { print("Allow") },
-                    secondaryAction: { print("Not Now") }
+                    primaryAction: { print("Continue") }
                 )
             }
         }

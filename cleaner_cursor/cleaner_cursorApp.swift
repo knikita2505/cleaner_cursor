@@ -180,17 +180,13 @@ struct PermissionsRequestView: View {
                 // Buttons
                 VStack(spacing: 12) {
                     PrimaryButton(
-                        title: "Allow Access",
-                        icon: "checkmark.shield.fill"
+                        title: "Continue",
+                        icon: "arrow.right"
                     ) {
                         Task {
                             await requestCurrentPermission()
                         }
                     }
-                    
-                    GhostButton(title: currentStep == 0 ? "Skip for Now" : "Continue") {
-                        moveToNextStep()
-        }
                 }
                 .padding(.horizontal, AppSpacing.screenPadding)
                 .padding(.bottom, 50)
