@@ -80,10 +80,24 @@ struct OnboardingView: View {
                     
                     // Terms
                     if currentPage == totalPages - 1 {
-                        Text("By continuing, you agree to our Terms & Privacy Policy")
-                            .font(AppFonts.caption)
-                            .foregroundColor(AppColors.textTertiary.opacity(0.6))
-                            .multilineTextAlignment(.center)
+                        HStack(spacing: 4) {
+                            Text("By continuing, you agree to our")
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.textTertiary.opacity(0.6))
+                            
+                            Link("Terms", destination: URL(string: "https://magicswipe.app/terms.html")!)
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.accentBlue)
+                            
+                            Text("&")
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.textTertiary.opacity(0.6))
+                            
+                            Link("Privacy Policy", destination: URL(string: "https://magicswipe.app/privacy.html")!)
+                                .font(AppFonts.caption)
+                                .foregroundColor(AppColors.accentBlue)
+                        }
+                        .multilineTextAlignment(.center)
                     }
                 }
                 .padding(.horizontal, AppSpacing.screenPadding)

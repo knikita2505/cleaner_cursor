@@ -336,37 +336,55 @@ struct SettingsView: View {
     
     private var settingsList: some View {
         VStack(spacing: 2) {
-            settingsRow(icon: "globe", title: "Language", color: AppColors.accentBlue)
-            settingsRow(icon: "questionmark.circle.fill", title: "Help & Support", color: AppColors.accentPurple)
-            settingsRow(icon: "doc.text.fill", title: "Privacy Policy", color: AppColors.textTertiary)
-            settingsRow(icon: "doc.text.fill", title: "Terms of Use", color: AppColors.textTertiary)
+            // Contact Us - opens email
+            Button {
+                openEmail()
+            } label: {
+                settingsRowContent(icon: "envelope.fill", title: "Contact Us", color: AppColors.accentPurple)
+            }
+            
+            // Privacy Policy - opens link
+            Link(destination: URL(string: "https://magicswipe.app/privacy.html")!) {
+                settingsRowContent(icon: "doc.text.fill", title: "Privacy Policy", color: AppColors.textTertiary)
+            }
+            
+            // Terms of Use - opens link
+            Link(destination: URL(string: "https://magicswipe.app/terms.html")!) {
+                settingsRowContent(icon: "doc.text.fill", title: "Terms of Use", color: AppColors.textTertiary)
+            }
         }
         .background(AppColors.backgroundSecondary)
         .cornerRadius(AppSpacing.cardRadius)
     }
     
-    private func settingsRow(icon: String, title: String, color: Color) -> some View {
-        Button {
-            // Handle tap
-        } label: {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.system(size: 18))
-                    .foregroundColor(color)
-                    .frame(width: 28)
-                
-                Text(title)
-                    .font(AppFonts.bodyL)
-                    .foregroundColor(AppColors.textPrimary)
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
-            }
-            .padding(.horizontal, AppSpacing.containerPadding)
-            .padding(.vertical, 14)
+    private func settingsRowContent(icon: String, title: String, color: Color) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundColor(color)
+                .frame(width: 28)
+            
+            Text(title)
+                .font(AppFonts.bodyL)
+                .foregroundColor(AppColors.textPrimary)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(AppColors.textTertiary.opacity(0.5))
+        }
+        .padding(.horizontal, AppSpacing.containerPadding)
+        .padding(.vertical, 14)
+    }
+    
+    private func openEmail() {
+        let email = "support@magicswipe.app"
+        let subject = "Magic Swipe Support"
+        let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)") {
+            UIApplication.shared.open(url)
         }
     }
     
