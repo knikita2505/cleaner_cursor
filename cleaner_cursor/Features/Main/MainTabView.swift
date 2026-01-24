@@ -395,11 +395,17 @@ struct SettingsView: View {
                 .font(AppFonts.subtitleM)
                 .foregroundColor(AppColors.textSecondary)
             
-            Text("Version 1.0.0")
+            Text("Version \(appVersion)")
                 .font(AppFonts.caption)
                 .foregroundColor(AppColors.textTertiary)
         }
         .padding(.top, 20)
+    }
+    
+    private var appVersion: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(version) (\(build))"
     }
 }
 

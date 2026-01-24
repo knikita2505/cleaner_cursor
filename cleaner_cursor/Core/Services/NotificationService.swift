@@ -33,18 +33,18 @@ final class NotificationService: ObservableObject {
     // MARK: - Notification Content Variants
     
     private let notificationVariants: [(title: String, body: String)] = [
-        ("Too Many Duplicates? 🧹", "Remove duplicate photos and videos with one tap."),
-        ("🧼 Refresh Your Gallery Now", "Time to refresh your gallery? We're ready – just tap!"),
-        ("🚀 Free Up iPhone Storage Fast", "Your iPhone will thank you – remove the clutter in seconds!"),
-        ("Compress Videos, Keep Quality 🎥", "Save space without losing a pixel."),
-        ("Let's Declutter! 💨", "Don't let junk slow you down – clean it out now!"),
-        ("Instant Performance Boost 🔋", "Free space, run smoother, feel the speed!"),
-        ("Your Storage Is Waiting 📱", "Hidden clutter may be taking space — clean it in seconds."),
-        ("Smart Cleanup Time ✨", "Duplicates and similar files won't remove themselves."),
-        ("More Space, Less Noise 🧠", "Keep only what matters — delete the rest easily."),
-        ("Quick Scan, Big Win ⚡", "One tap can free hundreds of megabytes."),
-        ("Keep Your iPhone Light 🪶", "Remove unnecessary photos and videos effortlessly."),
-        ("Clean Today, Relax Tomorrow 😌", "A quick cleanup keeps your phone running smoothly.")
+        ("Duplicate Photos Found 📸", "You may have duplicate photos taking up space."),
+        ("Time to Check Your Gallery 🖼️", "Review your photos and free up some storage."),
+        ("Storage Reminder 📱", "Check if you have unnecessary files to remove."),
+        ("Similar Photos Waiting ✨", "Review similar photos and keep only your favorites."),
+        ("Screenshots Piling Up? 📋", "You might have old screenshots you no longer need."),
+        ("Video Review Reminder 🎬", "Large videos may be using significant storage."),
+        ("Contact Cleanup Reminder 👥", "Check for duplicate or empty contacts."),
+        ("Weekly Storage Check 📊", "It's a good time to review your storage usage."),
+        ("Photo Library Update 🗂️", "New photos added — review for duplicates anytime."),
+        ("Storage Space Check ⚡", "See how much space you can free up today."),
+        ("Organize Your Photos 🧹", "Keep your photo library clean and organized."),
+        ("Monthly Cleanup Reminder 📅", "A quick review keeps your storage in check.")
     ]
     
     // MARK: - Init
