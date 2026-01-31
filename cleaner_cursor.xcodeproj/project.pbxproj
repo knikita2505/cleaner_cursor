@@ -69,6 +69,7 @@
 		11289BEE2EEA1430005ED805 /* SwipeProgressService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11289BED2EEA1430005ED805 /* SwipeProgressService.swift */; };
 		11289BF32EEA1444005ED805 /* SwipeSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11289BF12EEA1444005ED805 /* SwipeSessionView.swift */; };
 		11289BF42EEA1444005ED805 /* SwipeHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11289BF22EEA1444005ED805 /* SwipeHubView.swift */; };
+		113AB5E92F2A90240006E945 /* ApphudSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 113AB5E82F2A90240006E945 /* ApphudSDK */; };
 		116799452EDDF16400C73344 /* VideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799422EDDF16400C73344 /* VideosView.swift */; };
 		116799472EDDF16400C73344 /* ShortVideosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799442EDDF16400C73344 /* ShortVideosView.swift */; };
 		116799532EE2052C00C73344 /* ScanResultsCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116799522EE2052C00C73344 /* ScanResultsCache.swift */; };
@@ -81,6 +82,7 @@
 		11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */; };
 		11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A752EFD6BB30001F911 /* SystemTipsView.swift */; };
 		11F50A792EFD6BB30001F911 /* DeviceHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A762EFD6BB30001F911 /* DeviceHealthView.swift */; };
+		11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1012F0B5A01003BBBBB /* PaywallView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,6 +181,7 @@
 		11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BatteryInsightsView.swift; sourceTree = "<group>"; };
 		11F50A752EFD6BB30001F911 /* SystemTipsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemTipsView.swift; sourceTree = "<group>"; };
 		11F50A762EFD6BB30001F911 /* DeviceHealthView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthView.swift; sourceTree = "<group>"; };
+		11F0A1012F0B5A01003BBBBB /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -186,6 +189,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				113AB5E92F2A90240006E945 /* ApphudSDK in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -452,6 +456,7 @@
 		11205D052ED62451003AFFF9 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				11F0A1012F0B5A01003BBBBB /* PaywallView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -730,6 +735,9 @@
 				Base,
 			);
 			mainGroup = 11205BD62ED4D7A1003AFFF9;
+			packageReferences = (
+				113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */,
+			);
 			productRefGroup = 11205BE02ED4D7A2003AFFF9 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -827,6 +835,7 @@
 				11F50A712EFD6BA40001F911 /* DeviceHealthService.swift in Sources */,
 				11205D222ED62451003AFFF9 /* BatteryService.swift in Sources */,
 				110E27032F0DA75200AFEA92 /* SplashView.swift in Sources */,
+				11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */,
 				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
 				11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */,
 				11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */,
@@ -1179,6 +1188,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apphud/ApphudSDK";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.0.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		113AB5E82F2A90240006E945 /* ApphudSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */;
+			productName = ApphudSDK;
+		};
+/* End XCSwiftPackageProductDependency section */
 
 /* Begin XCVersionGroup section */
 		11205BED2ED4D7A3003AFFF9 /* cleaner_cursor.xcdatamodeld */ = {
