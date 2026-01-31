@@ -610,21 +610,36 @@ private struct PaywallBackground: View {
                 .blur(radius: 80)
                 .offset(x: -150, y: 260)
 
-            // Sparkles
+            // Sparkles - purple color matching STORAGE block
+            // Near close button (top left)
             Image(systemName: "sparkle")
                 .font(.system(size: 14))
-                .foregroundStyle(Color.white.opacity(0.55))
-                .offset(x: -150, y: -120)
-
-            Image(systemName: "sparkle")
-                .font(.system(size: 18))
-                .foregroundStyle(Color.white.opacity(0.75))
-                .offset(x: 150, y: -150)
-
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.85))
+                .offset(x: -140, y: -390)
+            
+            // Left side of header
             Image(systemName: "sparkle")
                 .font(.system(size: 12))
-                .foregroundStyle(Color.white.opacity(0.45))
-                .offset(x: 150, y: -60)
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.70))
+                .offset(x: -155, y: -280)
+            
+            // Top right of header  
+            Image(systemName: "sparkle")
+                .font(.system(size: 20))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.95))
+                .offset(x: 160, y: -320)
+            
+            // Right side near STORAGE
+            Image(systemName: "sparkle")
+                .font(.system(size: 16))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.80))
+                .offset(x: 155, y: -250)
+            
+            // Small one on right
+            Image(systemName: "sparkle")
+                .font(.system(size: 10))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.60))
+                .offset(x: 165, y: -200)
         }
     }
 }
@@ -716,16 +731,16 @@ private struct PlanCard: View {
             if !isDimmed { onTap() }
         } label: {
             HStack(alignment: .center) {
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(titleTop)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.system(size: 15, weight: .semibold))
                         .fontDesign(.rounded)
-                        .foregroundStyle(Color.white.opacity(0.65))
+                        .foregroundStyle(Color.white.opacity(0.70))
 
                     Text(mainPriceLine)
-                        .font(.system(size: 20, weight: .bold))
+                        .font(.system(size: 14, weight: .medium))
                         .fontDesign(.rounded)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(.white.opacity(0.90))
                         .lineLimit(1)
                         .minimumScaleFactor(0.85)
                 }
