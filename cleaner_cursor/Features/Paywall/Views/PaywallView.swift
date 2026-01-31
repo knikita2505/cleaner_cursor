@@ -17,18 +17,20 @@ struct PaywallView: View {
                 topBar
 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 18) {
+                    VStack(spacing: 16) {
                         headerSection
                         storageSection
                         plansSection
                         trustLine
                         ctaButton
-                        footerLinks
                     }
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 26)
                     .padding(.top, 6)
                 }
+                
+                // Footer always at bottom
+                footerLinks
+                    .padding(.bottom, 16)
             }
         }
         .onAppear {
@@ -49,20 +51,14 @@ struct PaywallView: View {
                 dismiss()
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.white.opacity(0.70))
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(.ultraThinMaterial.opacity(0.20))
-                            .overlay(Circle().stroke(Color.white.opacity(0.10), lineWidth: 1))
-                    )
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.30))
             }
 
             Spacer()
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 6)
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
         .padding(.bottom, 4)
     }
 
@@ -71,7 +67,7 @@ struct PaywallView: View {
     private var headerSection: some View {
         VStack(spacing: 10) {
             Text("CLEAN UP YOUR")
-                .font(.system(size: 40, weight: .black))
+                .font(.system(size: 38, weight: .black))
                 .fontDesign(.rounded)
                 .tracking(1.2)
                 .foregroundStyle(.white)
@@ -102,7 +98,7 @@ struct PaywallView: View {
             progressBar
         }
         .padding(.top, 2)
-        .padding(.bottom, 6)
+        .padding(.bottom, 24)
     }
 
     private var progressBar: some View {
@@ -116,17 +112,19 @@ struct PaywallView: View {
                     Capsule()
                         .fill(progressGradient)
                         .frame(width: geo.size.width * vm.storageProgress, height: 12)
-                        .animation(.easeInOut(duration: 2.5), value: vm.storageProgress)
+                        .animation(.linear(duration: 0.15), value: vm.storageProgress)
                 }
             }
             .frame(height: 12)
             .padding(.horizontal, 10)
 
             HStack(spacing: 6) {
-                Text("\(Int(vm.storageProgress * 100))")
+                Text("\(vm.percentageDisplay)")
                     .font(.system(size: 18, weight: .bold))
                     .fontDesign(.rounded)
                     .foregroundStyle(progressColor)
+                    .contentTransition(.numericText())
+                    .animation(.linear(duration: 0.1), value: vm.percentageDisplay)
 
                 Text("from 100% used")
                     .font(.system(size: 18, weight: .medium))
@@ -197,7 +195,7 @@ struct PaywallView: View {
             rightBadgeText: vm.weeklyBadge,
             rightSubBadgeText: nil,
             isSelected: vm.selectedPlan == .weekly,
-            isDimmed: !vm.weeklyAvailable,
+            isDimmed: false,
             onTap: { vm.select(.weekly) }
         )
     }
@@ -209,7 +207,7 @@ struct PaywallView: View {
             rightBadgeText: "BEST OFFER",
             rightSubBadgeText: vm.yearlyPerWeekLine,
             isSelected: vm.selectedPlan == .yearly,
-            isDimmed: !vm.yearlyAvailable,
+            isDimmed: false,
             onTap: { vm.select(.yearly) }
         )
     }
@@ -262,9 +260,9 @@ struct PaywallView: View {
             )
         }
         .buttonStyle(ScaleButtonStyle())
-        .disabled(vm.isPurchasing || !vm.hasAnyProduct)
+        .disabled(vm.isPurchasing)
         .opacity(vm.isPurchasing ? 0.85 : 1.0)
-        .padding(.top, 4)
+        .padding(.top, 8)
     }
 
     // MARK: - Footer
@@ -288,7 +286,7 @@ struct PaywallView: View {
                 .fontDesign(.rounded)
                 .foregroundStyle(Color.white.opacity(0.40))
         }
-        .padding(.top, 8)
+        .padding(.top, 12)
     }
 }
 
@@ -301,17 +299,24 @@ final class PaywallViewModel: ObservableObject {
     @Published var freeTrialEnabled: Bool = true
     @Published var selectedPlan: PaywallSubscriptionPlan = .weekly
 
-    @Published var storageProgress: CGFloat = 0.82
+    @Published var storageProgress: CGFloat = 1.0
+    @Published var percentageDisplay: Int = 100
     @Published var photosCount: Int = 823
     @Published var icloudCount: Int = 470
 
     @Published var isPurchasing: Bool = false
     @Published var showError: Bool = false
     @Published var errorMessage: String?
+    
+    // Animation timers
+    private var percentTimer: Timer?
+    private var photosTimer: Timer?
+    private var icloudTimer: Timer?
+    private var cycleTimer: Timer?
 
     // Apphud products
-    private(set) var weeklyProduct: ApphudProduct?
-    private(set) var yearlyProduct: ApphudProduct?
+    @Published private(set) var weeklyProduct: ApphudProduct?
+    @Published private(set) var yearlyProduct: ApphudProduct?
     private var currentPaywall: ApphudPaywall?
 
     var weeklyAvailable: Bool { weeklyProduct != nil }
@@ -326,32 +331,34 @@ final class PaywallViewModel: ObservableObject {
     var weeklyBadge: String { "3 DAYS FREE" }
 
     var weeklyMainLine: String {
-        guard let p = weeklyProduct?.skProduct else { return "Loading…" }
+        guard let p = weeklyProduct?.skProduct else { return "then €5.19 / week" }
         let price = formatPrice(p)
         return "then \(price) / week"
     }
 
     var yearlyMainLine: String {
-        guard let p = yearlyProduct?.skProduct else { return "Loading…" }
+        guard let p = yearlyProduct?.skProduct else { return "€25.99 / year" }
         return "\(formatPrice(p)) / year"
     }
 
     var yearlyPerWeekLine: String {
-        guard let p = yearlyProduct?.skProduct else { return "" }
+        guard let p = yearlyProduct?.skProduct else { return "€0.50/WEEK" }
         let weekly = (p.price as Decimal) / 52
         return "\(formatPrice(weekly, locale: p.priceLocale))/WEEK"
     }
 
     func onAppear() {
-        // Load products and log paywall shown
+        // Load products
         loadProducts()
 
-        // Run intro animation
-        runIntroAnimation()
+        // Run intro animation after small delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.runIntroAnimation()
+        }
     }
 
     func onTrialToggleChanged(_ enabled: Bool) {
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(.easeInOut(duration: 0.2)) {
             if enabled {
                 selectedPlan = .weekly
             } else {
@@ -361,9 +368,14 @@ final class PaywallViewModel: ObservableObject {
     }
 
     func select(_ plan: PaywallSubscriptionPlan) {
-        withAnimation(.easeInOut(duration: 0.18)) {
+        withAnimation(.easeInOut(duration: 0.2)) {
             selectedPlan = plan
-            if plan == .yearly { freeTrialEnabled = false }
+            // Sync toggle with plan selection
+            if plan == .weekly {
+                freeTrialEnabled = true
+            } else {
+                freeTrialEnabled = false
+            }
         }
     }
 
@@ -447,31 +459,88 @@ final class PaywallViewModel: ObservableObject {
     }
 
     private func runIntroAnimation() {
-        withAnimation(.easeInOut(duration: 2.5)) {
-            storageProgress = 0.25
-        }
-        animateCounter(from: 823, to: 205) { self.photosCount = $0 }
-        animateCounter(from: 470, to: 117) { self.icloudCount = $0 }
+        runAnimationCycle()
     }
-
-    private func animateCounter(from start: Int, to end: Int, update: @escaping (Int) -> Void) {
-        let duration: Double = 2.5
-        let steps = 60
-        let stepDuration = duration / Double(steps)
-        let diff = start - end
-
-        for step in 0...steps {
-            DispatchQueue.main.asyncAfter(deadline: .now() + stepDuration * Double(step)) {
-                let t = Double(step) / Double(steps)
-                let eased = self.easeInOut(t)
-                let current = start - Int(Double(diff) * eased)
-                update(current)
+    
+    private func stopAllTimers() {
+        percentTimer?.invalidate()
+        photosTimer?.invalidate()
+        icloudTimer?.invalidate()
+        cycleTimer?.invalidate()
+        percentTimer = nil
+        photosTimer = nil
+        icloudTimer = nil
+        cycleTimer = nil
+    }
+    
+    private func runAnimationCycle() {
+        stopAllTimers()
+        
+        let duration: Double = 10.0
+        let pauseBeforeRestart: Double = 2.0
+        
+        // Reset to initial values
+        percentageDisplay = 100
+        storageProgress = 1.0
+        photosCount = 823
+        icloudCount = 470
+        
+        // Each counter decreases by 1, but at different speeds to finish at the same time
+        // Percent: 100 → 25 = 75 steps, interval = 10/75 = 0.133 sec
+        // Photos: 823 → 205 = 618 steps, interval = 10/618 = 0.016 sec
+        // iCloud: 470 → 117 = 353 steps, interval = 10/353 = 0.028 sec
+        
+        let percentSteps = 100 - 25 // 75
+        let photosSteps = 823 - 205 // 618
+        let icloudSteps = 470 - 117 // 353
+        
+        let percentInterval = duration / Double(percentSteps)
+        let photosInterval = duration / Double(photosSteps)
+        let icloudInterval = duration / Double(icloudSteps)
+        
+        // Percent timer
+        percentTimer = Timer.scheduledTimer(withTimeInterval: percentInterval, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else { timer.invalidate(); return }
+                if self.percentageDisplay > 25 {
+                    self.percentageDisplay -= 1
+                    self.storageProgress = CGFloat(self.percentageDisplay) / 100.0
+                } else {
+                    timer.invalidate()
+                }
             }
         }
-    }
-
-    private func easeInOut(_ t: Double) -> Double {
-        t < 0.5 ? 2 * t * t : 1 - pow(-2 * t + 2, 2) / 2
+        
+        // Photos timer
+        photosTimer = Timer.scheduledTimer(withTimeInterval: photosInterval, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else { timer.invalidate(); return }
+                if self.photosCount > 205 {
+                    self.photosCount -= 1
+                } else {
+                    timer.invalidate()
+                }
+            }
+        }
+        
+        // iCloud timer
+        icloudTimer = Timer.scheduledTimer(withTimeInterval: icloudInterval, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else { timer.invalidate(); return }
+                if self.icloudCount > 117 {
+                    self.icloudCount -= 1
+                } else {
+                    timer.invalidate()
+                }
+            }
+        }
+        
+        // Schedule next cycle
+        cycleTimer = Timer.scheduledTimer(withTimeInterval: duration + pauseBeforeRestart, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.runAnimationCycle()
+            }
+        }
     }
 
     private func showErr(_ message: String) {
@@ -599,18 +668,18 @@ private struct AppIconBadgeAsset: View {
     var body: some View {
         VStack(spacing: 10) {
             ZStack(alignment: .topTrailing) {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
                     .fill(.ultraThinMaterial.opacity(0.20))
-                    .frame(width: 78, height: 78)
+                    .frame(width: 90, height: 90)
                     .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
                             .stroke(Color.white.opacity(0.10), lineWidth: 1)
                     )
                     .overlay(
                         Image(assetName)
                             .resizable()
                             .scaledToFit()
-                            .frame(width: 48, height: 48)
+                            .frame(width: 76, height: 76)
                             .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
                     )
 
@@ -622,6 +691,7 @@ private struct AppIconBadgeAsset: View {
                     .padding(.vertical, 6)
                     .background(Capsule().fill(Color(hex: "FF4D4D")))
                     .offset(x: 10, y: -10)
+                    .contentTransition(.numericText())
             }
 
             Text(title)
@@ -701,6 +771,7 @@ private struct PlanCard: View {
                     .stroke(isSelected ? Color(hex: "8B5CF6").opacity(0.95) : Color.clear, lineWidth: 2)
             )
             .opacity(isDimmed ? 0.45 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
         }
         .buttonStyle(.plain)
     }
