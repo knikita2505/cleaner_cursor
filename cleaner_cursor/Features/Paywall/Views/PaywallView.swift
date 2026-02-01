@@ -16,19 +16,28 @@ struct PaywallView: View {
             VStack(spacing: 0) {
                 topBar
 
+                // Top content - scrollable
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
                         headerSection
                         storageSection
-                        plansSection
-                        trustLine
-                        ctaButton
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 6)
                 }
                 
-                // Footer always at bottom
+                Spacer()
+                
+                // Bottom content - fixed at bottom
+                VStack(spacing: 12) {
+                    plansSection
+                    trustLine
+                    ctaButton
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+                
+                // Footer
                 footerLinks
                     .padding(.bottom, 16)
             }
@@ -169,11 +178,21 @@ struct PaywallView: View {
             }
             // Show normal plans
             else {
-                freeTrialToggle
+                premiumDescription
                 planCardWeekly
                 planCardYearly
             }
         }
+    }
+    
+    private var premiumDescription: some View {
+        Text("Ad-free smart cleaning and video compression without limits, secret storage, contact management and analytics.")
+            .font(.system(size: 15, weight: .medium))
+            .fontDesign(.rounded)
+            .foregroundStyle(Color.white.opacity(0.75))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
     }
     
     private var loadingPlansView: some View {
@@ -228,27 +247,6 @@ struct PaywallView: View {
         .padding(.horizontal, 20)
     }
 
-    private var freeTrialToggle: some View {
-        HStack {
-            Text("Free Trial Enabled")
-                .font(.system(size: 16, weight: .semibold))
-                .fontDesign(.rounded)
-                .foregroundStyle(.white)
-
-            Spacer()
-
-            Toggle("", isOn: $vm.freeTrialEnabled)
-                .labelsHidden()
-                .toggleStyle(SwitchToggleStyle(tint: Color(hex: "4CAF50")))
-                .onChange(of: vm.freeTrialEnabled) { _, newValue in
-                    vm.onTrialToggleChanged(newValue)
-                }
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(GlassCard(corner: 18))
-    }
-
     private var planCardWeekly: some View {
         PlanCard(
             titleTop: vm.weeklyTitleTop,
@@ -300,7 +298,7 @@ struct PaywallView: View {
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.white.opacity(0.55))
 
-                Text(vm.freeTrialEnabled ? "NO PAYMENT NOW" : "CANCEL ANYTIME")
+                Text(vm.isTrialEligible ? "NO PAYMENT NOW" : "CANCEL ANYTIME")
                     .font(.system(size: 13, weight: .semibold))
                     .fontDesign(.rounded)
                     .foregroundStyle(Color.white.opacity(0.75))
@@ -331,7 +329,7 @@ struct PaywallView: View {
                         .fontDesign(.rounded)
                         .foregroundStyle(.white.opacity(0.70))
                 } else {
-                    Text(vm.freeTrialEnabled ? "CONTINUE FOR FREE" : "CONTINUE")
+                    Text(vm.isTrialEligible && vm.selectedPlan == .weekly ? "START FREE TRIAL" : "CONTINUE")
                         .font(.system(size: 18, weight: .bold))
                         .fontDesign(.rounded)
                         .foregroundStyle(.white)
@@ -388,7 +386,6 @@ struct PaywallView: View {
 final class PaywallViewModel: ObservableObject {
 
     // UI state
-    @Published var freeTrialEnabled: Bool = true
     @Published var selectedPlan: PaywallSubscriptionPlan = .weekly
 
     @Published var storageProgress: CGFloat = 1.0
@@ -411,6 +408,9 @@ final class PaywallViewModel: ObservableObject {
     @Published private(set) var yearlyProduct: ApphudProduct?
     private var currentPaywall: ApphudPaywall?
     
+    // Trial eligibility
+    @Published var isTrialEligible: Bool = false
+    
     // Loading & Error states
     @Published var isLoadingProducts: Bool = true
     @Published var loadingError: PaywallError?
@@ -429,17 +429,19 @@ final class PaywallViewModel: ObservableObject {
         hasAnyProduct && !hasPricesLoaded
     }
 
-    // Display strings
+    // Display strings - dynamic based on trial eligibility
     var weeklyTitleTop: String {
-        "3-DAY FREE TRIAL"
+        isTrialEligible ? "3-DAY FREE TRIAL" : "WEEKLY ACCESS"
     }
 
-    var weeklyBadge: String { "3 DAYS FREE" }
+    var weeklyBadge: String {
+        isTrialEligible ? "3 DAYS FREE" : "WEEKLY"
+    }
 
     var weeklyMainLine: String? {
         guard let p = weeklyProduct?.skProduct else { return nil }
         let price = formatPrice(p)
-        return "then \(price) / week"
+        return isTrialEligible ? "then \(price) / week" : "\(price) / week"
     }
 
     var yearlyMainLine: String? {
@@ -467,25 +469,9 @@ final class PaywallViewModel: ObservableObject {
         loadProducts()
     }
 
-    func onTrialToggleChanged(_ enabled: Bool) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            if enabled {
-                selectedPlan = .weekly
-            } else {
-                selectedPlan = .yearly
-            }
-        }
-    }
-
     func select(_ plan: PaywallSubscriptionPlan) {
         withAnimation(.easeInOut(duration: 0.2)) {
             selectedPlan = plan
-            // Sync toggle with plan selection
-            if plan == .weekly {
-                freeTrialEnabled = true
-            } else {
-                freeTrialEnabled = false
-            }
         }
     }
 
@@ -625,14 +611,31 @@ final class PaywallViewModel: ObservableObject {
                     self.loadingError = .pricesNotLoaded
                 }
 
-                // If weekly not available but trial enabled, switch to yearly
-                if self.freeTrialEnabled, self.weeklyProduct == nil, self.yearlyProduct != nil {
-                    self.freeTrialEnabled = false
+                // Set default selected plan based on availability
+                if self.weeklyProduct == nil, self.yearlyProduct != nil {
                     self.selectedPlan = .yearly
-                }
-                if self.yearlyProduct == nil, self.weeklyProduct != nil {
+                } else if self.yearlyProduct == nil, self.weeklyProduct != nil {
                     self.selectedPlan = .weekly
                 }
+                
+                // Check trial eligibility for weekly product
+                self.checkTrialEligibility()
+            }
+        }
+    }
+    
+    private func checkTrialEligibility() {
+        guard let weeklyProduct = weeklyProduct,
+              let skProduct = weeklyProduct.skProduct else {
+            isTrialEligible = false
+            return
+        }
+        
+        // Check eligibility for introductory offer using Apphud
+        Apphud.checkEligibilityForIntroductoryOffer(product: skProduct) { [weak self] eligible in
+            DispatchQueue.main.async {
+                self?.isTrialEligible = eligible
+                print("📦 [Paywall] Trial eligibility: \(eligible)")
             }
         }
     }
