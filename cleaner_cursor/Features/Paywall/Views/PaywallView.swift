@@ -425,15 +425,46 @@ final class PaywallViewModel: ObservableObject {
     // MARK: - Private
 
     private func loadProducts() {
+        print("📦 [Paywall] Loading products...")
+        print("📦 [Paywall] Looking for placement: \(PaywallConstants.placementId)")
+        print("📦 [Paywall] Looking for products: \(PaywallConstants.weeklyProductId), \(PaywallConstants.yearlyProductId)")
+        
         Apphud.fetchPlacements { [weak self] placements, error in
             guard let self else { return }
             
             DispatchQueue.main.async {
+                // Log error if any
+                if let error = error {
+                    print("❌ [Paywall] Error fetching placements: \(error.localizedDescription)")
+                }
+                
+                // Log all placements
+                print("📦 [Paywall] Received \(placements.count) placements")
+                for placement in placements {
+                    print("   - Placement: '\(placement.identifier)'")
+                    if let paywall = placement.paywall {
+                        print("     Paywall: '\(paywall.identifier)', products: \(paywall.products.count)")
+                        for product in paywall.products {
+                            print("       - Product: '\(product.productId)', skProduct: \(product.skProduct != nil ? "loaded" : "nil")")
+                        }
+                    } else {
+                        print("     No paywall attached")
+                    }
+                }
+                
                 // Find placement by identifier
-                guard let placement = placements.first(where: { $0.identifier == PaywallConstants.placementId }),
-                      let paywall = placement.paywall else {
+                guard let placement = placements.first(where: { $0.identifier == PaywallConstants.placementId }) else {
+                    print("❌ [Paywall] Placement '\(PaywallConstants.placementId)' not found!")
+                    print("❌ [Paywall] Available placements: \(placements.map { $0.identifier })")
                     return
                 }
+                
+                guard let paywall = placement.paywall else {
+                    print("❌ [Paywall] Placement found but no paywall attached!")
+                    return
+                }
+                
+                print("✅ [Paywall] Found paywall: '\(paywall.identifier)'")
                 
                 self.currentPaywall = paywall
                 
@@ -442,9 +473,20 @@ final class PaywallViewModel: ObservableObject {
                 
                 // Get products from paywall
                 let products = paywall.products
+                print("📦 [Paywall] Paywall has \(products.count) products")
                 
                 self.weeklyProduct = products.first(where: { $0.productId == PaywallConstants.weeklyProductId })
                 self.yearlyProduct = products.first(where: { $0.productId == PaywallConstants.yearlyProductId })
+                
+                print("📦 [Paywall] Weekly product: \(self.weeklyProduct?.productId ?? "not found")")
+                print("📦 [Paywall] Yearly product: \(self.yearlyProduct?.productId ?? "not found")")
+                
+                if let weekly = self.weeklyProduct {
+                    print("   Weekly SKProduct: \(weekly.skProduct != nil ? "loaded" : "nil")")
+                }
+                if let yearly = self.yearlyProduct {
+                    print("   Yearly SKProduct: \(yearly.skProduct != nil ? "loaded" : "nil")")
+                }
 
                 // If weekly not available but trial enabled, switch to yearly
                 if self.freeTrialEnabled, self.weeklyProduct == nil, self.yearlyProduct != nil {

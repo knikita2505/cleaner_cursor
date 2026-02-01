@@ -1,9 +1,15 @@
 import SwiftUI
 import Photos
 import Contacts
+import ApphudSDK
 
 @main
 struct CleanerApp: App {
+    
+    init() {
+        // Initialize Apphud SDK
+        Apphud.start(apiKey: "app_nmqxh6EVfa5mV9s2P29r2CTX7CpJ9M")
+    }
     
     // MARK: - Body
 
