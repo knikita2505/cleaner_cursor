@@ -159,12 +159,73 @@ struct PaywallView: View {
 
     private var plansSection: some View {
         VStack(spacing: 12) {
-            freeTrialToggle
-
-            planCardWeekly
-
-            planCardYearly
+            // Show loading state
+            if vm.isLoadingProducts {
+                loadingPlansView
+            }
+            // Show critical error (no products at all)
+            else if let error = vm.loadingError, !vm.hasAnyProduct {
+                errorPlansView(error: error)
+            }
+            // Show normal plans
+            else {
+                freeTrialToggle
+                planCardWeekly
+                planCardYearly
+            }
         }
+    }
+    
+    private var loadingPlansView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .scaleEffect(1.2)
+            
+            Text("Loading subscription options...")
+                .font(.system(size: 14, weight: .medium))
+                .fontDesign(.rounded)
+                .foregroundStyle(Color.white.opacity(0.60))
+        }
+        .frame(height: 180)
+    }
+    
+    private func errorPlansView(error: PaywallError) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 36))
+                .foregroundStyle(Color(hex: "FFB74D"))
+            
+            VStack(spacing: 6) {
+                Text(error.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                
+                Text(error.message)
+                    .font(.system(size: 14, weight: .medium))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.white.opacity(0.60))
+                    .multilineTextAlignment(.center)
+            }
+            
+            Button {
+                vm.retryLoadProducts()
+            } label: {
+                Text("Try Again")
+                    .font(.system(size: 14, weight: .semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(Color(hex: "8B5CF6").opacity(0.80))
+                    )
+            }
+        }
+        .frame(height: 180)
+        .padding(.horizontal, 20)
     }
 
     private var freeTrialToggle: some View {
@@ -211,24 +272,50 @@ struct PaywallView: View {
             onTap: { vm.select(.yearly) }
         )
     }
+    
+    // MARK: - Prices Note
+    
+    @ViewBuilder
+    private var pricesNote: some View {
+        if vm.pricesMissing {
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 12))
+                
+                Text("Prices will be displayed at checkout")
+                    .font(.system(size: 12, weight: .medium))
+                    .fontDesign(.rounded)
+            }
+            .foregroundStyle(Color.white.opacity(0.50))
+            .padding(.top, 4)
+        }
+    }
 
     // MARK: - Trust line
 
     private var trustLine: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.shield.fill")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(Color.white.opacity(0.55))
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.55))
 
-            Text(vm.freeTrialEnabled ? "NO PAYMENT NOW" : "CANCEL ANYTIME")
-                .font(.system(size: 13, weight: .semibold))
-                .fontDesign(.rounded)
-                .foregroundStyle(Color.white.opacity(0.75))
+                Text(vm.freeTrialEnabled ? "NO PAYMENT NOW" : "CANCEL ANYTIME")
+                    .font(.system(size: 13, weight: .semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.white.opacity(0.75))
+            }
+            
+            pricesNote
         }
         .padding(.top, 4)
     }
 
     // MARK: - CTA
+    
+    private var isButtonDisabled: Bool {
+        vm.isPurchasing || vm.isLoadingProducts || !vm.hasAnyProduct
+    }
 
     private var ctaButton: some View {
         Button {
@@ -238,6 +325,11 @@ struct PaywallView: View {
                 if vm.isPurchasing {
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else if vm.isLoadingProducts {
+                    Text("LOADING...")
+                        .font(.system(size: 18, weight: .bold))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(.white.opacity(0.70))
                 } else {
                     Text(vm.freeTrialEnabled ? "CONTINUE FOR FREE" : "CONTINUE")
                         .font(.system(size: 18, weight: .bold))
@@ -260,8 +352,8 @@ struct PaywallView: View {
             )
         }
         .buttonStyle(ScaleButtonStyle())
-        .disabled(vm.isPurchasing)
-        .opacity(vm.isPurchasing ? 0.85 : 1.0)
+        .disabled(isButtonDisabled)
+        .opacity(isButtonDisabled ? 0.65 : 1.0)
         .padding(.top, 8)
     }
 
@@ -318,10 +410,24 @@ final class PaywallViewModel: ObservableObject {
     @Published private(set) var weeklyProduct: ApphudProduct?
     @Published private(set) var yearlyProduct: ApphudProduct?
     private var currentPaywall: ApphudPaywall?
+    
+    // Loading & Error states
+    @Published var isLoadingProducts: Bool = true
+    @Published var loadingError: PaywallError?
 
     var weeklyAvailable: Bool { weeklyProduct != nil }
     var yearlyAvailable: Bool { yearlyProduct != nil }
     var hasAnyProduct: Bool { weeklyAvailable || yearlyAvailable }
+    
+    /// True if at least one product has valid SKProduct with price
+    var hasPricesLoaded: Bool {
+        weeklyProduct?.skProduct != nil || yearlyProduct?.skProduct != nil
+    }
+    
+    /// True if products exist but prices didn't load
+    var pricesMissing: Bool {
+        hasAnyProduct && !hasPricesLoaded
+    }
 
     // Display strings
     var weeklyTitleTop: String {
@@ -330,19 +436,19 @@ final class PaywallViewModel: ObservableObject {
 
     var weeklyBadge: String { "3 DAYS FREE" }
 
-    var weeklyMainLine: String {
-        guard let p = weeklyProduct?.skProduct else { return "then €5.19 / week" }
+    var weeklyMainLine: String? {
+        guard let p = weeklyProduct?.skProduct else { return nil }
         let price = formatPrice(p)
         return "then \(price) / week"
     }
 
-    var yearlyMainLine: String {
-        guard let p = yearlyProduct?.skProduct else { return "€25.99 / year" }
+    var yearlyMainLine: String? {
+        guard let p = yearlyProduct?.skProduct else { return nil }
         return "\(formatPrice(p)) / year"
     }
 
-    var yearlyPerWeekLine: String {
-        guard let p = yearlyProduct?.skProduct else { return "€0.50/WEEK" }
+    var yearlyPerWeekLine: String? {
+        guard let p = yearlyProduct?.skProduct else { return nil }
         let weekly = (p.price as Decimal) / 52
         return "\(formatPrice(weekly, locale: p.priceLocale))/WEEK"
     }
@@ -355,6 +461,10 @@ final class PaywallViewModel: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             self.runIntroAnimation()
         }
+    }
+    
+    func retryLoadProducts() {
+        loadProducts()
     }
 
     func onTrialToggleChanged(_ enabled: Bool) {
@@ -425,6 +535,9 @@ final class PaywallViewModel: ObservableObject {
     // MARK: - Private
 
     private func loadProducts() {
+        isLoadingProducts = true
+        loadingError = nil
+        
         print("📦 [Paywall] Loading products...")
         print("📦 [Paywall] Looking for placement: \(PaywallConstants.placementId)")
         print("📦 [Paywall] Looking for products: \(PaywallConstants.weeklyProductId), \(PaywallConstants.yearlyProductId)")
@@ -433,9 +546,12 @@ final class PaywallViewModel: ObservableObject {
             guard let self else { return }
             
             DispatchQueue.main.async {
+                self.isLoadingProducts = false
+                
                 // Log error if any
                 if let error = error {
                     print("❌ [Paywall] Error fetching placements: \(error.localizedDescription)")
+                    // Don't set error yet, might still have cached data
                 }
                 
                 // Log all placements
@@ -452,15 +568,24 @@ final class PaywallViewModel: ObservableObject {
                     }
                 }
                 
+                // Check if no placements at all
+                if placements.isEmpty {
+                    print("❌ [Paywall] No placements received")
+                    self.loadingError = .productsNotAvailable
+                    return
+                }
+                
                 // Find placement by identifier
                 guard let placement = placements.first(where: { $0.identifier == PaywallConstants.placementId }) else {
                     print("❌ [Paywall] Placement '\(PaywallConstants.placementId)' not found!")
                     print("❌ [Paywall] Available placements: \(placements.map { $0.identifier })")
+                    self.loadingError = .placementNotFound
                     return
                 }
                 
                 guard let paywall = placement.paywall else {
                     print("❌ [Paywall] Placement found but no paywall attached!")
+                    self.loadingError = .paywallNotFound
                     return
                 }
                 
@@ -475,6 +600,12 @@ final class PaywallViewModel: ObservableObject {
                 let products = paywall.products
                 print("📦 [Paywall] Paywall has \(products.count) products")
                 
+                if products.isEmpty {
+                    print("❌ [Paywall] No products in paywall!")
+                    self.loadingError = .productsNotAvailable
+                    return
+                }
+                
                 self.weeklyProduct = products.first(where: { $0.productId == PaywallConstants.weeklyProductId })
                 self.yearlyProduct = products.first(where: { $0.productId == PaywallConstants.yearlyProductId })
                 
@@ -486,6 +617,12 @@ final class PaywallViewModel: ObservableObject {
                 }
                 if let yearly = self.yearlyProduct {
                     print("   Yearly SKProduct: \(yearly.skProduct != nil ? "loaded" : "nil")")
+                }
+                
+                // Check if we have products but no prices (SKProduct missing)
+                if self.hasAnyProduct && !self.hasPricesLoaded {
+                    print("⚠️ [Paywall] Products found but prices not loaded (SKProduct = nil)")
+                    self.loadingError = .pricesNotLoaded
                 }
 
                 // If weekly not available but trial enabled, switch to yearly
@@ -621,6 +758,62 @@ private enum PaywallConstants {
 
 enum PaywallSubscriptionPlan: String {
     case weekly, yearly
+}
+
+// MARK: - Paywall Errors
+
+enum PaywallError: Equatable {
+    case noInternet
+    case placementNotFound
+    case paywallNotFound
+    case productsNotAvailable
+    case pricesNotLoaded
+    case unknown(String)
+    
+    var title: String {
+        switch self {
+        case .noInternet:
+            return "No Internet Connection"
+        case .placementNotFound, .paywallNotFound:
+            return "Configuration Error"
+        case .productsNotAvailable:
+            return "Products Unavailable"
+        case .pricesNotLoaded:
+            return "Prices Loading..."
+        case .unknown:
+            return "Something Went Wrong"
+        }
+    }
+    
+    var message: String {
+        switch self {
+        case .noInternet:
+            return "Please check your connection and try again."
+        case .placementNotFound, .paywallNotFound:
+            return "Unable to load subscription options. Please try again later."
+        case .productsNotAvailable:
+            return "Subscriptions are temporarily unavailable. Please try again later."
+        case .pricesNotLoaded:
+            return "Prices will be shown at checkout."
+        case .unknown(let msg):
+            return msg
+        }
+    }
+    
+    static func == (lhs: PaywallError, rhs: PaywallError) -> Bool {
+        switch (lhs, rhs) {
+        case (.noInternet, .noInternet),
+             (.placementNotFound, .placementNotFound),
+             (.paywallNotFound, .paywallNotFound),
+             (.productsNotAvailable, .productsNotAvailable),
+             (.pricesNotLoaded, .pricesNotLoaded):
+            return true
+        case (.unknown(let a), .unknown(let b)):
+            return a == b
+        default:
+            return false
+        }
+    }
 }
 
 // MARK: - UI Components
@@ -761,7 +954,7 @@ private struct AppIconBadgeAsset: View {
 
 private struct PlanCard: View {
     let titleTop: String
-    let mainPriceLine: String
+    let mainPriceLine: String?
     let rightBadgeText: String
     let rightSubBadgeText: String?
     let isSelected: Bool
@@ -779,12 +972,14 @@ private struct PlanCard: View {
                         .fontDesign(.rounded)
                         .foregroundStyle(Color.white.opacity(0.70))
 
-                    Text(mainPriceLine)
-                        .font(.system(size: 14, weight: .medium))
-                        .fontDesign(.rounded)
-                        .foregroundStyle(.white.opacity(0.90))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
+                    if let priceLine = mainPriceLine {
+                        Text(priceLine)
+                            .font(.system(size: 14, weight: .medium))
+                            .fontDesign(.rounded)
+                            .foregroundStyle(.white.opacity(0.90))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
                 }
 
                 Spacer()
