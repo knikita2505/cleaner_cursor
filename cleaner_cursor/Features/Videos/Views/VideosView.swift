@@ -98,6 +98,27 @@ struct VideosView: View {
         } message: {
             Text("Delete \(viewModel.selectedCount) videos? This action cannot be undone.")
         }
+        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Get Premium") {
+                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
+            }
+            Button("Continue", role: .destructive) {
+                Task {
+                    await viewModel.proceedWithDeletion()
+                }
+            }
+        } message: {
+            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
+        }
+        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
+            Button("OK", role: .cancel) { }
+            Button("Get Premium") {
+                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
+            }
+        } message: {
+            Text(viewModel.limitWarningMessage)
+        }
         .confirmationDialog("Compress Quality", isPresented: $showCompressSheet) {
             Button("High Quality (30-40% savings)") {
                 Task { await viewModel.compressSelected(quality: .high) }
@@ -791,7 +812,13 @@ class VideosViewModel: ObservableObject {
     @Published var isProcessing = false
     @Published var processingMessage = ""
     
+    // Subscription limit states
+    @Published var showLimitWarning: Bool = false
+    @Published var showLastItemsWarning: Bool = false
+    @Published var limitWarningMessage: String = ""
+    
     private let videoService = VideoService.shared
+    private let subscriptionManager = SubscriptionManager.shared
     
     var selectedCount: Int {
         selectedIds.count
@@ -857,11 +884,34 @@ class VideosViewModel: ObservableObject {
     }
     
     func deleteVideo(_ video: VideoAsset) async {
+        // Check subscription limits
+        if !subscriptionManager.isPremium {
+            let permission = subscriptionManager.handleCleaningAttempt(count: 1)
+            
+            switch permission {
+            case .allowed:
+                break
+            case .lastItems:
+                showLastItemsWarning = true
+                return
+            case .limitReached, .insufficientLimit:
+                subscriptionManager.showPaywall(for: .reachedLimits)
+                return
+            }
+        }
+        
+        await performSingleDeletion(video)
+    }
+    
+    private func performSingleDeletion(_ video: VideoAsset) async {
         isProcessing = true
         processingMessage = "Deleting video..."
         
         do {
             try await videoService.deleteVideos([video.asset])
+            
+            // Record to subscription manager
+            subscriptionManager.recordCleanedItems(count: 1)
             
             // Record to history
             CleaningHistoryService.shared.recordCleaning(
@@ -887,11 +937,46 @@ class VideosViewModel: ObservableObject {
         let assetsToDelete = videosToDelete.map { $0.asset }
         let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
         
+        guard !assetsToDelete.isEmpty else { return }
+        
+        // Check subscription limits
+        if !subscriptionManager.isPremium {
+            let count = assetsToDelete.count
+            let permission = subscriptionManager.handleCleaningAttempt(count: count)
+            
+            switch permission {
+            case .allowed:
+                break
+            case .lastItems:
+                showLastItemsWarning = true
+                return
+            case .limitReached, .insufficientLimit:
+                subscriptionManager.showPaywall(for: .reachedLimits)
+                return
+            }
+        }
+        
+        await performBulkDeletion(assets: assetsToDelete, bytesFreed: bytesFreed)
+    }
+    
+    func proceedWithDeletion() async {
+        let videosToDelete = videos.filter { selectedIds.contains($0.id) }
+        let assetsToDelete = videosToDelete.map { $0.asset }
+        let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
+        await performBulkDeletion(assets: assetsToDelete, bytesFreed: bytesFreed)
+    }
+    
+    private func performBulkDeletion(assets assetsToDelete: [PHAsset], bytesFreed: Int64) async {
+        guard !assetsToDelete.isEmpty else { return }
+        
         isProcessing = true
         processingMessage = "Deleting \(assetsToDelete.count) videos..."
         
         do {
             try await videoService.deleteVideos(assetsToDelete)
+            
+            // Record to subscription manager
+            subscriptionManager.recordCleanedItems(count: assetsToDelete.count)
             
             // Record to history
             CleaningHistoryService.shared.recordCleaning(

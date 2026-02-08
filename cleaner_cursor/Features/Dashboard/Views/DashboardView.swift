@@ -10,6 +10,7 @@ struct DashboardView: View {
     
     @ObservedObject private var viewModel = DashboardViewModel.shared
     @ObservedObject private var photoService = PhotoService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @EnvironmentObject private var appState: AppState
     
     @State private var animateStorage: Bool = false
@@ -158,6 +159,9 @@ struct DashboardView: View {
             }
             
             Spacer()
+            
+            // Remaining items indicator (for free users)
+            RemainingItemsView()
         }
         .padding(.top, 8)
     }

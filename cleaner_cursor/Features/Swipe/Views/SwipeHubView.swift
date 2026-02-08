@@ -11,6 +11,7 @@ struct SwipeHubView: View {
     @StateObject private var viewModel = SwipeHubViewModel()
     @ObservedObject private var photoService = PhotoService.shared
     @ObservedObject private var progressService = SwipeProgressService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @State private var refreshTrigger = UUID()
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
@@ -126,6 +127,12 @@ struct SwipeHubView: View {
     private var content: some View {
         ScrollView {
             VStack(spacing: 24) {
+                // Remaining items indicator
+                HStack {
+                    Spacer()
+                    RemainingItemsView()
+                }
+                
                 // Summary Header
                 summaryHeader
                 

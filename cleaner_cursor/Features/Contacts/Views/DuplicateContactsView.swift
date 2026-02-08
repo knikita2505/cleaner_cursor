@@ -7,6 +7,7 @@ import UIKit
 
 struct DuplicateContactsView: View {
     @ObservedObject private var service = ContactsService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @State private var selectedGroup: ContactDuplicateGroup?
     @State private var quickMergeGroup: ContactDuplicateGroup?
     @State private var isMergingAll = false
@@ -178,6 +179,12 @@ struct DuplicateContactsView: View {
     }
     
     private func mergeAllGroups() async {
+        // Check premium access
+        guard subscriptionManager.canAccessFeature(.contacts) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         isMergingAll = true
         
         for group in service.duplicateGroups {
@@ -195,6 +202,12 @@ struct DuplicateContactsView: View {
     }
     
     private func quickMerge(group: ContactDuplicateGroup) async {
+        // Check premium access
+        guard subscriptionManager.canAccessFeature(.contacts) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         isMergingSingle = true
         
         do {
@@ -395,6 +408,7 @@ struct ContactAvatar: View {
 struct MergeContactsSheet: View {
     let group: ContactDuplicateGroup
     @ObservedObject private var service = ContactsService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var isMerging = false
     @State private var isDeleting = false
@@ -646,6 +660,12 @@ struct MergeContactsSheet: View {
     }
     
     private func mergeContacts() async {
+        // Check premium access
+        guard subscriptionManager.canAccessFeature(.contacts) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         isMerging = true
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         
@@ -662,6 +682,12 @@ struct MergeContactsSheet: View {
     }
     
     private func deleteContact(_ contact: CNContact) async {
+        // Check premium access
+        guard subscriptionManager.canAccessFeature(.contacts) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         isDeleting = true
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         

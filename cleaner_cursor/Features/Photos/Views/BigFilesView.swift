@@ -53,6 +53,27 @@ struct BigFilesView: View {
         } message: {
             Text("Delete \(viewModel.selectedCount) files? They will be removed permanently.")
         }
+        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Get Premium") {
+                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
+            }
+            Button("Continue", role: .destructive) {
+                Task {
+                    await viewModel.proceedWithDeletion()
+                }
+            }
+        } message: {
+            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
+        }
+        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
+            Button("OK", role: .cancel) { }
+            Button("Get Premium") {
+                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
+            }
+        } message: {
+            Text(viewModel.limitWarningMessage)
+        }
         .task {
             await viewModel.loadFiles()
         }
@@ -345,6 +366,11 @@ final class BigFilesViewModel: ObservableObject {
         didSet { applyFilters() }
     }
     
+    // Subscription limit states
+    @Published var showLimitWarning: Bool = false
+    @Published var showLastItemsWarning: Bool = false
+    @Published var limitWarningMessage: String = ""
+    
     let minSizeMB: Int = 20
     
     enum FileTypeFilter: String, CaseIterable {
@@ -360,6 +386,7 @@ final class BigFilesViewModel: ObservableObject {
     private var allFiles: [BigFileItem] = []
     private let photoService = PhotoService.shared
     private let videoService = VideoService.shared
+    private let subscriptionManager = SubscriptionManager.shared
     
     var selectedCount: Int { selectedIndices.count }
     
@@ -453,6 +480,33 @@ final class BigFilesViewModel: ObservableObject {
     }
     
     func deleteSelected() async {
+        guard !selectedIndices.isEmpty else { return }
+        
+        // Check subscription limits
+        if !subscriptionManager.isPremium {
+            let count = selectedIndices.count
+            let permission = subscriptionManager.handleCleaningAttempt(count: count)
+            
+            switch permission {
+            case .allowed:
+                break
+            case .lastItems:
+                showLastItemsWarning = true
+                return
+            case .limitReached, .insufficientLimit:
+                subscriptionManager.showPaywall(for: .reachedLimits)
+                return
+            }
+        }
+        
+        await performDeletion()
+    }
+    
+    func proceedWithDeletion() async {
+        await performDeletion()
+    }
+    
+    private func performDeletion() async {
         let assetsToDelete = selectedIndices.compactMap { index -> PHAsset? in
             guard index < files.count else { return nil }
             return files[index].asset
@@ -466,6 +520,9 @@ final class BigFilesViewModel: ObservableObject {
             }
             
             try await photoService.deletePhotos(assetsToDelete)
+            
+            // Record to subscription manager
+            subscriptionManager.recordCleanedItems(count: assetsToDelete.count)
             
             // Record to history
             CleaningHistoryService.shared.recordCleaning(
@@ -485,8 +542,10 @@ final class BigFilesViewModel: ObservableObject {
             
             selectedIndices.removeAll()
             
+            HapticManager.success()
         } catch {
             print("Failed to delete files: \(error)")
+            HapticManager.error()
         }
     }
 }

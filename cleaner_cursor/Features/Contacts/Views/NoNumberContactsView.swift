@@ -6,6 +6,7 @@ import Contacts
 
 struct NoNumberContactsView: View {
     @ObservedObject private var service = ContactsService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @State private var selectedContacts: Set<String> = []
     @State private var isDeleting = false
     @State private var showDeleteConfirm = false
@@ -143,6 +144,12 @@ struct NoNumberContactsView: View {
     }
     
     private func deleteSelectedContacts() async {
+        // Check premium access
+        guard subscriptionManager.canAccessFeature(.contacts) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         isDeleting = true
         let contactsToDelete = service.noNumberContacts.filter { selectedContacts.contains($0.identifier) }
         

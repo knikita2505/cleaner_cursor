@@ -7,7 +7,16 @@ import StoreKit
 struct PaywallView: View {
 
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var vm = PaywallViewModel()
+    @StateObject private var vm: PaywallViewModel
+    
+    let placement: PaywallPlacement
+    var onPurchaseSuccess: (() -> Void)?
+    
+    init(placement: PaywallPlacement = .onboarding, onPurchaseSuccess: (() -> Void)? = nil) {
+        self.placement = placement
+        self.onPurchaseSuccess = onPurchaseSuccess
+        self._vm = StateObject(wrappedValue: PaywallViewModel(placement: placement))
+    }
 
     var body: some View {
         ZStack {
@@ -44,6 +53,13 @@ struct PaywallView: View {
         }
         .onAppear {
             vm.onAppear()
+        }
+        .onChange(of: vm.purchaseSuccessful) { _, success in
+            if success {
+                SubscriptionManager.shared.handleSuccessfulPurchase()
+                onPurchaseSuccess?()
+                dismiss()
+            }
         }
         .alert("Purchase failed", isPresented: $vm.showError) {
             Button("OK", role: .cancel) {}
@@ -384,6 +400,9 @@ struct PaywallView: View {
 
 @MainActor
 final class PaywallViewModel: ObservableObject {
+    
+    // Placement
+    let placement: PaywallPlacement
 
     // UI state
     @Published var selectedPlan: PaywallSubscriptionPlan = .weekly
@@ -396,6 +415,9 @@ final class PaywallViewModel: ObservableObject {
     @Published var isPurchasing: Bool = false
     @Published var showError: Bool = false
     @Published var errorMessage: String?
+    
+    // Purchase success flag
+    @Published var purchaseSuccessful: Bool = false
     
     // Animation timers
     private var percentTimer: Timer?
@@ -414,6 +436,12 @@ final class PaywallViewModel: ObservableObject {
     // Loading & Error states
     @Published var isLoadingProducts: Bool = true
     @Published var loadingError: PaywallError?
+    
+    // MARK: - Init
+    
+    init(placement: PaywallPlacement = .onboarding) {
+        self.placement = placement
+    }
 
     var weeklyAvailable: Bool { weeklyProduct != nil }
     var yearlyAvailable: Bool { yearlyProduct != nil }
@@ -497,7 +525,8 @@ final class PaywallViewModel: ObservableObject {
                 self.isPurchasing = false
 
                 if result.success {
-                    // Purchase successful - can dismiss or show success UI
+                    // Purchase successful
+                    self.purchaseSuccessful = true
                 } else {
                     self.showErr(result.error?.localizedDescription ?? "Purchase failed.")
                 }
@@ -511,8 +540,14 @@ final class PaywallViewModel: ObservableObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.isPurchasing = false
-                if !result.success, let error = result.error {
+                
+                // Check if restore was successful and user now has premium
+                if Apphud.hasActiveSubscription() {
+                    self.purchaseSuccessful = true
+                } else if !result.success, let error = result.error {
                     self.showErr(error.localizedDescription)
+                } else {
+                    self.showErr("No active subscription found.")
                 }
             }
         }
@@ -525,7 +560,7 @@ final class PaywallViewModel: ObservableObject {
         loadingError = nil
         
         print("📦 [Paywall] Loading products...")
-        print("📦 [Paywall] Looking for placement: \(PaywallConstants.placementId)")
+        print("📦 [Paywall] Looking for placement: \(placement.identifier)")
         print("📦 [Paywall] Looking for products: \(PaywallConstants.weeklyProductId), \(PaywallConstants.yearlyProductId)")
         
         Apphud.fetchPlacements { [weak self] placements, error in
@@ -562,14 +597,14 @@ final class PaywallViewModel: ObservableObject {
                 }
                 
                 // Find placement by identifier
-                guard let placement = placements.first(where: { $0.identifier == PaywallConstants.placementId }) else {
-                    print("❌ [Paywall] Placement '\(PaywallConstants.placementId)' not found!")
+                guard let foundPlacement = placements.first(where: { $0.identifier == self.placement.identifier }) else {
+                    print("❌ [Paywall] Placement '\(self.placement.identifier)' not found!")
                     print("❌ [Paywall] Available placements: \(placements.map { $0.identifier })")
                     self.loadingError = .placementNotFound
                     return
                 }
                 
-                guard let paywall = placement.paywall else {
+                guard let paywall = foundPlacement.paywall else {
                     print("❌ [Paywall] Placement found but no paywall attached!")
                     self.loadingError = .paywallNotFound
                     return
@@ -745,9 +780,6 @@ final class PaywallViewModel: ObservableObject {
 // MARK: - Constants
 
 private enum PaywallConstants {
-    // Apphud Placement ID (create placement in Apphud Dashboard)
-    static let placementId = "onboarding"
-
     // App Store product IDs (must match App Store Connect + Apphud Products)
     static let weeklyProductId = "magicswipe.premium.week1"
     static let yearlyProductId = "magicswipe.premium.year1"

@@ -28,9 +28,11 @@ struct CleanerApp: App {
 struct RootView: View {
     
     @EnvironmentObject private var appState: AppState
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showSplash: Bool = true
     @State private var showPermissions: Bool = false
     @State private var permissionsCompleted: Bool = false
+    @State private var hasShownOnboardingPaywall: Bool = false
     
     var body: some View {
         ZStack {
@@ -81,9 +83,31 @@ struct RootView: View {
                 checkPermissionsStatus()
             }
         }
+        .onChange(of: permissionsCompleted) { _, completed in
+            if completed && !hasShownOnboardingPaywall {
+                // Show onboarding paywall after permissions completed
+                showOnboardingPaywallIfNeeded()
+            }
+        }
         .onAppear {
             // Start background loading during splash
             startBackgroundLoading()
+            
+            // Check subscription status
+            subscriptionManager.checkSubscriptionStatus()
+        }
+        .fullScreenCover(isPresented: $subscriptionManager.showPaywall) {
+            PaywallView(placement: subscriptionManager.currentPlacement)
+        }
+    }
+    
+    private func showOnboardingPaywallIfNeeded() {
+        // Delay slightly to allow UI to settle
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if !subscriptionManager.isPremium {
+                hasShownOnboardingPaywall = true
+                subscriptionManager.showPaywall(for: .onboarding)
+            }
         }
     }
     
