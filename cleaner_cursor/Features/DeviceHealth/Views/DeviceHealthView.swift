@@ -71,7 +71,7 @@ struct DeviceHealthView: View {
             }
         }
         .fullScreenCover(isPresented: $showPaywall) {
-            PaywallView(placement: .premiumFeature) {
+            PremiumPaywallView(placement: .premiumFeature) {
                 // Purchase successful - reload data
                 healthService.refresh()
                 if tipService.shouldShowTip(for: .deviceHealth) {

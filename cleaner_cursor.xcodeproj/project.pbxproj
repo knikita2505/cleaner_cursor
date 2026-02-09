@@ -83,6 +83,7 @@
 		11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A752EFD6BB30001F911 /* SystemTipsView.swift */; };
 		11F50A792EFD6BB30001F911 /* DeviceHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A762EFD6BB30001F911 /* DeviceHealthView.swift */; };
 		11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1012F0B5A01003BBBBB /* PaywallView.swift */; };
+		11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1062F2B000000000002 /* PremiumPaywallView.swift */; };
 		11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1032F2B000000000001 /* SubscriptionManager.swift */; };
 /* End PBXBuildFile section */
 
@@ -183,6 +184,7 @@
 		11F50A752EFD6BB30001F911 /* SystemTipsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemTipsView.swift; sourceTree = "<group>"; };
 		11F50A762EFD6BB30001F911 /* DeviceHealthView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthView.swift; sourceTree = "<group>"; };
 		11F0A1012F0B5A01003BBBBB /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		11F0A1062F2B000000000002 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPaywallView.swift; sourceTree = "<group>"; };
 		11F0A1032F2B000000000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -460,6 +462,7 @@
 			isa = PBXGroup;
 			children = (
 				11F0A1012F0B5A01003BBBBB /* PaywallView.swift */,
+				11F0A1062F2B000000000002 /* PremiumPaywallView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -839,6 +842,7 @@
 				11205D222ED62451003AFFF9 /* BatteryService.swift in Sources */,
 				110E27032F0DA75200AFEA92 /* SplashView.swift in Sources */,
 				11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */,
+				11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */,
 				11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */,
 				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
 				11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */,

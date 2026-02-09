@@ -97,7 +97,12 @@ struct RootView: View {
             subscriptionManager.checkSubscriptionStatus()
         }
         .fullScreenCover(isPresented: $subscriptionManager.showPaywall) {
-            PaywallView(placement: subscriptionManager.currentPlacement)
+            // Use different paywall based on placement
+            if subscriptionManager.currentPlacement == .onboarding {
+                PaywallView(placement: subscriptionManager.currentPlacement)
+            } else {
+                PremiumPaywallView(placement: subscriptionManager.currentPlacement)
+            }
         }
     }
     
