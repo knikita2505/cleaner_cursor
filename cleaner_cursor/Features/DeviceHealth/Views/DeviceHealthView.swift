@@ -10,13 +10,10 @@ struct DeviceHealthView: View {
     @StateObject private var healthService = DeviceHealthService.shared
     @StateObject private var storageService = StorageService.shared
     @StateObject private var batteryService = BatteryService.shared
-    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @EnvironmentObject private var appState: AppState
-    @Environment(\.dismiss) private var dismiss
     
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
-    @State private var showPaywall: Bool = false
     
     private let tipService = FeatureTipService.shared
     
@@ -47,14 +44,6 @@ struct DeviceHealthView: View {
             guard !hasAppeared else { return }
             hasAppeared = true
             
-            // Check premium access and show paywall if needed
-            if !subscriptionManager.canAccessFeature(.deviceHealth) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    showPaywall = true
-                }
-                return
-            }
-            
             healthService.refresh()
             
             // Show feature tip on first visit
@@ -68,23 +57,6 @@ struct DeviceHealthView: View {
             FeatureTipView(tipData: .deviceHealth) {
                 tipService.markTipAsShown(for: .deviceHealth)
                 showFeatureTip = false
-            }
-        }
-        .fullScreenCover(isPresented: $showPaywall) {
-            PremiumPaywallView(placement: .premiumFeature) {
-                // Purchase successful - reload data
-                healthService.refresh()
-                if tipService.shouldShowTip(for: .deviceHealth) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showFeatureTip = true
-                    }
-                }
-            }
-        }
-        .onChange(of: showPaywall) { isShowing in
-            // When paywall is dismissed and user still doesn't have access, go back
-            if !isShowing && !subscriptionManager.canAccessFeature(.deviceHealth) {
-                dismiss()
             }
         }
     }

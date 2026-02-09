@@ -8,10 +8,13 @@ struct CleaningHistoryView: View {
     // MARK: - Properties
     
     @StateObject private var historyService = CleaningHistoryService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
     @State private var showClearConfirmation = false
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
+    @State private var showPaywall: Bool = false
     
     private let tipService = FeatureTipService.shared
     
@@ -68,11 +71,35 @@ struct CleaningHistoryView: View {
             guard !hasAppeared else { return }
             hasAppeared = true
             
+            // Check premium access and show paywall if needed
+            if !subscriptionManager.canAccessFeature(.cleaningHistory) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showPaywall = true
+                }
+                return
+            }
+            
             // Show feature tip on first visit
             if tipService.shouldShowTip(for: .cleaningHistory) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     showFeatureTip = true
                 }
+            }
+        }
+        .fullScreenCover(isPresented: $showPaywall) {
+            PremiumPaywallView(placement: .premiumFeature) {
+                // Purchase successful
+                if tipService.shouldShowTip(for: .cleaningHistory) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
+                    }
+                }
+            }
+        }
+        .onChange(of: showPaywall) { isShowing in
+            // When paywall is dismissed and user still doesn't have access, go back
+            if !isShowing && !subscriptionManager.canAccessFeature(.cleaningHistory) {
+                dismiss()
             }
         }
         .fullScreenCover(isPresented: $showFeatureTip) {

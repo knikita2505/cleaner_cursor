@@ -16,6 +16,7 @@ struct DashboardView: View {
     @State private var animateStorage: Bool = false
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
+    @State private var showPremiumPaywall: Bool = false
     
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -40,6 +41,11 @@ struct DashboardView: View {
                             // Header
                             headerSection
                             
+                            // Premium Banner (if not subscribed)
+                            if !subscriptionManager.isPremium {
+                                premiumBanner
+                            }
+                            
                             // Storage Summary
                             storageSummaryCard
                             
@@ -50,6 +56,9 @@ struct DashboardView: View {
                         }
                         .padding(.horizontal, AppSpacing.screenPadding)
                         .padding(.top, 8)
+                    }
+                    .fullScreenCover(isPresented: $showPremiumPaywall) {
+                        PremiumPaywallView(placement: .premiumFeature)
                     }
                 }
             }
@@ -170,6 +179,64 @@ struct DashboardView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "EEEE, MMM d"
         return formatter.string(from: Date())
+    }
+    
+    // MARK: - Premium Banner
+    
+    private var premiumBanner: some View {
+        Button {
+            showPremiumPaywall = true
+        } label: {
+            HStack(spacing: 12) {
+                // Crown icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "A78BFA"), Color(hex: "8B5CF6")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Unlock Premium")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    Text("Unlimited cleanup & all features")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "8B5CF6").opacity(0.9), Color(hex: "6D28D9").opacity(0.9)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color(hex: "A78BFA").opacity(0.5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
     // MARK: - Storage Summary Card

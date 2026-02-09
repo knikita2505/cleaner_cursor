@@ -313,7 +313,6 @@ struct MoreView: View {
 
 struct SettingsView: View {
     @EnvironmentObject private var appState: AppState
-    @State private var showPaywall: Bool = false
     
     var body: some View {
         ZStack {
@@ -322,9 +321,6 @@ struct SettingsView: View {
             
             ScrollView {
                 VStack(spacing: 16) {
-                    // Subscription Section
-                    subscriptionSection
-                    
                     // Settings List
                     settingsList
                     
@@ -336,55 +332,6 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
-        .fullScreenCover(isPresented: $showPaywall) {
-            PaywallView()
-        }
-    }
-    
-    // MARK: - Subscription Section
-    
-    private var subscriptionSection: some View {
-        Button {
-            showPaywall = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(
-                            LinearGradient(
-                                colors: [AppColors.accentPurple, AppColors.accentBlue],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 44, height: 44)
-                    
-                    Image(systemName: "crown.fill")
-                        .font(.system(size: 20))
-                        .foregroundColor(.white)
-                }
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Premium")
-                        .font(AppFonts.subtitleL)
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text("Unlock all features")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                
-                Spacer()
-                
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
-            }
-            .padding(AppSpacing.containerPadding)
-            .background(AppColors.backgroundSecondary)
-            .cornerRadius(AppSpacing.cardRadius)
-        }
-        .buttonStyle(ScaleButtonStyle(scale: 0.98))
     }
     
     private var settingsList: some View {

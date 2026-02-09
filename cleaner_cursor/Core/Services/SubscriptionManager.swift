@@ -292,16 +292,16 @@ enum PaywallPlacement: String {
 enum PremiumFeature {
     case secretStorage
     case contacts
-    case deviceHealth
-    case cleaningHistory  // Now free - Tips section
+    case deviceHealth  // Now free - Tips section
+    case cleaningHistory
     case unlimitedCleaning
     
     var requiresPremium: Bool {
         switch self {
-        case .secretStorage, .contacts, .deviceHealth, .unlimitedCleaning:
+        case .secretStorage, .contacts, .cleaningHistory, .unlimitedCleaning:
             return true
-        case .cleaningHistory:
-            // Tips section is now free
+        case .deviceHealth:
+            // Device Health with tips is free
             return false
         }
     }
