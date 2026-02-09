@@ -11,7 +11,7 @@ struct MainTabView: View {
     @State private var dragOffset: CGFloat = 0
     
     // Tab order for swipe navigation
-    private let tabOrder: [AppTab] = [.hide, .swipe, .clean, .contacts, .more]
+    private let tabOrder: [AppTab] = [.hide, .swipe, .clean, .contacts, .analytics]
     
     // MARK: - Body
     
@@ -48,12 +48,12 @@ struct MainTabView: View {
                     }
                     .tag(AppTab.contacts)
                 
-                // 5. More Tab (Settings) - rightmost
-                MoreView()
+                // 5. Analytics Tab - rightmost
+                AnalyticsTabView()
                     .tabItem {
-                        Label(AppTab.more.title, systemImage: AppTab.more.icon)
+                        Label(AppTab.analytics.title, systemImage: AppTab.analytics.icon)
                     }
-                    .tag(AppTab.more)
+                    .tag(AppTab.analytics)
             }
             .tint(AppColors.accentBlue)
         }
@@ -147,8 +147,49 @@ struct SwipeCleanTab: View {
     }
 }
 
-// MARK: - More View (Tools Tab)
-/// Вкладка "More" - дополнительные инструменты
+// MARK: - Analytics Tab View
+/// Вкладка "Analytics" - история очисток
+
+struct AnalyticsTabView: View {
+    @EnvironmentObject private var appState: AppState
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
+    @State private var showPremiumPaywall: Bool = false
+    
+    var body: some View {
+        NavigationStack {
+            CleaningHistoryView()
+                .environmentObject(appState)
+        }
+        .onChange(of: appState.selectedTab) { oldTab, newTab in
+            // Check premium access every time user switches to Analytics tab
+            if newTab == .analytics && !subscriptionManager.canAccessFeature(.cleaningHistory) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showPremiumPaywall = true
+                }
+            }
+        }
+        .onAppear {
+            // Check premium access on initial appear
+            if !subscriptionManager.canAccessFeature(.cleaningHistory) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    showPremiumPaywall = true
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showPremiumPaywall) {
+            PremiumPaywallView(placement: .premiumFeature)
+        }
+        .onChange(of: showPremiumPaywall) { oldValue, isShowing in
+            // When paywall is dismissed, switch to Clean tab if user didn't subscribe
+            if !isShowing && !subscriptionManager.canAccessFeature(.cleaningHistory) {
+                appState.selectedTab = .clean
+            }
+        }
+    }
+}
+
+// MARK: - Legacy More View (kept for compatibility)
+/// Вкладка "More" - дополнительные инструменты (deprecated - use AnalyticsTabView)
 
 struct MoreView: View {
     @EnvironmentObject private var appState: AppState

@@ -218,13 +218,15 @@ struct BatteryInsightsView: View {
     // MARK: - Tips Section
     
     private var tipsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let tips = Array(batteryService.batteryTips.prefix(5))
+        
+        return VStack(alignment: .leading, spacing: 12) {
             Text("Battery Tips")
                 .font(AppFonts.subtitleL)
                 .foregroundColor(AppColors.textPrimary)
             
             VStack(spacing: 8) {
-                ForEach(batteryService.batteryTips.prefix(5)) { tip in
+                ForEach(Array(tips.enumerated()), id: \.offset) { index, tip in
                     tipCard(tip)
                 }
             }

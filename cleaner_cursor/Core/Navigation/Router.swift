@@ -122,6 +122,8 @@ struct NavigationDestinationModifier: ViewModifier {
                     Text("Storage Overview") // TODO: Implement
                 case .battery:
                     BatteryInsightsView()
+                case .deviceHealth:
+                    DeviceHealthView()
                 }
             }
             .navigationDestination(for: PhotosDestination.self) { destination in
