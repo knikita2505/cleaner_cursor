@@ -157,7 +157,7 @@ struct AnalyticsTabView: View {
     
     var body: some View {
         NavigationStack {
-            CleaningHistoryView()
+            CleaningHistoryView(isPaywallShowing: $showPremiumPaywall)
                 .environmentObject(appState)
         }
         .onChange(of: appState.selectedTab) { oldTab, newTab in

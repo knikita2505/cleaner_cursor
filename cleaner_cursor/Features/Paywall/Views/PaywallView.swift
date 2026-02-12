@@ -513,7 +513,8 @@ final class PaywallViewModel: ObservableObject {
         }
 
         guard let product else {
-            showErr("Product not available yet.")
+            // Show user-friendly error when products aren't loaded
+            showErr("Unable to load subscription details. Please check your internet connection and try again.")
             return
         }
 
@@ -528,9 +529,48 @@ final class PaywallViewModel: ObservableObject {
                     // Purchase successful
                     self.purchaseSuccessful = true
                 } else {
-                    self.showErr(result.error?.localizedDescription ?? "Purchase failed.")
+                    // Provide user-friendly error messages
+                    let errorMessage = self.friendlyErrorMessage(from: result.error)
+                    self.showErr(errorMessage)
                 }
             }
+        }
+    }
+    
+    /// Convert system errors to user-friendly messages
+    private func friendlyErrorMessage(from error: Error?) -> String {
+        guard let error = error else {
+            return "Purchase could not be completed. Please try again."
+        }
+        
+        let nsError = error as NSError
+        
+        // Check for common StoreKit errors
+        switch nsError.code {
+        case 0: // SKErrorUnknown
+            return "An unknown error occurred. Please try again."
+        case 1: // SKErrorClientInvalid
+            return "You are not allowed to make purchases on this device."
+        case 2: // SKErrorPaymentCancelled
+            return "Purchase was cancelled."
+        case 3: // SKErrorPaymentInvalid
+            return "Payment information is invalid. Please check your payment method."
+        case 4: // SKErrorPaymentNotAllowed
+            return "This device is not allowed to make purchases. Please check your device settings."
+        case 5: // SKErrorStoreProductNotAvailable
+            return "This subscription is not available in your region."
+        case 6: // SKErrorCloudServicePermissionDenied
+            return "Access to cloud service was denied."
+        case 7: // SKErrorCloudServiceNetworkConnectionFailed
+            return "Could not connect to the App Store. Please check your internet connection."
+        case 8: // SKErrorCloudServiceRevoked
+            return "Cloud service access has been revoked."
+        default:
+            // Check for network-related errors
+            if nsError.domain == NSURLErrorDomain {
+                return "No internet connection. Please check your network and try again."
+            }
+            return "Purchase failed. Please check your internet connection and try again."
         }
     }
 

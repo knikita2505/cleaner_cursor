@@ -89,10 +89,13 @@ struct DashboardView: View {
                 }
                 hasAppeared = true
                 
-                // Show feature tip on first visit
+                // Show feature tip on first visit (only if paywall is not showing)
                 if tipService.shouldShowTip(for: .cleanPhotos) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showFeatureTip = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        // Check if paywall is not showing before displaying tip
+                        if !subscriptionManager.showPaywall {
+                            showFeatureTip = true
+                        }
                     }
                 }
                 
@@ -118,6 +121,14 @@ struct DashboardView: View {
                     // Request notification permission after onboarding
                     Task {
                         await NotificationService.shared.enableNotifications()
+                    }
+                }
+            }
+            .onChange(of: subscriptionManager.showPaywall) { _, isShowing in
+                // Show feature tip after paywall is dismissed (if not shown yet)
+                if !isShowing && tipService.shouldShowTip(for: .cleanPhotos) && !showFeatureTip {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
                     }
                 }
             }
