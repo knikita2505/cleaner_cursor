@@ -2,13 +2,17 @@ import SwiftUI
 import Photos
 import Contacts
 import ApphudSDK
+import AppsFlyerLib
 
 @main
 struct CleanerApp: App {
     
     init() {
-        // Initialize Apphud SDK
+        // 1. Initialize Apphud SDK first
         Apphud.start(apiKey: "app_nmqxh6EVfa5mV9s2P29r2CTX7CpJ9M")
+        
+        // 2. Configure AppsFlyer (after Apphud to link User IDs)
+        AppsFlyerService.shared.configure()
     }
     
     // MARK: - Body

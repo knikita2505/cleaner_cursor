@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		110E27032F0DA75200AFEA92 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110E27002F0DA75200AFEA92 /* SplashView.swift */; };
+		110E2FFE2F47B5B0008AA143 /* AppsFlyerLib-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 110E2FFD2F47B5B0008AA143 /* AppsFlyerLib-Dynamic */; };
 		111038602EEDDAE90015FEE3 /* SimilarNamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */; };
 		111038612EEDDAE90015FEE3 /* ContactsCleanerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385B2EEDDAE90015FEE3 /* ContactsCleanerView.swift */; };
 		111038622EEDDAE90015FEE3 /* NoNumberContactsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385C2EEDDAE90015FEE3 /* NoNumberContactsView.swift */; };
@@ -78,13 +79,14 @@
 		11D645402F0B8A1000FA080C /* FeatureTipService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */; };
 		11D645422F0B8A2000FA080C /* FeatureTipView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645412F0B8A2000FA080C /* FeatureTipView.swift */; };
 		11D645442F0C9B0000FA080C /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11D645432F0C9B0000FA080C /* NotificationService.swift */; };
+		11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1012F0B5A01003BBBBB /* PaywallView.swift */; };
+		11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1032F2B000000000001 /* SubscriptionManager.swift */; };
+		11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1062F2B000000000002 /* PremiumPaywallView.swift */; };
+		11F0A1072F47C00000000001 /* AppsFlyerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1082F47C00000000001 /* AppsFlyerService.swift */; };
 		11F50A712EFD6BA40001F911 /* DeviceHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */; };
 		11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */; };
 		11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A752EFD6BB30001F911 /* SystemTipsView.swift */; };
 		11F50A792EFD6BB30001F911 /* DeviceHealthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A762EFD6BB30001F911 /* DeviceHealthView.swift */; };
-		11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1012F0B5A01003BBBBB /* PaywallView.swift */; };
-		11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1062F2B000000000002 /* PremiumPaywallView.swift */; };
-		11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1032F2B000000000001 /* SubscriptionManager.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -179,13 +181,14 @@
 		11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTipService.swift; sourceTree = "<group>"; };
 		11D645412F0B8A2000FA080C /* FeatureTipView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureTipView.swift; sourceTree = "<group>"; };
 		11D645432F0C9B0000FA080C /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		11F0A1012F0B5A01003BBBBB /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		11F0A1032F2B000000000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		11F0A1062F2B000000000002 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPaywallView.swift; sourceTree = "<group>"; };
+		11F0A1082F47C00000000001 /* AppsFlyerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsFlyerService.swift; sourceTree = "<group>"; };
 		11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthService.swift; sourceTree = "<group>"; };
 		11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BatteryInsightsView.swift; sourceTree = "<group>"; };
 		11F50A752EFD6BB30001F911 /* SystemTipsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemTipsView.swift; sourceTree = "<group>"; };
 		11F50A762EFD6BB30001F911 /* DeviceHealthView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthView.swift; sourceTree = "<group>"; };
-		11F0A1012F0B5A01003BBBBB /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
-		11F0A1062F2B000000000002 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPaywallView.swift; sourceTree = "<group>"; };
-		11F0A1032F2B000000000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -194,6 +197,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				113AB5E92F2A90240006E945 /* ApphudSDK in Frameworks */,
+				110E2FFE2F47B5B0008AA143 /* AppsFlyerLib-Dynamic in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -388,6 +392,7 @@
 		11205CF62ED62451003AFFF9 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				11F0A1082F47C00000000001 /* AppsFlyerService.swift */,
 				11F0A1032F2B000000000001 /* SubscriptionManager.swift */,
 				11D645352F09971D00FA080C /* CleaningHistoryService.swift */,
 				11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */,
@@ -743,6 +748,7 @@
 			mainGroup = 11205BD62ED4D7A1003AFFF9;
 			packageReferences = (
 				113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */,
+				110E2FFC2F47B5B0008AA143 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Dynamic" */,
 			);
 			productRefGroup = 11205BE02ED4D7A2003AFFF9 /* Products */;
 			projectDirPath = "";
@@ -844,6 +850,7 @@
 				11F0A1022F0B5A01003BBBBB /* PaywallView.swift in Sources */,
 				11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */,
 				11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */,
+				11F0A1072F47C00000000001 /* AppsFlyerService.swift in Sources */,
 				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
 				11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */,
 				11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */,
@@ -1198,6 +1205,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		110E2FFC2F47B5B0008AA143 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Dynamic" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework-Dynamic";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 6.17.8;
+			};
+		};
 		113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/apphud/ApphudSDK";
@@ -1209,6 +1224,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		110E2FFD2F47B5B0008AA143 /* AppsFlyerLib-Dynamic */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 110E2FFC2F47B5B0008AA143 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Dynamic" */;
+			productName = "AppsFlyerLib-Dynamic";
+		};
 		113AB5E82F2A90240006E945 /* ApphudSDK */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */;

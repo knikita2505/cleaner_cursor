@@ -1,4 +1,5 @@
 import SwiftUI
+import AppTrackingTransparency
 
 // MARK: - Onboarding View
 /// Экран онбординга с пагинацией
@@ -8,7 +9,9 @@ struct OnboardingView: View {
     // MARK: - Properties
     
     @EnvironmentObject private var appState: AppState
+    @StateObject private var appsFlyerService = AppsFlyerService.shared
     @State private var currentPage: Int = 0
+    @State private var hasRequestedATT: Bool = false
     
     private let totalPages = 4
     
@@ -62,6 +65,12 @@ struct OnboardingView: View {
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut(duration: 0.3), value: currentPage)
+                .onChange(of: currentPage) { oldPage, newPage in
+                    // Request ATT when user reaches the last page
+                    if newPage == totalPages - 1 && !hasRequestedATT {
+                        requestATTPermission()
+                    }
+                }
                 
                 // CTA Button
                 VStack(spacing: 16) {
@@ -196,6 +205,20 @@ struct OnboardingView: View {
         .padding(.vertical, 8)
         .background(AppColors.backgroundSecondary.opacity(0.6))
         .cornerRadius(20)
+    }
+    
+    // MARK: - ATT Permission
+    
+    /// Request App Tracking Transparency permission
+    private func requestATTPermission() {
+        hasRequestedATT = true
+        
+        Task {
+            // Small delay to let the page transition complete
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
+            
+            let _ = await appsFlyerService.requestATTPermission()
+        }
     }
 }
 
