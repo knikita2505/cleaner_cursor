@@ -8,12 +8,20 @@ struct CleaningHistoryView: View {
     // MARK: - Properties
     
     @StateObject private var historyService = CleaningHistoryService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @EnvironmentObject private var appState: AppState
     @State private var showClearConfirmation = false
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
     
+    /// Binding to track if paywall is currently showing (to avoid tip conflict)
+    @Binding var isPaywallShowing: Bool
+    
     private let tipService = FeatureTipService.shared
+    
+    init(isPaywallShowing: Binding<Bool> = .constant(false)) {
+        self._isPaywallShowing = isPaywallShowing
+    }
     
     // MARK: - Body
     
@@ -42,7 +50,7 @@ struct CleaningHistoryView: View {
                 .padding(AppSpacing.screenPadding)
             }
         }
-        .navigationTitle("Cleaning History")
+        .navigationTitle("Analytics")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -68,8 +76,20 @@ struct CleaningHistoryView: View {
             guard !hasAppeared else { return }
             hasAppeared = true
             
-            // Show feature tip on first visit
-            if tipService.shouldShowTip(for: .cleaningHistory) {
+            // Show feature tip on first visit only if user has premium access
+            if tipService.shouldShowTip(for: .cleaningHistory) && 
+               subscriptionManager.canAccessFeature(.cleaningHistory) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    showFeatureTip = true
+                }
+            }
+        }
+        .onChange(of: isPaywallShowing) { _, isShowing in
+            // Show feature tip after paywall is dismissed only if user purchased premium
+            if !isShowing && 
+               tipService.shouldShowTip(for: .cleaningHistory) && 
+               subscriptionManager.canAccessFeature(.cleaningHistory) &&
+               !showFeatureTip {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     showFeatureTip = true
                 }

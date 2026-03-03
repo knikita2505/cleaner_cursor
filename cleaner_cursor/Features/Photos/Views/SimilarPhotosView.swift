@@ -78,6 +78,27 @@ struct SimilarPhotosView: View {
         } message: {
             Text("Are you sure you want to delete \(viewModel.totalToDelete) photos? This action cannot be undone.")
         }
+        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
+            Button("Cancel", role: .cancel) { }
+            Button("Get Premium") {
+                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
+            }
+            Button("Continue", role: .destructive) {
+                Task {
+                    await viewModel.proceedWithDeletion()
+                }
+            }
+        } message: {
+            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
+        }
+        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
+            Button("OK", role: .cancel) { }
+            Button("Get Premium") {
+                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
+            }
+        } message: {
+            Text(viewModel.limitWarningMessage)
+        }
         .task {
             await viewModel.load()
         }
@@ -571,7 +592,13 @@ final class SimilarPhotosViewModel: ObservableObject {
     @Published var isDeleting: Bool = false
     @Published var deleteProgress: Double = 0
     
+    // Subscription limit states
+    @Published var showLimitWarning: Bool = false
+    @Published var showLastItemsWarning: Bool = false
+    @Published var limitWarningMessage: String = ""
+    
     private let photoService = PhotoService.shared
+    private let subscriptionManager = SubscriptionManager.shared
     
     // MARK: - Computed Properties
     
@@ -738,6 +765,43 @@ final class SimilarPhotosViewModel: ObservableObject {
             }
         }
         
+        // Check subscription limits
+        if !subscriptionManager.isPremium {
+            let count = allAssetsToDelete.count
+            let permission = subscriptionManager.handleCleaningAttempt(count: count)
+            
+            switch permission {
+            case .allowed:
+                break
+            case .lastItems:
+                showLastItemsWarning = true
+                return
+            case .limitReached, .insufficientLimit:
+                subscriptionManager.showPaywall(for: .reachedLimits)
+                return
+            }
+        }
+        
+        await performDeletion(assets: allAssetsToDelete, assetIds: assetsToDeleteIds)
+    }
+    
+    func proceedWithDeletion() async {
+        var assetsToDeleteIds: Set<String> = []
+        var allAssetsToDelete: [PHAsset] = []
+        
+        for group in groups {
+            for asset in group.assets where asset.isMarkedForDeletion {
+                assetsToDeleteIds.insert(asset.id)
+                allAssetsToDelete.append(asset.photoAsset.asset)
+            }
+        }
+        
+        await performDeletion(assets: allAssetsToDelete, assetIds: assetsToDeleteIds)
+    }
+    
+    private func performDeletion(assets allAssetsToDelete: [PHAsset], assetIds assetsToDeleteIds: Set<String>) async {
+        guard !allAssetsToDelete.isEmpty else { return }
+        
         isDeleting = true
         deleteProgress = 0
         
@@ -754,6 +818,9 @@ final class SimilarPhotosViewModel: ObservableObject {
                 deletedCount = end
                 deleteProgress = Double(deletedCount) / Double(allAssetsToDelete.count)
             }
+            
+            // Record to subscription manager
+            subscriptionManager.recordCleanedItems(count: allAssetsToDelete.count)
             
             // Calculate bytes freed
             let bytesFreed = allAssetsToDelete.reduce(Int64(0)) { total, asset in

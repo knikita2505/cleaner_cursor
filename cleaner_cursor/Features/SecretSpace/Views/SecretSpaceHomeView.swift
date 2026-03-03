@@ -9,12 +9,14 @@ struct SecretSpaceHomeView: View {
     
     @EnvironmentObject private var appState: AppState
     @StateObject private var secretService = SecretSpaceService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     
     @State private var showPasscodeSetup = false
     @State private var showUnlockSheet = false
     @State private var pendingDestination: SecretDestination?
     @State private var showFeatureTip: Bool = false
     @State private var hasAppeared: Bool = false
+    @State private var showPremiumRequired: Bool = false
     
     // Навигация
     @State private var navigationPath = NavigationPath()
@@ -108,6 +110,12 @@ struct SecretSpaceHomeView: View {
     // MARK: - Navigation
     
     private func handleSectionTap(_ destination: SecretDestination) {
+        // Check premium access for Secret Space
+        guard subscriptionManager.canAccessFeature(.secretStorage) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         pendingDestination = destination
         
         if !secretService.isPasscodeSet {

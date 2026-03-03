@@ -10,11 +10,16 @@ struct DashboardView: View {
     
     @ObservedObject private var viewModel = DashboardViewModel.shared
     @ObservedObject private var photoService = PhotoService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @EnvironmentObject private var appState: AppState
     
+    @StateObject private var healthService = DeviceHealthService.shared
     @State private var animateStorage: Bool = false
     @State private var hasAppeared: Bool = false
     @State private var showFeatureTip: Bool = false
+    @State private var showPremiumPaywall: Bool = false
+    @State private var showSettings: Bool = false
+    @State private var widgetPage: Int = 0
     
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -39,8 +44,13 @@ struct DashboardView: View {
                             // Header
                             headerSection
                             
-                            // Storage Summary
-                            storageSummaryCard
+                            // Premium Banner (if not subscribed)
+                            if !subscriptionManager.isPremium {
+                                premiumBanner
+                            }
+                            
+                            // Widget Carousel (Storage + Device Health)
+                            widgetCarousel
                             
                             // Categories Grid
                             categoriesGrid
@@ -49,6 +59,15 @@ struct DashboardView: View {
                         }
                         .padding(.horizontal, AppSpacing.screenPadding)
                         .padding(.top, 8)
+                    }
+                    .fullScreenCover(isPresented: $showPremiumPaywall) {
+                        PremiumPaywallView(placement: .premiumFeature)
+                    }
+                    .sheet(isPresented: $showSettings) {
+                        NavigationStack {
+                            SettingsView()
+                                .environmentObject(appState)
+                        }
                     }
                 }
             }
@@ -60,6 +79,9 @@ struct DashboardView: View {
                     animateStorage = true
                 }
                 
+                // Refresh device health
+                healthService.refresh()
+                
                 guard !hasAppeared else {
                     // Just refresh authorization status on subsequent appears
                     photoService.checkAuthorizationStatus()
@@ -67,10 +89,13 @@ struct DashboardView: View {
                 }
                 hasAppeared = true
                 
-                // Show feature tip on first visit
+                // Show feature tip on first visit (only if paywall is not showing)
                 if tipService.shouldShowTip(for: .cleanPhotos) {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showFeatureTip = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        // Check if paywall is not showing before displaying tip
+                        if !subscriptionManager.showPaywall {
+                            showFeatureTip = true
+                        }
                     }
                 }
                 
@@ -96,6 +121,14 @@ struct DashboardView: View {
                     // Request notification permission after onboarding
                     Task {
                         await NotificationService.shared.enableNotifications()
+                    }
+                }
+            }
+            .onChange(of: subscriptionManager.showPaywall) { _, isShowing in
+                // Show feature tip after paywall is dismissed (if not shown yet)
+                if !isShowing && tipService.shouldShowTip(for: .cleanPhotos) && !showFeatureTip {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showFeatureTip = true
                     }
                 }
             }
@@ -158,6 +191,19 @@ struct DashboardView: View {
             }
             
             Spacer()
+            
+            // Remaining items indicator (for free users)
+            RemainingItemsView()
+            
+            // Settings button
+            Button {
+                showSettings = true
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(AppColors.textSecondary)
+            }
+            .padding(.leading, 12)
         }
         .padding(.top, 8)
     }
@@ -168,9 +214,93 @@ struct DashboardView: View {
         return formatter.string(from: Date())
     }
     
-    // MARK: - Storage Summary Card
+    // MARK: - Premium Banner
     
-    private var storageSummaryCard: some View {
+    private var premiumBanner: some View {
+        Button {
+            showPremiumPaywall = true
+        } label: {
+            HStack(spacing: 12) {
+                // Crown icon
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color(hex: "A78BFA"), Color(hex: "8B5CF6")],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 40, height: 40)
+                    
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.white)
+                }
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Unlock Premium")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                    
+                    Text("Unlimited cleanup & all features")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.white.opacity(0.5))
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "8B5CF6").opacity(0.9), Color(hex: "6D28D9").opacity(0.9)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
+            .cornerRadius(14)
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .stroke(Color(hex: "A78BFA").opacity(0.5), lineWidth: 1)
+            )
+        }
+        .buttonStyle(ScaleButtonStyle(scale: 0.98))
+    }
+    
+    // MARK: - Widget Carousel (Storage + Device Health)
+    
+    private var widgetCarousel: some View {
+        VStack(spacing: 8) {
+            TabView(selection: $widgetPage) {
+                // Page 1: Storage Summary
+                storageWidget
+                    .tag(0)
+                
+                // Page 2: Device Health
+                deviceHealthWidget
+                    .tag(1)
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            .frame(height: 160)
+            
+            // Custom page indicator
+            HStack(spacing: 6) {
+                ForEach(0..<2, id: \.self) { index in
+                    Circle()
+                        .fill(widgetPage == index ? AppColors.accentPurple : AppColors.textTertiary.opacity(0.3))
+                        .frame(width: 6, height: 6)
+                        .animation(.easeInOut(duration: 0.2), value: widgetPage)
+                }
+            }
+        }
+    }
+    
+    private var storageWidget: some View {
         HStack(alignment: .top, spacing: 16) {
             // Left side - Text info + Stats
             VStack(alignment: .leading, spacing: 10) {
@@ -245,6 +375,98 @@ struct DashboardView: View {
         .background(AppColors.backgroundSecondary)
         .cornerRadius(AppSpacing.cardRadius)
         .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
+    }
+    
+    private var deviceHealthWidget: some View {
+        Button {
+            appState.dashboardPath.append(DashboardDestination.deviceHealth)
+        } label: {
+            HStack(spacing: 16) {
+                // Left side - Health Score Ring
+                ZStack {
+                    Circle()
+                        .stroke(AppColors.progressInactive, lineWidth: 8)
+                        .frame(width: 80, height: 80)
+                    
+                    Circle()
+                        .trim(from: 0, to: CGFloat(healthService.healthScore) / 100.0)
+                        .stroke(
+                            healthScoreColor,
+                            style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                        )
+                        .frame(width: 80, height: 80)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 0.8), value: healthService.healthScore)
+                    
+                    VStack(spacing: 0) {
+                        Text("\(healthService.healthScore)")
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
+                            .foregroundColor(AppColors.textPrimary)
+                        
+                        Text("Health")
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundColor(AppColors.textTertiary)
+                    }
+                }
+                
+                // Right side - Category scores
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Device Health")
+                        .font(AppFonts.subtitleM)
+                        .foregroundColor(AppColors.textPrimary)
+                    
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 6) {
+                        healthCategoryMini(icon: "internaldrive", label: "Storage", score: healthService.storageScore)
+                        healthCategoryMini(icon: "thermometer.medium", label: "Temp", score: healthService.temperatureScore)
+                        healthCategoryMini(icon: "battery.75", label: "Battery", score: healthService.batteryScore)
+                        healthCategoryMini(icon: "cpu", label: "Perform", score: healthService.performanceScore)
+                    }
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(AppColors.textTertiary.opacity(0.5))
+            }
+            .padding(AppSpacing.containerPaddingLarge)
+            .background(AppColors.backgroundSecondary)
+            .cornerRadius(AppSpacing.cardRadius)
+            .shadow(color: Color.black.opacity(0.2), radius: 10, x: 0, y: 4)
+        }
+        .buttonStyle(ScaleButtonStyle(scale: 0.98))
+    }
+    
+    private var healthScoreColor: Color {
+        if healthService.healthScore >= 80 {
+            return AppColors.statusSuccess
+        } else if healthService.healthScore >= 50 {
+            return AppColors.statusWarning
+        } else {
+            return AppColors.statusError
+        }
+    }
+    
+    private func healthCategoryMini(icon: String, label: String, score: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .foregroundColor(categoryScoreColor(score))
+            
+            Text("\(label) \(score)%")
+                .font(.system(size: 10, weight: .medium))
+                .foregroundColor(AppColors.textSecondary)
+        }
+    }
+    
+    private func categoryScoreColor(_ score: Int) -> Color {
+        if score >= 80 {
+            return AppColors.statusSuccess
+        } else if score >= 50 {
+            return AppColors.statusWarning
+        } else {
+            return AppColors.statusError
+        }
     }
     
     private func miniStatItem(label: String, value: String, color: Color) -> some View {

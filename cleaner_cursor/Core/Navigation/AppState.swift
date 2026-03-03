@@ -75,8 +75,8 @@ final class AppState: ObservableObject {
         selectedTab = .hide
     }
     
-    func navigateToMore() {
-        selectedTab = .more
+    func navigateToAnalytics() {
+        selectedTab = .analytics
     }
     
     // MARK: - Permission Requests
@@ -99,7 +99,7 @@ enum AppTab: String, CaseIterable, Identifiable {
     case swipe = "Swipe"
     case clean = "Clean"
     case contacts = "Contacts"
-    case more = "More"
+    case analytics = "Analytics"
     
     var id: String { rawValue }
     
@@ -109,7 +109,7 @@ enum AppTab: String, CaseIterable, Identifiable {
         case .swipe: return "hand.draw"
         case .clean: return "sparkles"
         case .contacts: return "person.crop.circle"
-        case .more: return "ellipsis.circle"
+        case .analytics: return "chart.bar.fill"
         }
     }
     
@@ -157,6 +157,7 @@ enum DashboardDestination: Hashable {
     case secretFolder
     case storageOverview
     case battery
+    case deviceHealth
 }
 
 enum PhotosDestination: Hashable {

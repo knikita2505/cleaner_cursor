@@ -1,128 +1,97 @@
 import SwiftUI
 
 // MARK: - Splash View
-/// Анимированный экран загрузки приложения
+/// Стильный анимированный экран загрузки с эффектом заполнения текста
 
 struct SplashView: View {
     
     // MARK: - Properties
     
-    @State private var gearRotation: Double = 0
-    @State private var sparkles: [SparkleParticle] = []
-    @State private var dustParticles: [DustParticle] = []
-    @State private var showText = false
-    @State private var textOpacity: Double = 0
-    @State private var progressWidth: CGFloat = 0
+    @State private var fillProgress: CGFloat = 0
+    @State private var wavePhase: CGFloat = 0
+    @State private var sparkles: [SplashSparkle] = []
+    @State private var glowScale: CGFloat = 0.8
+    @State private var glowOpacity: Double = 0
+    @State private var showMainText: Bool = true
+    @State private var mainTextOffset: CGFloat = 0
+    @State private var mainTextOpacity: Double = 1
+    @State private var taglineOffset: CGFloat = 30
+    @State private var taglineOpacity: Double = 0
+    @State private var pulseScale: CGFloat = 1.0
     
     let onComplete: () -> Void
+    
+    private let animationDuration: Double = 8.0
+    private let fillDuration: Double = 6.0
     
     // MARK: - Body
     
     var body: some View {
         ZStack {
-            // Background gradient
+            // Background
             LinearGradient(
                 colors: [
                     AppColors.backgroundPrimary,
                     AppColors.backgroundPrimary.opacity(0.95),
-                    AppColors.accentBlue.opacity(0.1)
+                    AppColors.accentBlue.opacity(0.08)
                 ],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .ignoresSafeArea()
             
-            VStack(spacing: 40) {
+            // Sparkles layer (behind everything)
+            ForEach(sparkles) { sparkle in
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [sparkle.color, sparkle.color.opacity(0)],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: sparkle.size / 2
+                        )
+                    )
+                    .frame(width: sparkle.size, height: sparkle.size)
+                    .opacity(sparkle.opacity)
+                    .offset(x: sparkle.x, y: sparkle.y)
+            }
+            
+            // Main content - positioned slightly above center
+            VStack(spacing: 0) {
+                Spacer()
+                    .frame(height: 60)
+                
                 Spacer()
                 
-                // Animated broom with sparkles
                 ZStack {
-                    // Dust particles
-                    ForEach(dustParticles) { particle in
-                        Circle()
-                            .fill(AppColors.textTertiary.opacity(particle.opacity))
-                            .frame(width: particle.size, height: particle.size)
-                            .offset(x: particle.x, y: particle.y)
-                    }
+                    // Soft ambient glow
+                    ambientGlow
                     
-                    // Sparkles
-                    ForEach(sparkles) { sparkle in
-                        Image(systemName: "sparkle")
-                            .font(.system(size: sparkle.size))
-                            .foregroundColor(sparkle.color)
-                            .opacity(sparkle.opacity)
-                            .offset(x: sparkle.x, y: sparkle.y)
-                            .rotationEffect(.degrees(sparkle.rotation))
-                    }
-                    
-                    // Gear icon
+                    // Text container
                     ZStack {
-                        // Glow effect
-                        Circle()
-                            .fill(
-                                RadialGradient(
-                                    colors: [AppColors.accentBlue.opacity(0.4), AppColors.accentPurple.opacity(0.2), .clear],
-                                    center: .center,
-                                    startRadius: 30,
-                                    endRadius: 90
-                                )
-                            )
-                            .frame(width: 180, height: 180)
+                        // Main "Magic Swipe" text
+                        liquidFilledText
+                            .offset(y: mainTextOffset)
+                            .opacity(mainTextOpacity)
+                            .scaleEffect(pulseScale)
                         
-                        // Main icon - spinning gear
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 80, weight: .medium))
+                        // Tagline
+                        Text("Making space for what matters")
+                            .font(.system(size: 22, weight: .medium, design: .rounded))
                             .foregroundStyle(
                                 LinearGradient(
-                                    colors: [AppColors.accentBlue, AppColors.accentPurple],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .rotationEffect(.degrees(gearRotation))
-                    }
-                }
-                .frame(height: 180)
-                
-                // App name and tagline
-                VStack(spacing: 12) {
-                    Text("Magic Swipe")
-                        .font(.system(size: 36, weight: .bold, design: .rounded))
-                        .foregroundColor(AppColors.textPrimary)
-                    
-                    Text("Making space for what matters")
-                        .font(AppFonts.bodyM)
-                        .foregroundColor(AppColors.textTertiary)
-                }
-                .opacity(textOpacity)
-                
-                Spacer()
-                
-                // Progress bar
-                VStack(spacing: 16) {
-                    ZStack(alignment: .leading) {
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(AppColors.backgroundSecondary)
-                            .frame(height: 6)
-                        
-                        RoundedRectangle(cornerRadius: 4)
-                            .fill(
-                                LinearGradient(
-                                    colors: [AppColors.accentBlue, AppColors.accentPurple],
+                                    colors: [AppColors.accentPurple.opacity(0.9), AppColors.accentBlue.opacity(0.9)],
                                     startPoint: .leading,
                                     endPoint: .trailing
                                 )
                             )
-                            .frame(width: progressWidth, height: 6)
+                            .offset(y: taglineOffset)
+                            .opacity(taglineOpacity)
                     }
-                    .frame(width: 200)
-                    
-                    Text("Preparing...")
-                        .font(AppFonts.caption)
-                        .foregroundColor(AppColors.textTertiary)
-                        .opacity(textOpacity)
                 }
-                .padding(.bottom, 60)
+                .frame(height: 100)
+                
+                Spacer()
             }
         }
         .onAppear {
@@ -130,132 +99,259 @@ struct SplashView: View {
         }
     }
     
+    // MARK: - Ambient Glow
+    
+    private var ambientGlow: some View {
+        ZStack {
+            // Very soft, large glow
+            Circle()
+                .fill(
+                    RadialGradient(
+                        colors: [
+                            AppColors.accentPurple.opacity(0.15),
+                            AppColors.accentBlue.opacity(0.08),
+                            .clear
+                        ],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: 200
+                    )
+                )
+                .frame(width: 400, height: 400)
+                .scaleEffect(glowScale)
+                .opacity(glowOpacity)
+                .blur(radius: 40)
+        }
+    }
+    
+    // MARK: - Liquid Filled Text
+    
+    private var liquidFilledText: some View {
+        ZStack {
+            // Background text (empty state) - very subtle
+            Text("Magic Swipe")
+                .font(.system(size: 58, weight: .heavy, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [
+                            AppColors.textTertiary.opacity(0.2),
+                            AppColors.textTertiary.opacity(0.15)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+            
+            // Filled text with liquid mask
+            Text("Magic Swipe")
+                .font(.system(size: 58, weight: .heavy, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [AppColors.accentPurple, AppColors.accentBlue],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .mask(
+                    VStack(spacing: 0) {
+                        // Empty space that shrinks as fill progresses
+                        Color.clear
+                            .frame(height: 80 * (1 - fillProgress))
+                        
+                        // Wave at the top of liquid
+                        SplashWaveShape(phase: wavePhase, amplitude: 4 * min(fillProgress * 3, 1) * max(0, 1 - fillProgress))
+                            .fill(Color.white)
+                            .frame(height: 12)
+                        
+                        // Filled area
+                        Rectangle()
+                            .fill(Color.white)
+                    }
+                    .frame(height: 80)
+                )
+        }
+    }
+    
     // MARK: - Animations
     
     private func startAnimations() {
-        // Gear spinning animation
+        // Smooth glow appearance
+        withAnimation(.easeOut(duration: 1.5)) {
+            glowOpacity = 1.0
+        }
+        
+        // Gentle glow breathing
         withAnimation(
-            .linear(duration: 3.0)
-            .repeatForever(autoreverses: false)
+            .easeInOut(duration: 3.0)
+            .repeatForever(autoreverses: true)
         ) {
-            gearRotation = 360
+            glowScale = 1.1
         }
         
-        // Text fade in
-        withAnimation(.easeIn(duration: 0.5).delay(0.3)) {
-            textOpacity = 1
-            showText = true
-        }
+        // Continuous smooth wave animation
+        startWaveAnimation()
         
-        // Progress bar animation
-        withAnimation(.easeInOut(duration: 6.0)) {
-            progressWidth = 200
+        // Smooth liquid fill
+        withAnimation(
+            .easeInOut(duration: fillDuration)
+        ) {
+            fillProgress = 1.0
         }
         
         // Generate sparkles
         generateSparkles()
         
-        // Generate dust particles
-        generateDustParticles()
+        // Pulse when fill completes
+        DispatchQueue.main.asyncAfter(deadline: .now() + fillDuration) {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.6)) {
+                pulseScale = 1.05
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                    pulseScale = 1.0
+                }
+            }
+        }
         
-        // Complete after animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                onComplete()
+        // Transition to tagline
+        DispatchQueue.main.asyncAfter(deadline: .now() + fillDuration + 0.5) {
+            transitionToTagline()
+        }
+        
+        // Complete
+        DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
+            onComplete()
+        }
+    }
+    
+    private func startWaveAnimation() {
+        // Use a display link style timer for smooth wave
+        Timer.scheduledTimer(withTimeInterval: 1/60, repeats: true) { timer in
+            wavePhase += 0.03
+            
+            if wavePhase > .pi * 100 {
+                wavePhase = 0
+            }
+            
+            // Stop after animation completes
+            DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
+                timer.invalidate()
             }
         }
     }
     
-    private func generateSparkles() {
-        // Create initial sparkles
-        for i in 0..<8 {
-            let delay = Double(i) * 0.15
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                addSparkle()
-            }
+    private func transitionToTagline() {
+        // Main text exits upward while fading
+        withAnimation(.easeInOut(duration: 0.6)) {
+            mainTextOffset = -20
+            mainTextOpacity = 0
         }
         
-        // Continue generating sparkles
-        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { timer in
-            if sparkles.count < 12 {
-                addSparkle()
-            }
+        // Tagline enters from below
+        withAnimation(.easeOut(duration: 0.7).delay(0.2)) {
+            taglineOffset = 0
+            taglineOpacity = 1
+        }
+    }
+    
+    private func generateSparkles() {
+        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { timer in
+            addSparkle()
             
-            // Stop after 6 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + animationDuration) {
                 timer.invalidate()
             }
         }
     }
     
     private func addSparkle() {
-        let sparkle = SparkleParticle(
-            x: CGFloat.random(in: -80...80),
-            y: CGFloat.random(in: -60...60),
-            size: CGFloat.random(in: 8...16),
-            opacity: Double.random(in: 0.4...1.0),
-            rotation: Double.random(in: 0...360),
-            color: [AppColors.accentBlue, AppColors.accentPurple, AppColors.accentGlow].randomElement()!
+        let angle = Double.random(in: 0...(2 * .pi))
+        let distance = CGFloat.random(in: 100...180)
+        
+        let sparkle = SplashSparkle(
+            x: cos(angle) * distance,
+            y: sin(angle) * distance * 0.4 - 20,
+            size: CGFloat.random(in: 4...12),
+            opacity: 0,
+            color: [
+                AppColors.accentPurple.opacity(0.6),
+                AppColors.accentBlue.opacity(0.6),
+                Color.white.opacity(0.4)
+            ].randomElement()!
         )
         
-        withAnimation(.easeOut(duration: 0.3)) {
-            sparkles.append(sparkle)
+        sparkles.append(sparkle)
+        let sparkleId = sparkle.id
+        
+        // Fade in
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            if let index = sparkles.firstIndex(where: { $0.id == sparkleId }) {
+                withAnimation(.easeOut(duration: 0.4)) {
+                    sparkles[index].opacity = Double.random(in: 0.3...0.7)
+                }
+            }
         }
         
-        // Remove sparkle after animation
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeOut(duration: 0.3)) {
-                sparkles.removeAll { $0.id == sparkle.id }
-            }
-        }
-    }
-    
-    private func generateDustParticles() {
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
-            let particle = DustParticle(
-                x: CGFloat.random(in: -100...100),
-                y: CGFloat.random(in: 20...80),
-                size: CGFloat.random(in: 3...8),
-                opacity: Double.random(in: 0.2...0.5)
-            )
-            
-            withAnimation(.easeOut(duration: 0.5)) {
-                dustParticles.append(particle)
-            }
-            
-            // Remove particle after animation
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    dustParticles.removeAll { $0.id == particle.id }
+        // Fade out and remove
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            if let index = sparkles.firstIndex(where: { $0.id == sparkleId }) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    sparkles[index].opacity = 0
                 }
             }
             
-            // Stop after 6 seconds
-            DispatchQueue.main.asyncAfter(deadline: .now() + 6.0) {
-                timer.invalidate()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                sparkles.removeAll { $0.id == sparkleId }
             }
         }
     }
 }
 
-// MARK: - Particle Models
+// MARK: - Splash Wave Shape
 
-struct SparkleParticle: Identifiable {
-    let id = UUID()
-    let x: CGFloat
-    let y: CGFloat
-    let size: CGFloat
-    let opacity: Double
-    let rotation: Double
-    let color: Color
+struct SplashWaveShape: Shape {
+    var phase: CGFloat
+    var amplitude: CGFloat
+    
+    var animatableData: AnimatablePair<CGFloat, CGFloat> {
+        get { AnimatablePair(phase, amplitude) }
+        set {
+            phase = newValue.first
+            amplitude = newValue.second
+        }
+    }
+    
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        
+        let midY = rect.height / 2
+        
+        path.move(to: CGPoint(x: 0, y: rect.height))
+        path.addLine(to: CGPoint(x: 0, y: midY))
+        
+        // Draw wave
+        for x in stride(from: 0, through: rect.width, by: 2) {
+            let relativeX = x / rect.width
+            let y = midY + sin(relativeX * .pi * 2.5 + phase) * amplitude
+            path.addLine(to: CGPoint(x: x, y: y))
+        }
+        
+        path.addLine(to: CGPoint(x: rect.width, y: rect.height))
+        path.closeSubpath()
+        
+        return path
+    }
 }
 
-struct DustParticle: Identifiable {
+// MARK: - Sparkle Model
+
+struct SplashSparkle: Identifiable {
     let id = UUID()
     let x: CGFloat
     let y: CGFloat
     let size: CGFloat
-    let opacity: Double
+    var opacity: Double
+    let color: Color
 }
 
 // MARK: - Preview
@@ -265,5 +361,3 @@ struct SplashView_Previews: PreviewProvider {
         SplashView(onComplete: {})
     }
 }
-
-

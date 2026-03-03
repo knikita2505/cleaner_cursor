@@ -1,0 +1,1114 @@
+import SwiftUI
+import ApphudSDK
+import StoreKit
+
+// MARK: - PaywallView (Native, iOS 17, Apphud-powered)
+
+struct PaywallView: View {
+
+    @Environment(\.dismiss) private var dismiss
+    @StateObject private var vm: PaywallViewModel
+    
+    let placement: PaywallPlacement
+    var onPurchaseSuccess: (() -> Void)?
+    
+    init(placement: PaywallPlacement = .onboarding, onPurchaseSuccess: (() -> Void)? = nil) {
+        self.placement = placement
+        self.onPurchaseSuccess = onPurchaseSuccess
+        self._vm = StateObject(wrappedValue: PaywallViewModel(placement: placement))
+    }
+
+    var body: some View {
+        ZStack {
+            PaywallBackground()
+
+            VStack(spacing: 0) {
+                topBar
+
+                // Top content - scrollable
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 16) {
+                        headerSection
+                        storageSection
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 6)
+                }
+                
+                Spacer()
+                
+                // Bottom content - fixed at bottom
+                VStack(spacing: 12) {
+                    plansSection
+                    trustLine
+                    ctaButton
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+                
+                // Footer
+                footerLinks
+                    .padding(.bottom, 16)
+            }
+        }
+        .onAppear {
+            vm.onAppear()
+        }
+        .onChange(of: vm.purchaseSuccessful) { _, success in
+            if success {
+                SubscriptionManager.shared.handleSuccessfulPurchase()
+                onPurchaseSuccess?()
+                dismiss()
+            }
+        }
+        .alert("Purchase failed", isPresented: $vm.showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(vm.errorMessage ?? "Something went wrong.")
+        }
+    }
+
+    // MARK: - Top bar
+
+    private var topBar: some View {
+        HStack {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.30))
+            }
+
+            Spacer()
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Header
+
+    private var headerSection: some View {
+        VStack(spacing: 10) {
+            Text("CLEAN UP YOUR")
+                .font(.system(size: 38, weight: .black))
+                .fontDesign(.rounded)
+                .tracking(1.2)
+                .foregroundStyle(.white)
+
+            PillTitle(text: "STORAGE")
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - Storage
+
+    private var storageSection: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 44) {
+                AppIconBadgeAsset(
+                    assetName: "pw_photos",
+                    title: "Photos",
+                    count: vm.photosCount
+                )
+
+                AppIconBadgeAsset(
+                    assetName: "pw_icloud",
+                    title: "iCloud",
+                    count: vm.icloudCount
+                )
+            }
+
+            progressBar
+        }
+        .padding(.top, 2)
+        .padding(.bottom, 24)
+    }
+
+    private var progressBar: some View {
+        VStack(spacing: 10) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.14))
+                        .frame(height: 12)
+
+                    Capsule()
+                        .fill(progressGradient)
+                        .frame(width: geo.size.width * vm.storageProgress, height: 12)
+                        .animation(.linear(duration: 0.15), value: vm.storageProgress)
+                }
+            }
+            .frame(height: 12)
+            .padding(.horizontal, 10)
+
+            HStack(spacing: 6) {
+                Text("\(vm.percentageDisplay)")
+                    .font(.system(size: 18, weight: .bold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(progressColor)
+                    .contentTransition(.numericText())
+                    .animation(.linear(duration: 0.1), value: vm.percentageDisplay)
+
+                Text("from 100% used")
+                    .font(.system(size: 18, weight: .medium))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.white.opacity(0.75))
+            }
+        }
+        .padding(.horizontal, 12)
+    }
+    
+    private var progressGradient: LinearGradient {
+        if vm.storageProgress > 0.6 {
+            return LinearGradient(colors: [Color(hex: "FF5252"), Color(hex: "FF8A65")], startPoint: .leading, endPoint: .trailing)
+        } else if vm.storageProgress > 0.4 {
+            return LinearGradient(colors: [Color(hex: "FFB74D"), Color(hex: "FFC107")], startPoint: .leading, endPoint: .trailing)
+        } else {
+            return LinearGradient(colors: [Color(hex: "66BB6A"), Color(hex: "4CAF50")], startPoint: .leading, endPoint: .trailing)
+        }
+    }
+    
+    private var progressColor: Color {
+        if vm.storageProgress > 0.6 {
+            return Color(hex: "FF5252")
+        } else if vm.storageProgress > 0.4 {
+            return Color(hex: "FFB74D")
+        } else {
+            return Color(hex: "66BB6A")
+        }
+    }
+
+    // MARK: - Plans
+
+    private var plansSection: some View {
+        VStack(spacing: 12) {
+            // Show loading state
+            if vm.isLoadingProducts {
+                loadingPlansView
+            }
+            // Show critical error (no products at all)
+            else if let error = vm.loadingError, !vm.hasAnyProduct {
+                errorPlansView(error: error)
+            }
+            // Show normal plans
+            else {
+                premiumDescription
+                planCardWeekly
+                planCardYearly
+            }
+        }
+    }
+    
+    private var premiumDescription: some View {
+        Text("Ad-free smart cleaning and video compression without limits, secret storage, contact management and analytics.")
+            .font(.system(size: 15, weight: .medium))
+            .fontDesign(.rounded)
+            .foregroundStyle(Color.white.opacity(0.75))
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 8)
+            .padding(.bottom, 4)
+    }
+    
+    private var loadingPlansView: some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                .scaleEffect(1.2)
+            
+            Text("Loading subscription options...")
+                .font(.system(size: 14, weight: .medium))
+                .fontDesign(.rounded)
+                .foregroundStyle(Color.white.opacity(0.60))
+        }
+        .frame(height: 180)
+    }
+    
+    private func errorPlansView(error: PaywallError) -> some View {
+        VStack(spacing: 16) {
+            Image(systemName: "exclamationmark.triangle")
+                .font(.system(size: 36))
+                .foregroundStyle(Color(hex: "FFB74D"))
+            
+            VStack(spacing: 6) {
+                Text(error.title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                
+                Text(error.message)
+                    .font(.system(size: 14, weight: .medium))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.white.opacity(0.60))
+                    .multilineTextAlignment(.center)
+            }
+            
+            Button {
+                vm.retryLoadProducts()
+            } label: {
+                Text("Try Again")
+                    .font(.system(size: 14, weight: .semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 10)
+                    .background(
+                        Capsule()
+                            .fill(Color(hex: "8B5CF6").opacity(0.80))
+                    )
+            }
+        }
+        .frame(height: 180)
+        .padding(.horizontal, 20)
+    }
+
+    private var planCardWeekly: some View {
+        PlanCard(
+            titleTop: vm.weeklyTitleTop,
+            mainPriceLine: vm.weeklyMainLine,
+            rightBadgeText: vm.weeklyBadge,
+            rightSubBadgeText: nil,
+            isSelected: vm.selectedPlan == .weekly,
+            isDimmed: false,
+            onTap: { vm.select(.weekly) }
+        )
+    }
+
+    private var planCardYearly: some View {
+        PlanCard(
+            titleTop: "YEARLY ACCESS",
+            mainPriceLine: vm.yearlyMainLine,
+            rightBadgeText: "BEST OFFER",
+            rightSubBadgeText: vm.yearlyPerWeekLine,
+            isSelected: vm.selectedPlan == .yearly,
+            isDimmed: false,
+            onTap: { vm.select(.yearly) }
+        )
+    }
+    
+    // MARK: - Prices Note
+    
+    @ViewBuilder
+    private var pricesNote: some View {
+        if vm.pricesMissing {
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 12))
+                
+                Text("Prices will be displayed at checkout")
+                    .font(.system(size: 12, weight: .medium))
+                    .fontDesign(.rounded)
+            }
+            .foregroundStyle(Color.white.opacity(0.50))
+            .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Trust line
+
+    private var trustLine: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "checkmark.shield.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.white.opacity(0.55))
+
+                Text(vm.isTrialEligible ? "NO PAYMENT NOW" : "CANCEL ANYTIME")
+                    .font(.system(size: 13, weight: .semibold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(Color.white.opacity(0.75))
+            }
+            
+            pricesNote
+        }
+        .padding(.top, 4)
+    }
+
+    // MARK: - CTA
+    
+    private var isButtonDisabled: Bool {
+        vm.isPurchasing || vm.isLoadingProducts || !vm.hasAnyProduct
+    }
+
+    private var ctaButton: some View {
+        Button {
+            vm.purchaseSelected()
+        } label: {
+            ZStack {
+                if vm.isPurchasing {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else if vm.isLoadingProducts {
+                    Text("LOADING...")
+                        .font(.system(size: 18, weight: .bold))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(.white.opacity(0.70))
+                } else {
+                    Text(vm.isTrialEligible && vm.selectedPlan == .weekly ? "START FREE TRIAL" : "CONTINUE")
+                        .font(.system(size: 18, weight: .bold))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(.white)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 18)
+            .background(
+                RoundedRectangle(cornerRadius: 30, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(hex: "A78BFA"), Color(hex: "8B5CF6")],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .shadow(color: Color(hex: "8B5CF6").opacity(0.35), radius: 22, x: 0, y: 12)
+            )
+        }
+        .buttonStyle(ScaleButtonStyle())
+        .disabled(isButtonDisabled)
+        .opacity(isButtonDisabled ? 0.65 : 1.0)
+        .padding(.top, 8)
+    }
+
+    // MARK: - Footer
+
+    private var footerLinks: some View {
+        HStack(spacing: 22) {
+            Button("Restore") {
+                vm.restore()
+            }
+            .font(.system(size: 13, weight: .medium))
+            .fontDesign(.rounded)
+            .foregroundStyle(Color.white.opacity(0.40))
+
+            Link("Terms of use", destination: URL(string: PaywallConstants.termsURL)!)
+                .font(.system(size: 13, weight: .medium))
+                .fontDesign(.rounded)
+                .foregroundStyle(Color.white.opacity(0.40))
+
+            Link("Privacy Policy", destination: URL(string: PaywallConstants.privacyURL)!)
+                .font(.system(size: 13, weight: .medium))
+                .fontDesign(.rounded)
+                .foregroundStyle(Color.white.opacity(0.40))
+        }
+        .padding(.top, 12)
+    }
+}
+
+// MARK: - ViewModel
+
+@MainActor
+final class PaywallViewModel: ObservableObject {
+    
+    // Placement
+    let placement: PaywallPlacement
+
+    // UI state
+    @Published var selectedPlan: PaywallSubscriptionPlan = .weekly
+
+    @Published var storageProgress: CGFloat = 1.0
+    @Published var percentageDisplay: Int = 100
+    @Published var photosCount: Int = 823
+    @Published var icloudCount: Int = 470
+
+    @Published var isPurchasing: Bool = false
+    @Published var showError: Bool = false
+    @Published var errorMessage: String?
+    
+    // Purchase success flag
+    @Published var purchaseSuccessful: Bool = false
+    
+    // Animation timers
+    private var percentTimer: Timer?
+    private var photosTimer: Timer?
+    private var icloudTimer: Timer?
+    private var cycleTimer: Timer?
+
+    // Apphud products
+    @Published private(set) var weeklyProduct: ApphudProduct?
+    @Published private(set) var yearlyProduct: ApphudProduct?
+    private var currentPaywall: ApphudPaywall?
+    
+    // Trial eligibility
+    @Published var isTrialEligible: Bool = false
+    
+    // Loading & Error states
+    @Published var isLoadingProducts: Bool = true
+    @Published var loadingError: PaywallError?
+    
+    // MARK: - Init
+    
+    init(placement: PaywallPlacement = .onboarding) {
+        self.placement = placement
+    }
+
+    var weeklyAvailable: Bool { weeklyProduct != nil }
+    var yearlyAvailable: Bool { yearlyProduct != nil }
+    var hasAnyProduct: Bool { weeklyAvailable || yearlyAvailable }
+    
+    /// True if at least one product has valid SKProduct with price
+    var hasPricesLoaded: Bool {
+        weeklyProduct?.skProduct != nil || yearlyProduct?.skProduct != nil
+    }
+    
+    /// True if products exist but prices didn't load
+    var pricesMissing: Bool {
+        hasAnyProduct && !hasPricesLoaded
+    }
+
+    // Display strings - dynamic based on trial eligibility
+    var weeklyTitleTop: String {
+        isTrialEligible ? "3-DAY FREE TRIAL" : "WEEKLY ACCESS"
+    }
+
+    var weeklyBadge: String {
+        isTrialEligible ? "3 DAYS FREE" : "WEEKLY"
+    }
+
+    var weeklyMainLine: String? {
+        guard let p = weeklyProduct?.skProduct else { return nil }
+        let price = formatPrice(p)
+        return isTrialEligible ? "then \(price) / week" : "\(price) / week"
+    }
+
+    var yearlyMainLine: String? {
+        guard let p = yearlyProduct?.skProduct else { return nil }
+        return "\(formatPrice(p)) / year"
+    }
+
+    var yearlyPerWeekLine: String? {
+        guard let p = yearlyProduct?.skProduct else { return nil }
+        let weekly = (p.price as Decimal) / 52
+        return "\(formatPrice(weekly, locale: p.priceLocale))/WEEK"
+    }
+
+    func onAppear() {
+        // Load products
+        loadProducts()
+
+        // Run intro animation after small delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            self.runIntroAnimation()
+        }
+    }
+    
+    func retryLoadProducts() {
+        loadProducts()
+    }
+
+    func select(_ plan: PaywallSubscriptionPlan) {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            selectedPlan = plan
+        }
+    }
+
+    func purchaseSelected() {
+        let product: ApphudProduct?
+        switch selectedPlan {
+        case .weekly:
+            product = weeklyProduct
+        case .yearly:
+            product = yearlyProduct
+        }
+
+        guard let product else {
+            // Show user-friendly error when products aren't loaded
+            showErr("Unable to load subscription details. Please check your internet connection and try again.")
+            return
+        }
+
+        isPurchasing = true
+
+        Apphud.purchase(product) { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isPurchasing = false
+
+                if result.success {
+                    // Purchase successful
+                    self.purchaseSuccessful = true
+                } else {
+                    // Provide user-friendly error messages
+                    let errorMessage = self.friendlyErrorMessage(from: result.error)
+                    self.showErr(errorMessage)
+                }
+            }
+        }
+    }
+    
+    /// Convert system errors to user-friendly messages
+    private func friendlyErrorMessage(from error: Error?) -> String {
+        guard let error = error else {
+            return "Purchase could not be completed. Please try again."
+        }
+        
+        let nsError = error as NSError
+        
+        // Check for common StoreKit errors
+        switch nsError.code {
+        case 0: // SKErrorUnknown
+            return "An unknown error occurred. Please try again."
+        case 1: // SKErrorClientInvalid
+            return "You are not allowed to make purchases on this device."
+        case 2: // SKErrorPaymentCancelled
+            return "Purchase was cancelled."
+        case 3: // SKErrorPaymentInvalid
+            return "Payment information is invalid. Please check your payment method."
+        case 4: // SKErrorPaymentNotAllowed
+            return "This device is not allowed to make purchases. Please check your device settings."
+        case 5: // SKErrorStoreProductNotAvailable
+            return "This subscription is not available in your region."
+        case 6: // SKErrorCloudServicePermissionDenied
+            return "Access to cloud service was denied."
+        case 7: // SKErrorCloudServiceNetworkConnectionFailed
+            return "Could not connect to the App Store. Please check your internet connection."
+        case 8: // SKErrorCloudServiceRevoked
+            return "Cloud service access has been revoked."
+        default:
+            // Check for network-related errors
+            if nsError.domain == NSURLErrorDomain {
+                return "No internet connection. Please check your network and try again."
+            }
+            return "Purchase failed. Please check your internet connection and try again."
+        }
+    }
+
+    func restore() {
+        isPurchasing = true
+        Apphud.restorePurchases { [weak self] result in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isPurchasing = false
+                
+                // Check if restore was successful and user now has premium
+                if Apphud.hasActiveSubscription() {
+                    self.purchaseSuccessful = true
+                } else if !result.success, let error = result.error {
+                    self.showErr(error.localizedDescription)
+                } else {
+                    self.showErr("No active subscription found.")
+                }
+            }
+        }
+    }
+
+    // MARK: - Private
+
+    private func loadProducts() {
+        isLoadingProducts = true
+        loadingError = nil
+        
+        print("📦 [Paywall] Loading products...")
+        print("📦 [Paywall] Looking for placement: \(placement.identifier)")
+        print("📦 [Paywall] Looking for products: \(PaywallConstants.weeklyProductId), \(PaywallConstants.yearlyProductId)")
+        
+        Apphud.fetchPlacements { [weak self] placements, error in
+            guard let self else { return }
+            
+            DispatchQueue.main.async {
+                self.isLoadingProducts = false
+                
+                // Log error if any
+                if let error = error {
+                    print("❌ [Paywall] Error fetching placements: \(error.localizedDescription)")
+                    // Don't set error yet, might still have cached data
+                }
+                
+                // Log all placements
+                print("📦 [Paywall] Received \(placements.count) placements")
+                for placement in placements {
+                    print("   - Placement: '\(placement.identifier)'")
+                    if let paywall = placement.paywall {
+                        print("     Paywall: '\(paywall.identifier)', products: \(paywall.products.count)")
+                        for product in paywall.products {
+                            print("       - Product: '\(product.productId)', skProduct: \(product.skProduct != nil ? "loaded" : "nil")")
+                        }
+                    } else {
+                        print("     No paywall attached")
+                    }
+                }
+                
+                // Check if no placements at all
+                if placements.isEmpty {
+                    print("❌ [Paywall] No placements received")
+                    self.loadingError = .productsNotAvailable
+                    return
+                }
+                
+                // Find placement by identifier
+                guard let foundPlacement = placements.first(where: { $0.identifier == self.placement.identifier }) else {
+                    print("❌ [Paywall] Placement '\(self.placement.identifier)' not found!")
+                    print("❌ [Paywall] Available placements: \(placements.map { $0.identifier })")
+                    self.loadingError = .placementNotFound
+                    return
+                }
+                
+                guard let paywall = foundPlacement.paywall else {
+                    print("❌ [Paywall] Placement found but no paywall attached!")
+                    self.loadingError = .paywallNotFound
+                    return
+                }
+                
+                print("✅ [Paywall] Found paywall: '\(paywall.identifier)'")
+                
+                self.currentPaywall = paywall
+                
+                // Log paywall shown
+                Apphud.paywallShown(paywall)
+                
+                // Get products from paywall
+                let products = paywall.products
+                print("📦 [Paywall] Paywall has \(products.count) products")
+                
+                if products.isEmpty {
+                    print("❌ [Paywall] No products in paywall!")
+                    self.loadingError = .productsNotAvailable
+                    return
+                }
+                
+                self.weeklyProduct = products.first(where: { $0.productId == PaywallConstants.weeklyProductId })
+                self.yearlyProduct = products.first(where: { $0.productId == PaywallConstants.yearlyProductId })
+                
+                print("📦 [Paywall] Weekly product: \(self.weeklyProduct?.productId ?? "not found")")
+                print("📦 [Paywall] Yearly product: \(self.yearlyProduct?.productId ?? "not found")")
+                
+                if let weekly = self.weeklyProduct {
+                    print("   Weekly SKProduct: \(weekly.skProduct != nil ? "loaded" : "nil")")
+                }
+                if let yearly = self.yearlyProduct {
+                    print("   Yearly SKProduct: \(yearly.skProduct != nil ? "loaded" : "nil")")
+                }
+                
+                // Check if we have products but no prices (SKProduct missing)
+                if self.hasAnyProduct && !self.hasPricesLoaded {
+                    print("⚠️ [Paywall] Products found but prices not loaded (SKProduct = nil)")
+                    self.loadingError = .pricesNotLoaded
+                }
+
+                // Set default selected plan based on availability
+                if self.weeklyProduct == nil, self.yearlyProduct != nil {
+                    self.selectedPlan = .yearly
+                } else if self.yearlyProduct == nil, self.weeklyProduct != nil {
+                    self.selectedPlan = .weekly
+                }
+                
+                // Check trial eligibility for weekly product
+                self.checkTrialEligibility()
+            }
+        }
+    }
+    
+    private func checkTrialEligibility() {
+        guard let weeklyProduct = weeklyProduct,
+              let skProduct = weeklyProduct.skProduct else {
+            isTrialEligible = false
+            return
+        }
+        
+        // Check eligibility for introductory offer using Apphud
+        Apphud.checkEligibilityForIntroductoryOffer(product: skProduct) { [weak self] eligible in
+            DispatchQueue.main.async {
+                self?.isTrialEligible = eligible
+                print("📦 [Paywall] Trial eligibility: \(eligible)")
+            }
+        }
+    }
+
+    private func runIntroAnimation() {
+        runAnimationCycle()
+    }
+    
+    private func stopAllTimers() {
+        percentTimer?.invalidate()
+        photosTimer?.invalidate()
+        icloudTimer?.invalidate()
+        cycleTimer?.invalidate()
+        percentTimer = nil
+        photosTimer = nil
+        icloudTimer = nil
+        cycleTimer = nil
+    }
+    
+    private func runAnimationCycle() {
+        stopAllTimers()
+        
+        let duration: Double = 10.0
+        let pauseBeforeRestart: Double = 2.0
+        
+        // Reset to initial values
+        percentageDisplay = 100
+        storageProgress = 1.0
+        photosCount = 823
+        icloudCount = 470
+        
+        // Each counter decreases by 1, but at different speeds to finish at the same time
+        // Percent: 100 → 25 = 75 steps, interval = 10/75 = 0.133 sec
+        // Photos: 823 → 205 = 618 steps, interval = 10/618 = 0.016 sec
+        // iCloud: 470 → 117 = 353 steps, interval = 10/353 = 0.028 sec
+        
+        let percentSteps = 100 - 25 // 75
+        let photosSteps = 823 - 205 // 618
+        let icloudSteps = 470 - 117 // 353
+        
+        let percentInterval = duration / Double(percentSteps)
+        let photosInterval = duration / Double(photosSteps)
+        let icloudInterval = duration / Double(icloudSteps)
+        
+        // Percent timer
+        percentTimer = Timer.scheduledTimer(withTimeInterval: percentInterval, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else { timer.invalidate(); return }
+                if self.percentageDisplay > 25 {
+                    self.percentageDisplay -= 1
+                    self.storageProgress = CGFloat(self.percentageDisplay) / 100.0
+                } else {
+                    timer.invalidate()
+                }
+            }
+        }
+        
+        // Photos timer
+        photosTimer = Timer.scheduledTimer(withTimeInterval: photosInterval, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else { timer.invalidate(); return }
+                if self.photosCount > 205 {
+                    self.photosCount -= 1
+                } else {
+                    timer.invalidate()
+                }
+            }
+        }
+        
+        // iCloud timer
+        icloudTimer = Timer.scheduledTimer(withTimeInterval: icloudInterval, repeats: true) { [weak self] timer in
+            DispatchQueue.main.async {
+                guard let self else { timer.invalidate(); return }
+                if self.icloudCount > 117 {
+                    self.icloudCount -= 1
+                } else {
+                    timer.invalidate()
+                }
+            }
+        }
+        
+        // Schedule next cycle
+        cycleTimer = Timer.scheduledTimer(withTimeInterval: duration + pauseBeforeRestart, repeats: false) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.runAnimationCycle()
+            }
+        }
+    }
+
+    private func showErr(_ message: String) {
+        errorMessage = message
+        showError = true
+    }
+
+    private func formatPrice(_ product: SKProduct) -> String {
+        formatPrice(product.price as Decimal, locale: product.priceLocale)
+    }
+
+    private func formatPrice(_ value: Decimal, locale: Locale) -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = locale
+        return formatter.string(from: value as NSDecimalNumber) ?? "\(value)"
+    }
+}
+
+// MARK: - Constants
+
+private enum PaywallConstants {
+    // App Store product IDs (must match App Store Connect + Apphud Products)
+    static let weeklyProductId = "magicswipe.premium.week1"
+    static let yearlyProductId = "magicswipe.premium.year1"
+
+    // Footer links
+    static let termsURL = "https://magicswipe.app/terms.html"
+    static let privacyURL = "https://magicswipe.app/privacy.html"
+}
+
+// MARK: - Subscription Plan
+
+enum PaywallSubscriptionPlan: String {
+    case weekly, yearly
+}
+
+// MARK: - Paywall Errors
+
+enum PaywallError: Equatable {
+    case noInternet
+    case placementNotFound
+    case paywallNotFound
+    case productsNotAvailable
+    case pricesNotLoaded
+    case unknown(String)
+    
+    var title: String {
+        switch self {
+        case .noInternet:
+            return "No Internet Connection"
+        case .placementNotFound, .paywallNotFound:
+            return "Configuration Error"
+        case .productsNotAvailable:
+            return "Products Unavailable"
+        case .pricesNotLoaded:
+            return "Prices Loading..."
+        case .unknown:
+            return "Something Went Wrong"
+        }
+    }
+    
+    var message: String {
+        switch self {
+        case .noInternet:
+            return "Please check your connection and try again."
+        case .placementNotFound, .paywallNotFound:
+            return "Unable to load subscription options. Please try again later."
+        case .productsNotAvailable:
+            return "Subscriptions are temporarily unavailable. Please try again later."
+        case .pricesNotLoaded:
+            return "Prices will be shown at checkout."
+        case .unknown(let msg):
+            return msg
+        }
+    }
+    
+    static func == (lhs: PaywallError, rhs: PaywallError) -> Bool {
+        switch (lhs, rhs) {
+        case (.noInternet, .noInternet),
+             (.placementNotFound, .placementNotFound),
+             (.paywallNotFound, .paywallNotFound),
+             (.productsNotAvailable, .productsNotAvailable),
+             (.pricesNotLoaded, .pricesNotLoaded):
+            return true
+        case (.unknown(let a), .unknown(let b)):
+            return a == b
+        default:
+            return false
+        }
+    }
+}
+
+// MARK: - UI Components
+
+private struct PaywallBackground: View {
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(hex: "1A0A2E"),
+                    Color(hex: "16082A"),
+                    Color(hex: "0D0618")
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
+
+            // Glow blobs
+            Circle()
+                .fill(Color(hex: "8B5CF6").opacity(0.30))
+                .frame(width: 280, height: 280)
+                .blur(radius: 70)
+                .offset(x: 130, y: -220)
+
+            Circle()
+                .fill(Color(hex: "A78BFA").opacity(0.18))
+                .frame(width: 320, height: 320)
+                .blur(radius: 80)
+                .offset(x: -150, y: 260)
+
+            // Sparkles - purple color matching STORAGE block
+            // Near close button (top left)
+            Image(systemName: "sparkle")
+                .font(.system(size: 14))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.85))
+                .offset(x: -140, y: -390)
+            
+            // Left side of header
+            Image(systemName: "sparkle")
+                .font(.system(size: 12))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.70))
+                .offset(x: -155, y: -280)
+            
+            // Top right of header  
+            Image(systemName: "sparkle")
+                .font(.system(size: 20))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.95))
+                .offset(x: 160, y: -320)
+            
+            // Right side near STORAGE
+            Image(systemName: "sparkle")
+                .font(.system(size: 16))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.80))
+                .offset(x: 155, y: -250)
+            
+            // Small one on right
+            Image(systemName: "sparkle")
+                .font(.system(size: 10))
+                .foregroundStyle(Color(hex: "A78BFA").opacity(0.60))
+                .offset(x: 165, y: -200)
+        }
+    }
+}
+
+private struct GlassCard: View {
+    var corner: CGFloat = 18
+    var body: some View {
+        RoundedRectangle(cornerRadius: corner, style: .continuous)
+            .fill(.ultraThinMaterial.opacity(0.35))
+            .overlay(
+                RoundedRectangle(cornerRadius: corner, style: .continuous)
+                    .stroke(Color.white.opacity(0.14), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.25), radius: 18, x: 0, y: 10)
+    }
+}
+
+private struct PillTitle: View {
+    let text: String
+    var body: some View {
+        Text(text)
+            .font(.system(size: 34, weight: .black))
+            .fontDesign(.rounded)
+            .tracking(1.0)
+            .foregroundStyle(Color(hex: "1A0A2E"))
+            .padding(.horizontal, 22)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(hex: "A78BFA").opacity(0.92))
+                    .shadow(color: Color(hex: "8B5CF6").opacity(0.35), radius: 18, x: 0, y: 10)
+            )
+    }
+}
+
+private struct AppIconBadgeAsset: View {
+    let assetName: String
+    let title: String
+    let count: Int
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    .fill(.ultraThinMaterial.opacity(0.20))
+                    .frame(width: 90, height: 90)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 22, style: .continuous)
+                            .stroke(Color.white.opacity(0.10), lineWidth: 1)
+                    )
+                    .overlay(
+                        Image(assetName)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 76, height: 76)
+                            .shadow(color: .black.opacity(0.18), radius: 10, x: 0, y: 6)
+                    )
+
+                Text("\(count)")
+                    .font(.system(size: 14, weight: .bold))
+                    .fontDesign(.rounded)
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color(hex: "FF4D4D")))
+                    .offset(x: 10, y: -10)
+                    .contentTransition(.numericText())
+            }
+
+            Text(title)
+                .font(.system(size: 16, weight: .medium))
+                .fontDesign(.rounded)
+                .foregroundStyle(Color.white.opacity(0.80))
+        }
+    }
+}
+
+private struct PlanCard: View {
+    let titleTop: String
+    let mainPriceLine: String?
+    let rightBadgeText: String
+    let rightSubBadgeText: String?
+    let isSelected: Bool
+    let isDimmed: Bool
+    let onTap: () -> Void
+
+    var body: some View {
+        Button {
+            if !isDimmed { onTap() }
+        } label: {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(titleTop)
+                        .font(.system(size: 15, weight: .semibold))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(Color.white.opacity(0.70))
+
+                    if let priceLine = mainPriceLine {
+                        Text(priceLine)
+                            .font(.system(size: 14, weight: .medium))
+                            .fontDesign(.rounded)
+                            .foregroundStyle(.white.opacity(0.90))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
+                    }
+                }
+
+                Spacer()
+
+                VStack(alignment: .trailing, spacing: 6) {
+                    Text(rightBadgeText)
+                        .font(.system(size: 11, weight: .bold))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(isSelected ? .white : Color(hex: "A78BFA"))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(
+                                isSelected
+                                ? Color(hex: "8B5CF6").opacity(0.95)
+                                : Color(hex: "8B5CF6").opacity(0.28)
+                            )
+                        )
+
+                    if let rightSubBadgeText {
+                        Text(rightSubBadgeText)
+                            .font(.system(size: 11, weight: .semibold))
+                            .fontDesign(.rounded)
+                            .foregroundStyle(Color.white.opacity(0.55))
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 16)
+            .background(
+                ZStack {
+                    GlassCard(corner: 18)
+                    if isSelected {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color(hex: "8B5CF6").opacity(0.18))
+                    }
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(isSelected ? Color(hex: "8B5CF6").opacity(0.95) : Color.clear, lineWidth: 2)
+            )
+            .opacity(isDimmed ? 0.45 : 1.0)
+            .animation(.easeInOut(duration: 0.2), value: isSelected)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Preview
+
+struct PaywallView_Previews: PreviewProvider {
+    static var previews: some View {
+        PaywallView()
+            .preferredColorScheme(.dark)
+    }
+}

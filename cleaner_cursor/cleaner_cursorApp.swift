@@ -1,9 +1,19 @@
 import SwiftUI
 import Photos
 import Contacts
+import ApphudSDK
+import AppsFlyerLib
 
 @main
 struct CleanerApp: App {
+    
+    init() {
+        // 1. Initialize Apphud SDK first
+        Apphud.start(apiKey: "app_nmqxh6EVfa5mV9s2P29r2CTX7CpJ9M")
+        
+        // 2. Configure AppsFlyer (after Apphud to link User IDs)
+        AppsFlyerService.shared.configure()
+    }
     
     // MARK: - Body
 
@@ -22,9 +32,11 @@ struct CleanerApp: App {
 struct RootView: View {
     
     @EnvironmentObject private var appState: AppState
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     @State private var showSplash: Bool = true
     @State private var showPermissions: Bool = false
     @State private var permissionsCompleted: Bool = false
+    @State private var hasShownOnboardingPaywall: Bool = false
     
     var body: some View {
         ZStack {
@@ -75,9 +87,36 @@ struct RootView: View {
                 checkPermissionsStatus()
             }
         }
+        .onChange(of: permissionsCompleted) { _, completed in
+            if completed && !hasShownOnboardingPaywall {
+                // Show onboarding paywall after permissions completed
+                showOnboardingPaywallIfNeeded()
+            }
+        }
         .onAppear {
             // Start background loading during splash
             startBackgroundLoading()
+            
+            // Check subscription status
+            subscriptionManager.checkSubscriptionStatus()
+        }
+        .fullScreenCover(isPresented: $subscriptionManager.showPaywall) {
+            // Use different paywall based on placement
+            if subscriptionManager.currentPlacement == .onboarding {
+                PaywallView(placement: subscriptionManager.currentPlacement)
+            } else {
+                PremiumPaywallView(placement: subscriptionManager.currentPlacement)
+            }
+        }
+    }
+    
+    private func showOnboardingPaywallIfNeeded() {
+        // Delay slightly to allow UI to settle
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            if !subscriptionManager.isPremium {
+                hasShownOnboardingPaywall = true
+                subscriptionManager.showPaywall(for: .onboarding)
+            }
         }
     }
     

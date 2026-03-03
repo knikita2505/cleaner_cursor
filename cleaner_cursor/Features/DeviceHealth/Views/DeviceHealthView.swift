@@ -41,10 +41,10 @@ struct DeviceHealthView: View {
         .navigationTitle("Device Health")
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            healthService.refresh()
-            
             guard !hasAppeared else { return }
             hasAppeared = true
+            
+            healthService.refresh()
             
             // Show feature tip on first visit
             if tipService.shouldShowTip(for: .deviceHealth) {
@@ -139,20 +139,15 @@ struct DeviceHealthView: View {
     
     private var categoriesSection: some View {
         VStack(spacing: 2) {
-            // Storage - переключает на таб Clean
-            Button {
-                appState.selectedTab = .clean
-            } label: {
-                categoryRow(
-                    icon: "internaldrive.fill",
-                    title: "Storage",
-                    subtitle: "\(Int((storageService.storageInfo?.usagePercentage ?? 0) * 100))% used",
-                    status: healthService.storageStatus,
-                    score: healthService.storageScore,
-                    showChevron: true
-                )
-            }
-            .buttonStyle(.plain)
+            // Storage - информационная строка без навигации
+            categoryRow(
+                icon: "internaldrive.fill",
+                title: "Storage",
+                subtitle: "\(Int((storageService.storageInfo?.usagePercentage ?? 0) * 100))% used",
+                status: healthService.storageStatus,
+                score: healthService.storageScore,
+                showChevron: false
+            )
             
             Divider()
                 .background(AppColors.textTertiary.opacity(0.1))

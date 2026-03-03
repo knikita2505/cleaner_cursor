@@ -156,6 +156,7 @@ struct SimilarGroupCard: View {
 struct SimilarNamesActionSheet: View {
     let group: ContactSimilarGroup
     @ObservedObject private var service = ContactsService.shared
+    @ObservedObject private var subscriptionManager = SubscriptionManager.shared
     @Environment(\.dismiss) private var dismiss
     @State private var contactToDelete: CNContact?
     @State private var showDeleteConfirm = false
@@ -262,6 +263,12 @@ struct SimilarNamesActionSheet: View {
     }
     
     private func deleteContact(_ contact: CNContact) async {
+        // Check premium access
+        guard subscriptionManager.canAccessFeature(.contacts) else {
+            subscriptionManager.showPaywall(for: .premiumFeature)
+            return
+        }
+        
         isDeleting = true
         
         do {
