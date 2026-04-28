@@ -13,6 +13,9 @@ struct CleanerApp: App {
         
         // 2. Configure AppsFlyer (after Apphud to link User IDs)
         AppsFlyerService.shared.configure()
+        
+        // 3. Activate AppMetrica (after Apphud to link device_id)
+        AppMetricaService.shared.activate()
     }
     
     // MARK: - Body

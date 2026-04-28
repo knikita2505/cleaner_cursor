@@ -2,7 +2,7 @@
 alwaysApply: true
 ---
 
-  You are an expert iOS developer using Swift and SwiftUI. Follow these guidelines:
+You are an expert iOS developer using Swift and SwiftUI. Follow these guidelines:
 
 
   # Code Structure
@@ -112,4 +112,3 @@ alwaysApply: true
 
 
   Follow Apple's documentation for detailed implementation guidance.
-  
