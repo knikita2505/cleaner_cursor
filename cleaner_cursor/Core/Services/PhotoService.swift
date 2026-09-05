@@ -50,24 +50,22 @@ final class PhotoService: ObservableObject {
     }
     
     func requestAuthorization() async -> Bool {
-        let existing = PHPhotoLibrary.authorizationStatus(for: .readWrite)
-        if existing != .notDetermined {
-            authorizationStatus = existing
-            return existing == .authorized || existing == .limited
-        }
-
-        // PhotoKit's async API can hang forever if awaited on the MainActor.
-        let status = await Self.requestPhotoLibraryAccess()
-        authorizationStatus = status
-        return status == .authorized || status == .limited
-    }
-
-    nonisolated private static func requestPhotoLibraryAccess() async -> PHAuthorizationStatus {
-        await withCheckedContinuation { continuation in
-            PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
-                continuation.resume(returning: status)
+        let status = await withCheckedContinuation { (continuation: CheckedContinuation<PHAuthorizationStatus, Never>) in
+            let request = {
+                PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+                    DispatchQueue.main.async {
+                        continuation.resume(returning: newStatus)
+                    }
+                }
+            }
+            if Thread.isMainThread {
+                request()
+            } else {
+                DispatchQueue.main.async(execute: request)
             }
         }
+        authorizationStatus = status
+        return status == .authorized || status == .limited
     }
     
     var isAuthorized: Bool {

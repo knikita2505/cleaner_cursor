@@ -166,7 +166,6 @@ struct RootView: View {
 struct PermissionsRequestView: View {
     let onComplete: () -> Void
     
-    @Environment(\.scenePhase) private var scenePhase
     @State private var currentStep: Int = 0
     @State private var isRequesting = false
     @ObservedObject private var photoService = PhotoService.shared
@@ -237,10 +236,6 @@ struct PermissionsRequestView: View {
                 .padding(.bottom, 50)
             }
         }
-        .onChange(of: scenePhase) { _, newPhase in
-            guard newPhase == .active, isRequesting else { return }
-            advanceIfPermissionAlreadyDecided()
-        }
     }
     
     private func permissionContent(
@@ -305,23 +300,6 @@ struct PermissionsRequestView: View {
             _ = await contactsService.requestAuthorization()
         }
 
-        advanceAfterPermissionRequest()
-    }
-
-    private func advanceIfPermissionAlreadyDecided() {
-        if currentStep == 0 {
-            photoService.checkAuthorizationStatus()
-            guard photoService.authorizationStatus != .notDetermined else { return }
-        } else {
-            contactsService.checkAuthorization()
-            let status = CNContactStore.authorizationStatus(for: .contacts)
-            guard status != .notDetermined else { return }
-        }
-        advanceAfterPermissionRequest()
-    }
-
-    private func advanceAfterPermissionRequest() {
-        guard isRequesting else { return }
         isRequesting = false
         moveToNextStep()
     }
