@@ -26,6 +26,8 @@
 		11205BE32ED4D7A2003AFFF9 /* cleaner_cursorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */; };
 		11205BE52ED4D7A2003AFFF9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BE42ED4D7A2003AFFF9 /* ContentView.swift */; };
 		11205BE72ED4D7A3003AFFF9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 11205BE62ED4D7A3003AFFF9 /* Assets.xcassets */; };
+		11A0C0032F10CA100001A103 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 11A0C0012F10CA100001A101 /* Localizable.xcstrings */; };
+		11A0C0042F10CA100001A104 /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 11A0C0022F10CA100001A102 /* InfoPlist.xcstrings */; };
 		11205BEA2ED4D7A3003AFFF9 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 11205BE92ED4D7A3003AFFF9 /* Preview Assets.xcassets */; };
 		11205BEC2ED4D7A3003AFFF9 /* Persistence.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11205BEB2ED4D7A3003AFFF9 /* Persistence.swift */; };
 		11205BEF2ED4D7A3003AFFF9 /* cleaner_cursor.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = 11205BED2ED4D7A3003AFFF9 /* cleaner_cursor.xcdatamodeld */; };
@@ -130,6 +132,8 @@
 		11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = cleaner_cursorApp.swift; sourceTree = "<group>"; };
 		11205BE42ED4D7A2003AFFF9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		11205BE62ED4D7A3003AFFF9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		11A0C0012F10CA100001A101 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		11A0C0022F10CA100001A102 /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
 		11205BE92ED4D7A3003AFFF9 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		11205BEB2ED4D7A3003AFFF9 /* Persistence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Persistence.swift; sourceTree = "<group>"; };
 		11205BEE2ED4D7A3003AFFF9 /* cleaner_cursor.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = cleaner_cursor.xcdatamodel; sourceTree = "<group>"; };
@@ -315,6 +319,8 @@
 				11205BE22ED4D7A2003AFFF9 /* cleaner_cursorApp.swift */,
 				11205BE42ED4D7A2003AFFF9 /* ContentView.swift */,
 				11205BE62ED4D7A3003AFFF9 /* Assets.xcassets */,
+				11A0C0012F10CA100001A101 /* Localizable.xcstrings */,
+				11A0C0022F10CA100001A102 /* InfoPlist.xcstrings */,
 				11205BEB2ED4D7A3003AFFF9 /* Persistence.swift */,
 				11205BED2ED4D7A3003AFFF9 /* cleaner_cursor.xcdatamodeld */,
 				11205BE82ED4D7A3003AFFF9 /* Preview Content */,
@@ -752,6 +758,9 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				es,
+				ja,
+				"pt-BR",
 				Base,
 			);
 			mainGroup = 11205BD62ED4D7A1003AFFF9;
@@ -778,6 +787,8 @@
 			files = (
 				11205BEA2ED4D7A3003AFFF9 /* Preview Assets.xcassets in Resources */,
 				11205BE72ED4D7A3003AFFF9 /* Assets.xcassets in Resources */,
+				11A0C0032F10CA100001A103 /* Localizable.xcstrings in Resources */,
+				11A0C0042F10CA100001A104 /* InfoPlist.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1040,7 +1051,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"cleaner_cursor/Preview Content\"";
 				DEVELOPMENT_TEAM = 424XBTW2M9;
 				ENABLE_PREVIEWS = YES;
@@ -1058,7 +1069,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "nikita.ka.phone-cleaner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1077,7 +1088,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_ASSET_PATHS = "\"cleaner_cursor/Preview Content\"";
 				DEVELOPMENT_TEAM = 424XBTW2M9;
 				ENABLE_PREVIEWS = YES;
@@ -1095,7 +1106,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 2.1;
 				PRODUCT_BUNDLE_IDENTIFIER = "nikita.ka.phone-cleaner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

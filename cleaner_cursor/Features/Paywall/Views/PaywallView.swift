@@ -277,9 +277,9 @@ struct PaywallView: View {
 
     private var planCardYearly: some View {
         PlanCard(
-            titleTop: "YEARLY ACCESS",
+            titleTop: String(localized: "YEARLY ACCESS"),
             mainPriceLine: vm.yearlyMainLine,
-            rightBadgeText: "BEST OFFER",
+            rightBadgeText: String(localized: "BEST OFFER"),
             rightSubBadgeText: vm.yearlyPerWeekLine,
             isSelected: vm.selectedPlan == .yearly,
             isDimmed: false,
@@ -459,28 +459,28 @@ final class PaywallViewModel: ObservableObject {
 
     // Display strings - dynamic based on trial eligibility
     var weeklyTitleTop: String {
-        isTrialEligible ? "3-DAY FREE TRIAL" : "WEEKLY ACCESS"
+        isTrialEligible ? String(localized: "3-DAY FREE TRIAL") : String(localized: "WEEKLY ACCESS")
     }
 
     var weeklyBadge: String {
-        isTrialEligible ? "3 DAYS FREE" : "WEEKLY"
+        isTrialEligible ? String(localized: "3 DAYS FREE") : String(localized: "WEEKLY")
     }
 
     var weeklyMainLine: String? {
         guard let p = weeklyProduct?.skProduct else { return nil }
         let price = formatPrice(p)
-        return isTrialEligible ? "then \(price) / week" : "\(price) / week"
+        return isTrialEligible ? String(localized: "then \(price) / week") : String(localized: "\(price) / week")
     }
 
     var yearlyMainLine: String? {
         guard let p = yearlyProduct?.skProduct else { return nil }
-        return "\(formatPrice(p)) / year"
+        return String(localized: "\(formatPrice(p)) / year")
     }
 
     var yearlyPerWeekLine: String? {
         guard let p = yearlyProduct?.skProduct else { return nil }
         let weekly = (p.price as Decimal) / 52
-        return "\(formatPrice(weekly, locale: p.priceLocale))/WEEK"
+        return String(localized: "\(formatPrice(weekly, locale: p.priceLocale))/WEEK")
     }
 
     func onAppear() {
@@ -848,28 +848,28 @@ enum PaywallError: Equatable {
     var title: String {
         switch self {
         case .noInternet:
-            return "No Internet Connection"
+            return String(localized: "No Internet Connection")
         case .placementNotFound, .paywallNotFound:
-            return "Configuration Error"
+            return String(localized: "Configuration Error")
         case .productsNotAvailable:
-            return "Products Unavailable"
+            return String(localized: "Products Unavailable")
         case .pricesNotLoaded:
-            return "Prices Loading..."
+            return String(localized: "Prices Loading...")
         case .unknown:
-            return "Something Went Wrong"
+            return String(localized: "Something Went Wrong")
         }
     }
     
     var message: String {
         switch self {
         case .noInternet:
-            return "Please check your connection and try again."
+            return String(localized: "Please check your connection and try again.")
         case .placementNotFound, .paywallNotFound:
-            return "Unable to load subscription options. Please try again later."
+            return String(localized: "Unable to load subscription options. Please try again later.")
         case .productsNotAvailable:
-            return "Subscriptions are temporarily unavailable. Please try again later."
+            return String(localized: "Subscriptions are temporarily unavailable. Please try again later.")
         case .pricesNotLoaded:
-            return "Prices will be shown at checkout."
+            return String(localized: "Prices will be shown at checkout.")
         case .unknown(let msg):
             return msg
         }
@@ -968,7 +968,7 @@ private struct GlassCard: View {
 }
 
 private struct PillTitle: View {
-    let text: String
+    let text: LocalizedStringKey
     var body: some View {
         Text(text)
             .font(.system(size: 34, weight: .black))
@@ -987,7 +987,7 @@ private struct PillTitle: View {
 
 private struct AppIconBadgeAsset: View {
     let assetName: String
-    let title: String
+    let title: LocalizedStringKey
     let count: Int
 
     var body: some View {

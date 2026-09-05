@@ -771,17 +771,17 @@ enum SecretSpaceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .photoLibraryNotAuthorized:
-            return "Photo library access is required"
+            return String(localized: "Photo library access is required")
         case .failedToLoadImage:
-            return "Failed to load image"
+            return String(localized: "Failed to load image")
         case .failedToLoadVideo:
-            return "Failed to load video"
+            return String(localized: "Failed to load video")
         case .failedToSave:
-            return "Failed to save file"
+            return String(localized: "Failed to save file")
         case .passcodeNotSet:
-            return "Passcode is not set"
+            return String(localized: "Passcode is not set")
         case .invalidPasscode:
-            return "Invalid passcode"
+            return String(localized: "Invalid passcode")
         }
     }
 }

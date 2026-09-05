@@ -8,6 +8,7 @@ extension Date {
     
     private static let shortFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
         formatter.dateStyle = .short
         formatter.timeStyle = .none
         return formatter
@@ -15,6 +16,7 @@ extension Date {
     
     private static let mediumFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
         formatter.dateStyle = .medium
         formatter.timeStyle = .none
         return formatter
@@ -22,6 +24,7 @@ extension Date {
     
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = .autoupdatingCurrent
         formatter.dateStyle = .none
         formatter.timeStyle = .short
         return formatter
@@ -29,6 +32,7 @@ extension Date {
     
     private static let relativeFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
+        formatter.locale = .autoupdatingCurrent
         formatter.unitsStyle = .abbreviated
         return formatter
     }()
@@ -77,17 +81,13 @@ extension Date {
     
     var smartFormatted: String {
         if isToday {
-            return "Today"
+            return String(localized: "Today")
         } else if isYesterday {
-            return "Yesterday"
+            return String(localized: "Yesterday")
         } else if isThisWeek {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "EEEE"
-            return formatter.string(from: self)
+            return formatted(.dateTime.weekday(.wide))
         } else if isThisYear {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "MMM d"
-            return formatter.string(from: self)
+            return formatted(.dateTime.month(.abbreviated).day())
         } else {
             return shortFormatted
         }

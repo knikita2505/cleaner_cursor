@@ -6,6 +6,8 @@ enum PhotoSortOption: String, CaseIterable {
     case recent = "Recent"
     case oldest = "Oldest"
     case largest = "Largest"
+    
+    var localizedTitle: LocalizedStringKey { LocalizedStringKey(rawValue) }
 }
 
 // MARK: - Similar Photos View
@@ -104,7 +106,7 @@ struct SimilarPhotosView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(PhotoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }

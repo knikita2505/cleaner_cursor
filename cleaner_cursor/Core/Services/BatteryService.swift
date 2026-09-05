@@ -87,11 +87,11 @@ final class BatteryService: ObservableObject {
     
     var batteryStateDescription: String {
         switch batteryState {
-        case .charging: return "Charging"
-        case .full: return "Full"
-        case .unplugged: return "Unplugged"
-        case .unknown: return "Unknown"
-        @unknown default: return "Unknown"
+        case .charging: return String(localized: "Charging")
+        case .full: return String(localized: "Full")
+        case .unplugged: return String(localized: "Unplugged")
+        case .unknown: return String(localized: "Unknown")
+        @unknown default: return String(localized: "Unknown")
         }
     }
     
@@ -115,40 +115,40 @@ final class BatteryService: ObservableObject {
         // Always show general tips
         tips.append(BatteryTip(
             icon: "sun.max.fill",
-            title: "Reduce Screen Brightness",
-            description: "Lower brightness can significantly extend battery life"
+            title: String(localized: "Reduce Screen Brightness"),
+            description: String(localized: "Lower brightness can significantly extend battery life")
         ))
         
         tips.append(BatteryTip(
             icon: "wifi",
-            title: "Turn Off Wi-Fi When Not Needed",
-            description: "Disable Wi-Fi if you're not using it to save power"
+            title: String(localized: "Turn Off Wi-Fi When Not Needed"),
+            description: String(localized: "Disable Wi-Fi if you're not using it to save power")
         ))
         
         tips.append(BatteryTip(
             icon: "location.fill",
-            title: "Limit Location Services",
-            description: "Restrict background location access for apps"
+            title: String(localized: "Limit Location Services"),
+            description: String(localized: "Restrict background location access for apps")
         ))
         
         if !isLowPowerModeEnabled && batteryLevel < 0.3 {
             tips.insert(BatteryTip(
                 icon: "battery.25",
-                title: "Enable Low Power Mode",
-                description: "Extend battery life by reducing background activity"
+                title: String(localized: "Enable Low Power Mode"),
+                description: String(localized: "Extend battery life by reducing background activity")
             ), at: 0)
         }
         
         tips.append(BatteryTip(
             icon: "app.badge",
-            title: "Disable Background App Refresh",
-            description: "Stop apps from refreshing in the background"
+            title: String(localized: "Disable Background App Refresh"),
+            description: String(localized: "Stop apps from refreshing in the background")
         ))
         
         tips.append(BatteryTip(
             icon: "envelope.fill",
-            title: "Fetch Mail Less Frequently",
-            description: "Change mail fetch to manual or hourly intervals"
+            title: String(localized: "Fetch Mail Less Frequently"),
+            description: String(localized: "Change mail fetch to manual or hourly intervals")
         ))
         
         return tips

@@ -113,7 +113,15 @@ enum AppTab: String, CaseIterable, Identifiable {
         }
     }
     
-    var title: String { rawValue }
+    var title: LocalizedStringKey {
+        switch self {
+        case .hide: "Hide"
+        case .swipe: "Swipe"
+        case .clean: "Clean"
+        case .contacts: "Contacts"
+        case .analytics: "Analytics"
+        }
+    }
 }
 
 // MARK: - Permission Type
@@ -131,19 +139,19 @@ enum PermissionType: String {
         }
     }
     
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .photos: return "Access Your Photos"
-        case .contacts: return "Access Your Contacts"
-        case .notifications: return "Enable Notifications"
+        case .photos: "Access Your Photos"
+        case .contacts: "Access Your Contacts"
+        case .notifications: "Enable Notifications"
         }
     }
     
-    var description: String {
+    var description: LocalizedStringKey {
         switch self {
-        case .photos: return "We need access to your photos to find duplicates, similar photos, and help you free up storage space."
-        case .contacts: return "We need access to your contacts to find and merge duplicates, remove empty contacts."
-        case .notifications: return "Enable notifications to get alerts about storage status, cleaning reminders, and special offers."
+        case .photos: "We need access to your photos to find duplicates, similar photos, and help you free up storage space."
+        case .contacts: "We need access to your contacts to find and merge duplicates, remove empty contacts."
+        case .notifications: "Enable notifications to get alerts about storage status, cleaning reminders, and special offers."
         }
     }
 }

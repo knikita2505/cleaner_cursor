@@ -54,7 +54,7 @@ final class SubscriptionManager: ObservableObject {
     /// Formatted remaining items text
     var remainingItemsText: String {
         if isPremium {
-            return "Unlimited"
+            return String(localized: "Unlimited")
         }
         return "\(remainingItems)/\(Self.dailyFreeLimit)"
     }
@@ -309,15 +309,15 @@ enum PremiumFeature {
     var displayName: String {
         switch self {
         case .secretStorage:
-            return "Secret Storage"
+            return String(localized: "Secret Storage")
         case .contacts:
-            return "Contact Management"
+            return String(localized: "Contact Management")
         case .deviceHealth:
-            return "Device Health"
+            return String(localized: "Device Health")
         case .cleaningHistory:
-            return "Cleaning Analytics"
+            return String(localized: "Cleaning Analytics")
         case .unlimitedCleaning:
-            return "Unlimited Cleaning"
+            return String(localized: "Unlimited Cleaning")
         }
     }
 }
@@ -425,25 +425,25 @@ struct LimitWarningContent {
     let secondaryButton: String?
     
     static let lastItems = LimitWarningContent(
-        title: "Last Free Items",
-        message: "This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.",
-        primaryButton: "Continue",
-        secondaryButton: "Get Premium"
+        title: String(localized: "Last Free Items"),
+        message: String(localized: "This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning."),
+        primaryButton: String(localized: "Continue"),
+        secondaryButton: String(localized: "Get Premium")
     )
     
     static let limitReached = LimitWarningContent(
-        title: "Daily Limit Reached",
-        message: "You've reached your daily limit of \(SubscriptionManager.dailyFreeLimit) items. Upgrade to Premium for unlimited cleaning.",
-        primaryButton: "Get Premium",
-        secondaryButton: "OK"
+        title: String(localized: "Daily Limit Reached"),
+        message: String(localized: "You've reached your daily limit of \(SubscriptionManager.dailyFreeLimit) items. Upgrade to Premium for unlimited cleaning."),
+        primaryButton: String(localized: "Get Premium"),
+        secondaryButton: String(localized: "OK")
     )
     
     static func insufficientLimit(remaining: Int, requested: Int) -> LimitWarningContent {
         LimitWarningContent(
-            title: "Not Enough Items Left",
-            message: "You want to clean \(requested) items but only have \(remaining) left today. Upgrade to Premium for unlimited cleaning.",
-            primaryButton: "Get Premium",
-            secondaryButton: "OK"
+            title: String(localized: "Not Enough Items Left"),
+            message: String(localized: "You want to clean \(requested) items but only have \(remaining) left today. Upgrade to Premium for unlimited cleaning."),
+            primaryButton: String(localized: "Get Premium"),
+            secondaryButton: String(localized: "OK")
         )
     }
 }

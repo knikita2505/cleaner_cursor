@@ -158,7 +158,7 @@ struct BackupDetailView: View {
         
         do {
             try await service.restoreAllContacts(from: backup)
-            successMessage = "Successfully restored \(backup.contactCount) contacts"
+            successMessage = String(localized: "Successfully restored \(backup.contactCount) contacts")
             showSuccess = true
         } catch {
             errorMessage = error.localizedDescription
@@ -173,7 +173,7 @@ struct BackupDetailView: View {
         
         do {
             try await service.restoreContact(contact)
-            successMessage = "Successfully restored \(contact.displayName)"
+            successMessage = String(localized: "Successfully restored \(contact.displayName)")
             showSuccess = true
         } catch {
             errorMessage = error.localizedDescription

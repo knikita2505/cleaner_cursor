@@ -209,9 +209,7 @@ struct DashboardView: View {
     }
     
     private var currentTimeString: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, MMM d"
-        return formatter.string(from: Date())
+        Date.now.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
     }
     
     // MARK: - Premium Banner
@@ -447,15 +445,18 @@ struct DashboardView: View {
         }
     }
     
-    private func healthCategoryMini(icon: String, label: String, score: Int) -> some View {
+    private func healthCategoryMini(icon: String, label: LocalizedStringKey, score: Int) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.system(size: 10))
                 .foregroundColor(categoryScoreColor(score))
             
-            Text("\(label) \(score)%")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(AppColors.textSecondary)
+            HStack(spacing: 2) {
+                Text(label)
+                Text("\(score)%")
+            }
+            .font(.system(size: 10, weight: .medium))
+            .foregroundColor(AppColors.textSecondary)
         }
     }
     
@@ -469,15 +470,18 @@ struct DashboardView: View {
         }
     }
     
-    private func miniStatItem(label: String, value: String, color: Color) -> some View {
+    private func miniStatItem(label: LocalizedStringKey, value: String, color: Color) -> some View {
         HStack(spacing: 4) {
             Circle()
                 .fill(color)
                 .frame(width: 6, height: 6)
-            Text("\(label) \(value)")
-                .font(.system(size: 11))
-                .foregroundColor(AppColors.textSecondary)
-                .fixedSize()
+            HStack(spacing: 3) {
+                Text(label)
+                Text(value)
+            }
+            .font(.system(size: 11))
+            .foregroundColor(AppColors.textSecondary)
+            .fixedSize()
         }
     }
     
@@ -574,7 +578,7 @@ struct CategoryCard: View {
                 
                 // Text content at bottom
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(category.title)
+                    Text(LocalizedStringKey(category.title))
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
                         .lineLimit(1)

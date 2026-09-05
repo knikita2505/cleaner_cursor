@@ -107,7 +107,7 @@ struct LivePhotosView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(PhotoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }
@@ -686,7 +686,7 @@ struct LivePhotoCard: View {
         }
     }
     
-    private func actionButton(title: String, color: Color, isActive: Bool, action: @escaping () -> Void) -> some View {
+    private func actionButton(title: LocalizedStringKey, color: Color, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(AppFonts.subtitleM)

@@ -213,7 +213,7 @@ struct PasscodeView: View {
         }
     }
     
-    private var titleText: String {
+    private var titleText: LocalizedStringKey {
         switch mode {
         case .create:
             return isConfirming ? "Confirm Passcode" : "Create Passcode"
@@ -226,7 +226,7 @@ struct PasscodeView: View {
         }
     }
     
-    private var subtitleText: String {
+    private var subtitleText: LocalizedStringKey {
         switch mode {
         case .create:
             return isConfirming ? "Re-enter your passcode" : "Create a 4-digit passcode"
@@ -379,10 +379,10 @@ struct PasscodeView: View {
         
         if failedAttempts >= maxFailedAttempts {
             activateLock()
-            showError("Locked for 3 minutes")
+            showError(String(localized: "Locked for 3 minutes"))
         } else {
             let remaining = maxFailedAttempts - failedAttempts
-            showError("\(remaining) attempts remaining")
+            showError(String(localized: "\(remaining) attempts remaining"))
         }
     }
     
@@ -394,10 +394,10 @@ struct PasscodeView: View {
                     HapticManager.success()
                     onSuccess()
                 } else {
-                    showError("Failed to save")
+                    showError(String(localized: "Failed to save"))
                 }
             } else {
-                showError("Passcodes don't match")
+                showError(String(localized: "Passcodes don't match"))
                 confirmPasscode = ""
             }
             
@@ -406,7 +406,7 @@ struct PasscodeView: View {
                 HapticManager.success()
                 onSuccess()
             } else {
-                showError("Failed to save")
+                showError(String(localized: "Failed to save"))
             }
             
         default:

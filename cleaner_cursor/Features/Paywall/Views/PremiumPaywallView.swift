@@ -278,9 +278,9 @@ struct PremiumPaywallView: View {
 
     private var planCardYearly: some View {
         PremiumPlanCard(
-            titleTop: "YEARLY ACCESS",
+            titleTop: String(localized: "YEARLY ACCESS"),
             mainPriceLine: vm.yearlyMainLine,
-            rightBadgeText: "BEST OFFER",
+            rightBadgeText: String(localized: "BEST OFFER"),
             rightSubBadgeText: vm.yearlyPerWeekLine,
             isSelected: vm.selectedPlan == .yearly,
             isDimmed: false,
@@ -463,7 +463,7 @@ private struct PremiumPaywallBackground: View {
 }
 
 private struct PremiumPillTitle: View {
-    let text: String
+    let text: LocalizedStringKey
     var body: some View {
         Text(text)
             .font(.system(size: 28, weight: .black))
@@ -482,7 +482,7 @@ private struct PremiumPillTitle: View {
 
 private struct FeatureRow: View {
     let icon: String
-    let text: String
+    let text: LocalizedStringKey
     
     var body: some View {
         HStack(spacing: 12) {
@@ -513,7 +513,7 @@ private struct FeatureRow: View {
 
 private struct PremiumAppIconBadgeAsset: View {
     let assetName: String
-    let title: String
+    let title: LocalizedStringKey
     let count: Int
 
     var body: some View {

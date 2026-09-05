@@ -50,9 +50,24 @@ final class PhotoService: ObservableObject {
     }
     
     func requestAuthorization() async -> Bool {
-        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        let existing = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        if existing != .notDetermined {
+            authorizationStatus = existing
+            return existing == .authorized || existing == .limited
+        }
+
+        // PhotoKit's async API can hang forever if awaited on the MainActor.
+        let status = await Self.requestPhotoLibraryAccess()
         authorizationStatus = status
         return status == .authorized || status == .limited
+    }
+
+    nonisolated private static func requestPhotoLibraryAccess() async -> PHAuthorizationStatus {
+        await withCheckedContinuation { continuation in
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { status in
+                continuation.resume(returning: status)
+            }
+        }
     }
     
     var isAuthorized: Bool {
@@ -920,15 +935,15 @@ enum PhotoServiceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAuthorized:
-            return "Photo library access not authorized"
+            return String(localized: "Photo library access not authorized")
         case .fetchFailed:
-            return "Failed to fetch photos"
+            return String(localized: "Failed to fetch photos")
         case .deleteFailed:
-            return "Failed to delete photos"
+            return String(localized: "Failed to delete photos")
         case .conversionFailed:
-            return "Failed to convert Live Photo"
+            return String(localized: "Failed to convert Live Photo")
         case .albumCreationFailed:
-            return "Failed to create album"
+            return String(localized: "Failed to create album")
         }
     }
 }

@@ -153,7 +153,7 @@ struct CleaningHistoryView: View {
         .cornerRadius(AppSpacing.cardRadius)
     }
     
-    private func summaryStatView(value: String, label: String, icon: String, color: Color) -> some View {
+    private func summaryStatView(value: String, label: LocalizedStringKey, icon: String, color: Color) -> some View {
         VStack(spacing: 8) {
             ZStack {
                 Circle()
@@ -331,7 +331,7 @@ struct CleaningHistoryView: View {
         }
     }
     
-    private func statBadge(value: String, label: String) -> some View {
+    private func statBadge(value: String, label: LocalizedStringKey) -> some View {
         HStack(spacing: 4) {
             Text(value)
                 .font(.system(size: 14, weight: .semibold))
@@ -431,9 +431,7 @@ struct CleaningHistoryView: View {
     // MARK: - Helpers
     
     private func formattedDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d, yyyy"
-        return formatter.string(from: date)
+        date.formatted(date: .abbreviated, time: .omitted)
     }
     
     private func formatPercentage(_ percentage: Double) -> String {

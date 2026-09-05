@@ -287,8 +287,8 @@ struct ContactsCleanerView: View {
 
 struct ContactCategoryCard: View {
     let icon: String
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     let count: Int
     let color: Color
     var isLoading: Bool = false

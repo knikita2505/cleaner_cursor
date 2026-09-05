@@ -144,7 +144,7 @@ struct SystemTipsView: View {
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(tip.title)
+                        Text(LocalizedStringKey(tip.title))
                             .font(AppFonts.subtitleM)
                             .foregroundColor(AppColors.textPrimary)
                             .multilineTextAlignment(.leading)
@@ -171,7 +171,7 @@ struct SystemTipsView: View {
                     Divider()
                         .background(AppColors.textTertiary.opacity(0.1))
                     
-                    Text(tip.description)
+                    Text(LocalizedStringKey(tip.description))
                         .font(AppFonts.bodyM)
                         .foregroundColor(AppColors.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -181,7 +181,7 @@ struct SystemTipsView: View {
                             handleTipAction(action)
                         } label: {
                             HStack(spacing: 8) {
-                                Text(action.title)
+                                Text(LocalizedStringKey(action.title))
                                     .font(AppFonts.subtitleM)
                                 
                                 Image(systemName: "arrow.right")
@@ -379,7 +379,7 @@ struct SystemTipsView: View {
             tips.append(SystemTip(
                 icon: "arrow.clockwise",
                 title: "Restart Your Device",
-                description: "Your device has been running for \(healthService.uptimeDescription). Regular restarts clear temporary files and can improve performance.",
+                description: String(localized: "Your device has been running for \(healthService.uptimeDescription). Regular restarts clear temporary files and can improve performance."),
                 category: .performance,
                 action: nil
             ))
@@ -456,12 +456,12 @@ enum TipCategory: CaseIterable {
     case battery
     case performance
     
-    var title: String {
+    var title: LocalizedStringKey {
         switch self {
-        case .all: return "All"
-        case .storage: return "Storage"
-        case .battery: return "Battery"
-        case .performance: return "Performance"
+        case .all: "All"
+        case .storage: "Storage"
+        case .battery: "Battery"
+        case .performance: "Performance"
         }
     }
     

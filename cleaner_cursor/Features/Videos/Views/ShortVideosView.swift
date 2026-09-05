@@ -108,7 +108,7 @@ struct ShortVideosView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(VideoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }

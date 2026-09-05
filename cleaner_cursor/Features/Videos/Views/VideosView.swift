@@ -7,6 +7,8 @@ enum VideoSortOption: String, CaseIterable {
     case recent = "Recent"
     case oldest = "Oldest"
     case largest = "Largest"
+    
+    var localizedTitle: LocalizedStringKey { LocalizedStringKey(rawValue) }
 }
 
 // MARK: - Videos View
@@ -132,7 +134,7 @@ struct VideosView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(VideoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }
@@ -905,7 +907,7 @@ class VideosViewModel: ObservableObject {
     
     private func performSingleDeletion(_ video: VideoAsset) async {
         isProcessing = true
-        processingMessage = "Deleting video..."
+        processingMessage = String(localized: "Deleting video...")
         
         do {
             try await videoService.deleteVideos([video.asset])
@@ -970,7 +972,7 @@ class VideosViewModel: ObservableObject {
         guard !assetsToDelete.isEmpty else { return }
         
         isProcessing = true
-        processingMessage = "Deleting \(assetsToDelete.count) videos..."
+        processingMessage = String(localized: "Deleting \(assetsToDelete.count) videos...")
         
         do {
             try await videoService.deleteVideos(assetsToDelete)
@@ -1001,7 +1003,7 @@ class VideosViewModel: ObservableObject {
     
     func compressVideo(_ video: VideoAsset, quality: VideoCompressionQuality) async {
         isProcessing = true
-        processingMessage = "Compressing video..."
+        processingMessage = String(localized: "Compressing video...")
         
         await withCheckedContinuation { continuation in
             videoService.compressVideo(asset: video.asset, quality: quality) { result in
@@ -1027,7 +1029,7 @@ class VideosViewModel: ObservableObject {
         isProcessing = true
         
         for (index, video) in videosToCompress.enumerated() {
-            processingMessage = "Compressing \(index + 1)/\(videosToCompress.count)..."
+            processingMessage = String(localized: "Compressing \(index + 1)/\(videosToCompress.count)...")
             
             await withCheckedContinuation { continuation in
                 videoService.compressVideo(asset: video.asset, quality: quality) { result in

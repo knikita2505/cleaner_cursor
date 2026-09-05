@@ -166,7 +166,9 @@ struct RootView: View {
 struct PermissionsRequestView: View {
     let onComplete: () -> Void
     
+    @Environment(\.scenePhase) private var scenePhase
     @State private var currentStep: Int = 0
+    @State private var isRequesting = false
     @ObservedObject private var photoService = PhotoService.shared
     @ObservedObject private var contactsService = ContactsService.shared
     
@@ -223,7 +225,8 @@ struct PermissionsRequestView: View {
                 VStack(spacing: 12) {
                     PrimaryButton(
                         title: "Continue",
-                        icon: "arrow.right"
+                        icon: "arrow.right",
+                        isLoading: isRequesting
                     ) {
                         Task {
                             await requestCurrentPermission()
@@ -234,13 +237,17 @@ struct PermissionsRequestView: View {
                 .padding(.bottom, 50)
             }
         }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active, isRequesting else { return }
+            advanceIfPermissionAlreadyDecided()
+        }
     }
     
     private func permissionContent(
         icon: String,
         iconColor: Color,
-        title: String,
-        description: String,
+        title: LocalizedStringKey,
+        description: LocalizedStringKey,
         features: [String]
     ) -> some View {
         VStack(spacing: 32) {
@@ -278,7 +285,7 @@ struct PermissionsRequestView: View {
                             .font(.system(size: 20))
                             .foregroundColor(AppColors.statusSuccess)
                         
-                        Text(feature)
+                        Text(LocalizedStringKey(feature))
                             .font(AppFonts.bodyL)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -289,16 +296,34 @@ struct PermissionsRequestView: View {
     }
     
     private func requestCurrentPermission() async {
+        guard !isRequesting else { return }
+        isRequesting = true
+
         if currentStep == 0 {
             _ = await photoService.requestAuthorization()
-            // Scan will start automatically when DashboardView appears
         } else {
             _ = await contactsService.requestAuthorization()
         }
-        
-        await MainActor.run {
-            moveToNextStep()
+
+        advanceAfterPermissionRequest()
+    }
+
+    private func advanceIfPermissionAlreadyDecided() {
+        if currentStep == 0 {
+            photoService.checkAuthorizationStatus()
+            guard photoService.authorizationStatus != .notDetermined else { return }
+        } else {
+            contactsService.checkAuthorization()
+            let status = CNContactStore.authorizationStatus(for: .contacts)
+            guard status != .notDetermined else { return }
         }
+        advanceAfterPermissionRequest()
+    }
+
+    private func advanceAfterPermissionRequest() {
+        guard isRequesting else { return }
+        isRequesting = false
+        moveToNextStep()
     }
     
     private func moveToNextStep() {

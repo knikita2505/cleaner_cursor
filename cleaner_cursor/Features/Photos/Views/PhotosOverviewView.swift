@@ -247,7 +247,7 @@ struct CategoryRow: View {
             
             // Text
             VStack(alignment: .leading, spacing: 2) {
-                Text(category.type.rawValue)
+                Text(LocalizedStringKey(category.type.rawValue))
                     .font(AppFonts.subtitleM)
                     .foregroundColor(AppColors.textPrimary)
                 

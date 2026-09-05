@@ -1,0 +1,192 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "MagicSwipe"
+          }
+        }
+      }
+    },
+    "NSContactsUsageDescription" : {
+      "comment" : "Privacy - Contacts Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We need access to your contacts to find and merge duplicates, and remove empty contacts."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesitamos acceso a tus contactos para encontrar y fusionar duplicados, y eliminar contactos vacíos."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重複する連絡先の検出と統合、空の連絡先の削除のために、連絡先へのアクセスが必要です。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precisamos de acesso aos seus contatos para encontrar e mesclar duplicatas e remover contatos vazios."
+          }
+        }
+      }
+    },
+    "NSFaceIDUsageDescription" : {
+      "comment" : "Privacy - Face ID Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use Face ID to unlock your Secret Folder."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Usa Face ID para desbloquear tu carpeta secreta."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Face IDを使ってシークレットフォルダのロックを解除します。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Use o Face ID para desbloquear sua pasta secreta."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryAddUsageDescription" : {
+      "comment" : "Privacy - Photo Library Additions Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We need permission to save optimized or cleaned photos to your library."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesitamos permiso para guardar fotos optimizadas o limpiadas en tu biblioteca."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最適化または整理した写真をライブラリに保存するために許可が必要です。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precisamos de permissão para salvar fotos otimizadas ou limpas na sua biblioteca."
+          }
+        }
+      }
+    },
+    "NSPhotoLibraryUsageDescription" : {
+      "comment" : "Privacy - Photo Library Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We need access to your photos to find duplicates, similar photos, and help you free up storage space."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Necesitamos acceso a tus fotos para encontrar duplicados, fotos similares y ayudarte a liberar espacio."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重複写真や似た写真を見つけてストレージを確保するために、写真へのアクセスが必要です。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Precisamos de acesso às suas fotos para encontrar duplicatas, fotos semelhantes e ajudar a liberar espaço."
+          }
+        }
+      }
+    },
+    "NSUserNotificationsUsageDescription" : {
+      "comment" : "Privacy - User Notifications Usage Description",
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We'll send you reminders about storage cleanup and important updates."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Te enviaremos recordatorios sobre la limpieza de almacenamiento y actualizaciones importantes."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ストレージの整理や重要なアップデートについてお知らせします。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enviaremos lembretes sobre a limpeza de armazenamento e atualizações importantes."
+          }
+        }
+      }
+    },
+    "NSUserTrackingUsageDescription" : {
+      "comment" : "Privacy - Tracking Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "It will help us to provide you a more personalized experience, relevant content and promotions."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nos ayuda a ofrecerte una experiencia más personalizada, contenido relevante y promociones."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "よりパーソナライズされた体験、関連コンテンツ、お得な情報を提供するために使用します。"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Isso nos ajuda a oferecer uma experiência mais personalizada, conteúdo relevante e promoções."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

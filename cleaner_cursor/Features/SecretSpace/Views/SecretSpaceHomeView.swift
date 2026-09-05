@@ -159,7 +159,7 @@ struct SecretSpaceHomeView: View {
                 icon: "photo.on.rectangle.angled",
                 iconColor: AppColors.accentBlue,
                 title: "Secret Album",
-                subtitle: "\(secretService.secretPhotos.count + secretService.secretVideos.count) items",
+                subtitle: String(localized: "\(secretService.secretPhotos.count + secretService.secretVideos.count) items"),
                 destination: .album
             )
             
@@ -167,7 +167,7 @@ struct SecretSpaceHomeView: View {
                 icon: "person.crop.circle.fill",
                 iconColor: AppColors.statusSuccess,
                 title: "Secret Contacts",
-                subtitle: "\(secretService.secretContacts.count) contacts",
+                subtitle: String(localized: "\(secretService.secretContacts.count) contacts"),
                 destination: .contacts
             )
         }
@@ -176,7 +176,7 @@ struct SecretSpaceHomeView: View {
     private func sectionButton(
         icon: String,
         iconColor: Color,
-        title: String,
+        title: LocalizedStringKey,
         subtitle: String,
         destination: SecretDestination
     ) -> some View {
@@ -270,11 +270,11 @@ struct SecretSpaceHomeView: View {
     private var protectionSubtitle: String {
         if secretService.isPasscodeSet {
             if secretService.isFaceIDEnabled {
-                return "Passcode + \(secretService.biometricType.name)"
+                return String(localized: "Passcode + \(secretService.biometricType.name)")
             }
-            return "Passcode enabled"
+            return String(localized: "Passcode enabled")
         }
-        return "Set up passcode"
+        return String(localized: "Set up passcode")
     }
     
     // MARK: - Status View
