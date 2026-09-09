@@ -96,6 +96,8 @@ struct PremiumPaywallView: View {
                 .fontDesign(.rounded)
                 .tracking(1.0)
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
             PremiumPillTitle(text: "PREMIUM")
         }
@@ -148,14 +150,16 @@ struct PremiumPaywallView: View {
                     .font(.system(size: 18, weight: .bold))
                     .fontDesign(.rounded)
                     .foregroundStyle(progressColor)
-                    .contentTransition(.numericText())
-                    .animation(.linear(duration: 0.1), value: vm.percentageDisplay)
+                    .monospacedDigit()
 
                 Text("from 100% used")
                     .font(.system(size: 18, weight: .medium))
                     .fontDesign(.rounded)
                     .foregroundStyle(Color.white.opacity(0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 12)
     }
@@ -469,6 +473,8 @@ private struct PremiumPillTitle: View {
             .font(.system(size: 28, weight: .black))
             .fontDesign(.rounded)
             .tracking(1.0)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
             .foregroundStyle(Color(hex: "1A0A2E"))
             .padding(.horizontal, 18)
             .padding(.vertical, 8)
@@ -495,6 +501,8 @@ private struct FeatureRow: View {
                 .font(.system(size: 15, weight: .medium))
                 .fontDesign(.rounded)
                 .foregroundStyle(.white.opacity(0.90))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             
             Spacer()
             

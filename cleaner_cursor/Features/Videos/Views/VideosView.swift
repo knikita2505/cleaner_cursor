@@ -271,18 +271,20 @@ struct VideosView: View {
         VStack(spacing: 0) {
             Divider()
             
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(viewModel.selectedCount) selected")
                         .font(AppFonts.subtitleM)
                         .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                     
                     Text(viewModel.formattedSelectedSize)
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
                 }
-                
-                Spacer()
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 
                 // Compress button
                 Button {
@@ -291,10 +293,12 @@ struct VideosView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.down.right.and.arrow.up.left")
                         Text("Compress")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .font(AppFonts.subtitleM)
                     .foregroundColor(.white)
-                    .frame(width: 120)
+                    .frame(minWidth: 88, maxWidth: 120)
                     .padding(.vertical, 12)
                     .background(AppColors.accentBlue)
                     .cornerRadius(12)
@@ -307,10 +311,12 @@ struct VideosView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "trash.fill")
                         Text("Delete")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .font(AppFonts.subtitleM)
                     .foregroundColor(.white)
-                    .frame(width: 100)
+                    .frame(minWidth: 80, maxWidth: 100)
                     .padding(.vertical, 12)
                     .background(AppColors.statusError)
                     .cornerRadius(12)

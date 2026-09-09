@@ -264,18 +264,20 @@ struct ShortVideosView: View {
         VStack(spacing: 0) {
             Divider()
             
-            HStack {
+            HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(viewModel.selectedCount) selected")
                         .font(AppFonts.subtitleM)
                         .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                     
                     Text(viewModel.formattedSelectedSize)
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
                 }
-                
-                Spacer()
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 
                 Button {
                     showDeleteConfirmation = true

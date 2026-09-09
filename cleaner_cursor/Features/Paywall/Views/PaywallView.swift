@@ -94,12 +94,16 @@ struct PaywallView: View {
             Text("CLEAN UP YOUR")
                 .font(.system(size: 38, weight: .black))
                 .fontDesign(.rounded)
-                .tracking(1.2)
+                .tracking(0.4)
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .frame(maxWidth: .infinity)
 
             PillTitle(text: "STORAGE")
         }
         .padding(.top, 4)
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Storage
@@ -148,14 +152,16 @@ struct PaywallView: View {
                     .font(.system(size: 18, weight: .bold))
                     .fontDesign(.rounded)
                     .foregroundStyle(progressColor)
-                    .contentTransition(.numericText())
-                    .animation(.linear(duration: 0.1), value: vm.percentageDisplay)
+                    .monospacedDigit()
 
                 Text("from 100% used")
                     .font(.system(size: 18, weight: .medium))
                     .fontDesign(.rounded)
                     .foregroundStyle(Color.white.opacity(0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 12)
     }
@@ -207,6 +213,9 @@ struct PaywallView: View {
             .fontDesign(.rounded)
             .foregroundStyle(Color.white.opacity(0.75))
             .multilineTextAlignment(.center)
+            .lineLimit(4)
+            .minimumScaleFactor(0.75)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 8)
             .padding(.bottom, 4)
     }
@@ -973,10 +982,13 @@ private struct PillTitle: View {
         Text(text)
             .font(.system(size: 34, weight: .black))
             .fontDesign(.rounded)
-            .tracking(1.0)
+            .tracking(0.3)
+            .lineLimit(1)
+            .minimumScaleFactor(0.45)
             .foregroundStyle(Color(hex: "1A0A2E"))
-            .padding(.horizontal, 22)
+            .padding(.horizontal, 16)
             .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .fill(Color(hex: "A78BFA").opacity(0.92))

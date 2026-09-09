@@ -446,17 +446,22 @@ struct DashboardView: View {
     }
     
     private func healthCategoryMini(icon: String, label: LocalizedStringKey, score: Int) -> some View {
-        HStack(spacing: 4) {
+        HStack(alignment: .center, spacing: 5) {
             Image(systemName: icon)
-                .font(.system(size: 10))
+                .font(.system(size: 11))
                 .foregroundColor(categoryScoreColor(score))
+                .frame(width: 14)
             
-            HStack(spacing: 2) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(label)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
                 Text("\(score)%")
+                    .fontWeight(.semibold)
             }
             .font(.system(size: 10, weight: .medium))
             .foregroundColor(AppColors.textSecondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
     

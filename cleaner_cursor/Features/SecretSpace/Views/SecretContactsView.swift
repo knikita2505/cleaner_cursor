@@ -498,7 +498,7 @@ struct AddContactView: View {
     
     private func formField(
         icon: String,
-        placeholder: String,
+        placeholder: LocalizedStringKey,
         text: Binding<String>,
         field: Field,
         keyboardType: UIKeyboardType = .default,
@@ -768,7 +768,7 @@ struct ContactDetailView: View {
         }
     }
     
-    private func editableRow(icon: String, placeholder: String, text: Binding<String>) -> some View {
+    private func editableRow(icon: String, placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 18))

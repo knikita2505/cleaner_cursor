@@ -183,7 +183,7 @@ struct BurstPhotosView: View {
         .background(AppColors.backgroundSecondary)
     }
     
-    private func statBadge(count: Int, label: String, color: Color) -> some View {
+    private func statBadge(count: Int, label: LocalizedStringKey, color: Color) -> some View {
         VStack(spacing: 2) {
             Text("\(count)")
                 .font(AppFonts.subtitleL)
@@ -192,6 +192,8 @@ struct BurstPhotosView: View {
             Text(label)
                 .font(AppFonts.caption)
                 .foregroundColor(AppColors.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
