@@ -14,6 +14,8 @@ final class NotificationService: ObservableObject {
     // MARK: - Constants
     
     private let notificationsEnabledKey = "notifications_enabled"
+    private let scheduleVersionKey = "notifications_schedule_version"
+    private let currentScheduleVersion = 2
     private let planningDays = 14
     private let minimumDaysThreshold = 5
     private let morningHour = 9
@@ -31,23 +33,23 @@ final class NotificationService: ObservableObject {
     }
     
     // MARK: - Notification Content Variants
+    /// Ключи из Localizable.xcstrings. iOS подставляет перевод в момент показа,
+    /// а не в момент планирования (иначе пуши остаются на языке, который был при schedule).
     
-    private var notificationVariants: [(title: String, body: String)] {
-        [
-            (String(localized: "Duplicate Photos Found 📸"), String(localized: "You may have duplicate photos taking up space.")),
-            (String(localized: "Time to Check Your Gallery 🖼️"), String(localized: "Review your photos and free up some storage.")),
-            (String(localized: "Storage Reminder 📱"), String(localized: "Check if you have unnecessary files to remove.")),
-            (String(localized: "Similar Photos Waiting ✨"), String(localized: "Review similar photos and keep only your favorites.")),
-            (String(localized: "Screenshots Piling Up? 📋"), String(localized: "You might have old screenshots you no longer need.")),
-            (String(localized: "Video Review Reminder 🎬"), String(localized: "Large videos may be using significant storage.")),
-            (String(localized: "Contact Cleanup Reminder 👥"), String(localized: "Check for duplicate or empty contacts.")),
-            (String(localized: "Weekly Storage Check 📊"), String(localized: "It's a good time to review your storage usage.")),
-            (String(localized: "Photo Library Update 🗂️"), String(localized: "New photos added — review for duplicates anytime.")),
-            (String(localized: "Storage Space Check ⚡"), String(localized: "See how much space you can free up today.")),
-            (String(localized: "Organize Your Photos 🧹"), String(localized: "Keep your photo library clean and organized.")),
-            (String(localized: "Monthly Cleanup Reminder 📅"), String(localized: "A quick review keeps your storage in check."))
-        ]
-    }
+    private let notificationVariants: [(titleKey: String, bodyKey: String)] = [
+        ("Duplicate Photos Found 📸", "You may have duplicate photos taking up space."),
+        ("Time to Check Your Gallery 🖼️", "Review your photos and free up some storage."),
+        ("Storage Reminder 📱", "Check if you have unnecessary files to remove."),
+        ("Similar Photos Waiting ✨", "Review similar photos and keep only your favorites."),
+        ("Screenshots Piling Up? 📋", "You might have old screenshots you no longer need."),
+        ("Video Review Reminder 🎬", "Large videos may be using significant storage."),
+        ("Contact Cleanup Reminder 👥", "Check for duplicate or empty contacts."),
+        ("Weekly Storage Check 📊", "It's a good time to review your storage usage."),
+        ("Photo Library Update 🗂️", "New photos added — review for duplicates anytime."),
+        ("Storage Space Check ⚡", "See how much space you can free up today."),
+        ("Organize Your Photos 🧹", "Keep your photo library clean and organized."),
+        ("Monthly Cleanup Reminder 📅", "A quick review keeps your storage in check.")
+    ]
     
     // MARK: - Init
     
@@ -117,8 +119,9 @@ final class NotificationService: ObservableObject {
         }
         
         let remainingDays = await getRemainingScheduledDays()
+        let needsLocalizationRefresh = UserDefaults.standard.integer(forKey: scheduleVersionKey) < currentScheduleVersion
         
-        if remainingDays < minimumDaysThreshold {
+        if needsLocalizationRefresh || remainingDays < minimumDaysThreshold {
             print("📅 Remaining scheduled days: \(remainingDays). Rescheduling...")
             await scheduleNotifications()
         } else {
@@ -157,6 +160,7 @@ final class NotificationService: ObservableObject {
         }
         
         print("✅ Scheduled \(planningDays * 2) notifications for the next \(planningDays) days")
+        UserDefaults.standard.set(currentScheduleVersion, forKey: scheduleVersionKey)
     }
     
     /// Планирование одного уведомления
@@ -178,10 +182,11 @@ final class NotificationService: ObservableObject {
         // Выбираем случайный вариант контента
         let variant = notificationVariants.randomElement() ?? notificationVariants[0]
         
-        // Создаём контент
+        // Создаём контент. localizedUserNotificationString подставляет перевод
+        // в момент показа, по текущему языку приложения.
         let content = UNMutableNotificationContent()
-        content.title = variant.title
-        content.body = variant.body
+        content.title = NSString.localizedUserNotificationString(forKey: variant.titleKey, arguments: nil)
+        content.body = NSString.localizedUserNotificationString(forKey: variant.bodyKey, arguments: nil)
         content.sound = .default
         
         // Создаём триггер

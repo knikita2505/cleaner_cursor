@@ -32,7 +32,7 @@ Product / placement / Apphud / AppMetrica / AppsFlyer IDs, URL, UserDefaults key
    - экран «Как открыть доступ к контактам» (Limited Access) — системный UI iOS, его нельзя локализовать приложением.
 4. Чтобы увидеть японские permission-диалоги, язык iPhone должен быть Japanese (не только App Language в scheme).
 5. Tab bar, onboarding, paywall, alerts удаления, Secret Space, Analytics
-6. Смена языка: уже поставленные локальные пуши обновятся при следующем `scheduleNotifications()` (запуск приложения)
+6. Смена языка: локальные пуши используют `localizedUserNotificationString` (перевод в момент показа). Уже поставленные пуши со старым английским текстом пересоздаются при следующем запуске (`notifications_schedule_version`).
 
 ## Следующий этап
 

@@ -1469,6 +1469,7 @@
       }
     },
     "A quick review keeps your storage in check." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -2869,6 +2870,7 @@
       }
     },
     "Check for duplicate or empty contacts." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -2891,6 +2893,7 @@
       }
     },
     "Check if you have unnecessary files to remove." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -3672,6 +3675,7 @@
       }
     },
     "Contact Cleanup Reminder 👥" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -5612,6 +5616,7 @@
       }
     },
     "Duplicate Photos Found 📸" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -7487,6 +7492,7 @@
       }
     },
     "It's a good time to review your storage usage." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -7864,6 +7870,7 @@
       }
     },
     "Keep your photo library clean and organized." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -7909,6 +7916,7 @@
       }
     },
     "Large videos may be using significant storage." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -8828,6 +8836,7 @@
       }
     },
     "Monthly Cleanup Reminder 📅" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -9004,6 +9013,7 @@
       }
     },
     "New photos added — review for duplicates anytime." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -9938,6 +9948,7 @@
       }
     },
     "Organize Your Photos 🧹" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -10271,6 +10282,7 @@
       }
     },
     "Photo Library Update 🗂️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -11587,6 +11599,7 @@
       }
     },
     "Review similar photos and keep only your favorites." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -11631,6 +11644,7 @@
       }
     },
     "Review your photos and free up some storage." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -12168,6 +12182,7 @@
       }
     },
     "Screenshots Piling Up? 📋" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -12411,6 +12426,7 @@
       }
     },
     "See how much space you can free up today." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -12988,6 +13004,7 @@
       }
     },
     "Similar Photos Waiting ✨" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -13520,6 +13537,7 @@
       }
     },
     "Storage Reminder 📱" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -13542,6 +13560,7 @@
       }
     },
     "Storage Space Check ⚡" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -14387,6 +14406,7 @@
       }
     },
     "Time to Check Your Gallery 🖼️" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -15366,6 +15386,7 @@
       }
     },
     "Video Review Reminder 🎬" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -15833,6 +15854,7 @@
       }
     },
     "Weekly Storage Check 📊" : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -16280,6 +16302,7 @@
       }
     },
     "You may have duplicate photos taking up space." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {
@@ -16302,6 +16325,7 @@
       }
     },
     "You might have old screenshots you no longer need." : {
+      "extractionState" : "stale",
       "localizations" : {
         "es" : {
           "stringUnit" : {

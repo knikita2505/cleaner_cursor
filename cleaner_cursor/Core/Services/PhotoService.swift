@@ -51,17 +51,8 @@ final class PhotoService: ObservableObject {
     
     func requestAuthorization() async -> Bool {
         let status = await withCheckedContinuation { (continuation: CheckedContinuation<PHAuthorizationStatus, Never>) in
-            let request = {
-                PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
-                    DispatchQueue.main.async {
-                        continuation.resume(returning: newStatus)
-                    }
-                }
-            }
-            if Thread.isMainThread {
-                request()
-            } else {
-                DispatchQueue.main.async(execute: request)
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+                continuation.resume(returning: newStatus)
             }
         }
         authorizationStatus = status
