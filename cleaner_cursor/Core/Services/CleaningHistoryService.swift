@@ -91,8 +91,8 @@ final class CleaningHistoryService: ObservableObject {
         if screenshotsCount > 10 {
             recommendations.append(CleaningRecommendation(
                 icon: "camera.viewfinder",
-                title: "Clean Screenshots",
-                description: "You have \(screenshotsCount) screenshots that might be outdated",
+                title: String(localized: "Clean Screenshots"),
+                description: String(localized: "You have \(screenshotsCount) screenshots that might be outdated"),
                 type: .screenshots,
                 priority: screenshotsCount > 50 ? .high : .medium
             ))
@@ -103,8 +103,8 @@ final class CleaningHistoryService: ObservableObject {
         if similarCount > 5 {
             recommendations.append(CleaningRecommendation(
                 icon: "photo.on.rectangle.angled",
-                title: "Similar Photos Found",
-                description: "\(similarCount) similar photos can be removed",
+                title: String(localized: "Similar Photos Found"),
+                description: String(localized: "\(similarCount) similar photos can be removed"),
                 type: .similarPhotos,
                 priority: similarCount > 20 ? .high : .medium
             ))
@@ -115,8 +115,8 @@ final class CleaningHistoryService: ObservableObject {
         if duplicatesCount > 0 {
             recommendations.append(CleaningRecommendation(
                 icon: "plus.square.on.square",
-                title: "Duplicates Detected",
-                description: "\(duplicatesCount) duplicate photos taking extra space",
+                title: String(localized: "Duplicates Detected"),
+                description: String(localized: "\(duplicatesCount) duplicate photos taking extra space"),
                 type: .duplicates,
                 priority: .high
             ))
@@ -127,8 +127,8 @@ final class CleaningHistoryService: ObservableObject {
         if totalVideosCount > 10 {
             recommendations.append(CleaningRecommendation(
                 icon: "video.fill",
-                title: "Review Videos",
-                description: "\(totalVideosCount) videos to review",
+                title: String(localized: "Review Videos"),
+                description: String(localized: "\(totalVideosCount) videos to review"),
                 type: .videos,
                 priority: .medium
             ))
@@ -139,8 +139,8 @@ final class CleaningHistoryService: ObservableObject {
         if livePhotosCount > 20 {
             recommendations.append(CleaningRecommendation(
                 icon: "livephoto",
-                title: "Convert Live Photos",
-                description: "\(livePhotosCount) Live Photos can be converted to save space",
+                title: String(localized: "Convert Live Photos"),
+                description: String(localized: "\(livePhotosCount) Live Photos can be converted to save space"),
                 type: .livePhotos,
                 priority: .low
             ))
@@ -150,8 +150,8 @@ final class CleaningHistoryService: ObservableObject {
         if recommendations.isEmpty {
             recommendations.append(CleaningRecommendation(
                 icon: "checkmark.circle.fill",
-                title: "Looking Good!",
-                description: "Your device is well optimized. Keep it up!",
+                title: String(localized: "Looking Good!"),
+                description: String(localized: "Your device is well optimized. Keep it up!"),
                 type: nil,
                 priority: .low
             ))
@@ -265,16 +265,16 @@ enum CleaningType: String, Codable, CaseIterable {
     
     var displayName: String {
         switch self {
-        case .screenshots: return "Screenshots"
-        case .similarPhotos: return "Similar Photos"
-        case .duplicates: return "Duplicates"
-        case .livePhotos: return "Live Photos"
-        case .burstPhotos: return "Burst Photos"
-        case .videos: return "Videos"
-        case .shortVideos: return "Short Videos"
-        case .contacts: return "Contacts"
-        case .swipePhotos: return "Swipe Clean"
-        case .bigFiles: return "Big Files"
+        case .screenshots: return String(localized: "Screenshots")
+        case .similarPhotos: return String(localized: "Similar Photos")
+        case .duplicates: return String(localized: "Duplicates")
+        case .livePhotos: return String(localized: "Live Photos")
+        case .burstPhotos: return String(localized: "Burst Photos")
+        case .videos: return String(localized: "Videos")
+        case .shortVideos: return String(localized: "Short Videos")
+        case .contacts: return String(localized: "Contacts")
+        case .swipePhotos: return String(localized: "Swipe Clean")
+        case .bigFiles: return String(localized: "Big Files")
         }
     }
     

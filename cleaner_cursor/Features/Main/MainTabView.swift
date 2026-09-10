@@ -398,7 +398,7 @@ struct SettingsView: View {
         .cornerRadius(AppSpacing.cardRadius)
     }
     
-    private func settingsRowContent(icon: String, title: String, color: Color) -> some View {
+    private func settingsRowContent(icon: String, title: LocalizedStringKey, color: Color) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 18))
@@ -421,7 +421,7 @@ struct SettingsView: View {
     
     private func openEmail() {
         let email = "support@magicswipe.app"
-        let subject = "Magic Swipe Support"
+        let subject = String(localized: "Magic Swipe Support")
         let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         
         if let url = URL(string: "mailto:\(email)?subject=\(encodedSubject)") {

@@ -113,7 +113,7 @@ struct NavigationDestinationModifier: ViewModifier {
                 case .photosCleaner:
                     PhotosOverviewView()
                 case .videosCleaner:
-                    Text("Videos Cleaner") // TODO: Implement
+                    Text("Videos Cleaner")
                 case .contactsCleaner:
                     Text("Contacts Cleaner") // TODO: Implement
                 case .secretFolder:

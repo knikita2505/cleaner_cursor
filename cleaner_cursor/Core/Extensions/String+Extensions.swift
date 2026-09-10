@@ -60,12 +60,10 @@ extension String {
     
     // MARK: - Localization Helpers
     
+    /// Resolves a static English key from the String Catalog.
+    /// Do not use on already-interpolated strings — call `String(localized:)` at the literal site instead.
     var localized: String {
-        NSLocalizedString(self, comment: "")
-    }
-    
-    func localized(with arguments: CVarArg...) -> String {
-        String(format: self.localized, arguments: arguments)
+        String(localized: LocalizedStringResource(stringLiteral: self))
     }
 }
 

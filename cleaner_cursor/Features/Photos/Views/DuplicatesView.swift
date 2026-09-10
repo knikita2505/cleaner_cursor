@@ -99,7 +99,7 @@ struct DuplicatesView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(PhotoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }

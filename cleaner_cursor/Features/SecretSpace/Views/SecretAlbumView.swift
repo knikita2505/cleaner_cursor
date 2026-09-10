@@ -153,7 +153,7 @@ struct SecretAlbumView: View {
                     .font(AppFonts.titleL)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text("Add photos and videos from your\nlibrary to keep them private")
+                Text("Add photos and videos from your library to keep them private")
                     .font(AppFonts.bodyL)
                     .foregroundColor(AppColors.textTertiary)
                     .multilineTextAlignment(.center)

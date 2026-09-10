@@ -117,7 +117,7 @@ final class DashboardViewModel: ObservableObject {
         scanTask?.cancel()
         
         isScanning = true
-        scanProgress = "Starting..."
+        scanProgress = String(localized: "Starting...")
         
         scanTask = Task(priority: .utility) {
             await performBackgroundScan()
@@ -129,7 +129,7 @@ final class DashboardViewModel: ObservableObject {
         await updateStorageInfo()
         
         // 2. ВСЕ категории параллельно!
-        await MainActor.run { scanProgress = "Scanning media..." }
+        await MainActor.run { scanProgress = String(localized: "Scanning media...") }
         
         await withTaskGroup(of: Void.self) { group in
             // Быстрые категории (системные папки)

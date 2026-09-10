@@ -7,18 +7,18 @@ import SwiftUI
 struct PrimaryCard: View {
     let icon: String
     let iconColor: Color
-    let title: String
-    let subtitle: String?
-    let badge: String?
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey?
+    let badge: LocalizedStringKey?
     let showChevron: Bool
     let action: () -> Void
     
     init(
         icon: String,
         iconColor: Color = AppColors.accentBlue,
-        title: String,
-        subtitle: String? = nil,
-        badge: String? = nil,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey? = nil,
+        badge: LocalizedStringKey? = nil,
         showChevron: Bool = true,
         action: @escaping () -> Void
     ) {
@@ -95,18 +95,18 @@ struct PrimaryCard: View {
 struct ListCard: View {
     let icon: String
     let iconColor: Color
-    let title: String
+    let title: LocalizedStringKey
     let counter: String?
-    let subtitle: String?
+    let subtitle: LocalizedStringKey?
     let showChevron: Bool
     let action: () -> Void
     
     init(
         icon: String,
         iconColor: Color = AppColors.accentBlue,
-        title: String,
+        title: LocalizedStringKey,
         counter: String? = nil,
-        subtitle: String? = nil,
+        subtitle: LocalizedStringKey? = nil,
         showChevron: Bool = true,
         action: @escaping () -> Void
     ) {
@@ -177,14 +177,14 @@ struct ListCard: View {
 struct StatsCard: View {
     let icon: String
     let iconColor: Color
-    let title: String
+    let title: LocalizedStringKey
     let value: String
     let unit: String?
     
     init(
         icon: String,
         iconColor: Color = AppColors.accentBlue,
-        title: String,
+        title: LocalizedStringKey,
         value: String,
         unit: String? = nil
     ) {

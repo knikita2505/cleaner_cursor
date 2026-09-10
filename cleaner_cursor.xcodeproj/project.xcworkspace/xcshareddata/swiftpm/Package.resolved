@@ -1,5 +1,5 @@
 {
-  "originHash" : "40e03ad9264e99f29d5b8928c603221a97c69e20a5bef65bff7a18d7298a420d",
+  "originHash" : "515c3c851f272cb4e246e8e18299880b5827f698a687f9c142367d4902a9a637",
   "pins" : [
     {
       "identity" : "apphudsdk",
@@ -11,12 +11,30 @@
       }
     },
     {
+      "identity" : "appmetrica-sdk-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/appmetrica/appmetrica-sdk-ios",
+      "state" : {
+        "revision" : "5d0c615554b4db13e5f3ff635786ef518a5ea6f6",
+        "version" : "6.2.1"
+      }
+    },
+    {
       "identity" : "appsflyerframework-dynamic",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/AppsFlyerSDK/AppsFlyerFramework-Dynamic",
       "state" : {
         "revision" : "cdbcb9a281fcbc2dba4afb8568a849e4c4557176",
         "version" : "6.17.8"
+      }
+    },
+    {
+      "identity" : "kscrash",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/kstenerud/KSCrash",
+      "state" : {
+        "revision" : "95a8895d75f3c22aa9ad9f2a15d2fbd97b0a55e2",
+        "version" : "2.5.1"
       }
     }
   ],

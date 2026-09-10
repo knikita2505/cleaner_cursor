@@ -243,10 +243,10 @@ enum SecretFolderError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
-        case .keychainError: return "Failed to save to Keychain"
-        case .folderNotFound: return "Secret folder not found"
-        case .fileNotFound: return "File not found"
-        case .biometricsNotAvailable: return "Biometrics not available"
+        case .keychainError: return String(localized: "Failed to save to Keychain")
+        case .folderNotFound: return String(localized: "Secret folder not found")
+        case .fileNotFound: return String(localized: "File not found")
+        case .biometricsNotAvailable: return String(localized: "Biometrics not available")
         }
     }
 }

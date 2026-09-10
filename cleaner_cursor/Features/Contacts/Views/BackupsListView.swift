@@ -169,7 +169,7 @@ struct BackupsListView: View {
         let success = await service.createBackup()
         
         if !success {
-            errorMessage = "Failed to create backup"
+            errorMessage = String(localized: "Failed to create backup")
             showError = true
         }
         

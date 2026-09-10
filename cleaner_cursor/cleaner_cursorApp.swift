@@ -13,6 +13,9 @@ struct CleanerApp: App {
         
         // 2. Configure AppsFlyer (after Apphud to link User IDs)
         AppsFlyerService.shared.configure()
+        
+        // 3. Activate AppMetrica (after Apphud to link device_id)
+        AppMetricaService.shared.activate()
     }
     
     // MARK: - Body
@@ -164,6 +167,7 @@ struct PermissionsRequestView: View {
     let onComplete: () -> Void
     
     @State private var currentStep: Int = 0
+    @State private var isRequesting = false
     @ObservedObject private var photoService = PhotoService.shared
     @ObservedObject private var contactsService = ContactsService.shared
     
@@ -220,7 +224,8 @@ struct PermissionsRequestView: View {
                 VStack(spacing: 12) {
                     PrimaryButton(
                         title: "Continue",
-                        icon: "arrow.right"
+                        icon: "arrow.right",
+                        isLoading: isRequesting
                     ) {
                         Task {
                             await requestCurrentPermission()
@@ -236,8 +241,8 @@ struct PermissionsRequestView: View {
     private func permissionContent(
         icon: String,
         iconColor: Color,
-        title: String,
-        description: String,
+        title: LocalizedStringKey,
+        description: LocalizedStringKey,
         features: [String]
     ) -> some View {
         VStack(spacing: 32) {
@@ -275,7 +280,7 @@ struct PermissionsRequestView: View {
                             .font(.system(size: 20))
                             .foregroundColor(AppColors.statusSuccess)
                         
-                        Text(feature)
+                        Text(LocalizedStringKey(feature))
                             .font(AppFonts.bodyL)
                             .foregroundColor(AppColors.textSecondary)
                     }
@@ -286,16 +291,17 @@ struct PermissionsRequestView: View {
     }
     
     private func requestCurrentPermission() async {
+        guard !isRequesting else { return }
+        isRequesting = true
+
         if currentStep == 0 {
             _ = await photoService.requestAuthorization()
-            // Scan will start automatically when DashboardView appears
         } else {
             _ = await contactsService.requestAuthorization()
         }
-        
-        await MainActor.run {
-            moveToNextStep()
-        }
+
+        isRequesting = false
+        moveToNextStep()
     }
     
     private func moveToNextStep() {

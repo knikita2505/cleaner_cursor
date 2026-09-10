@@ -6,17 +6,17 @@ import SwiftUI
 struct EmptyStateView: View {
     let icon: String
     let iconColor: Color
-    let title: String
-    let description: String
-    let buttonTitle: String?
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+    let buttonTitle: LocalizedStringKey?
     let action: (() -> Void)?
     
     init(
         icon: String,
         iconColor: Color = AppColors.accentBlue,
-        title: String,
-        description: String,
-        buttonTitle: String? = nil,
+        title: LocalizedStringKey,
+        description: LocalizedStringKey,
+        buttonTitle: LocalizedStringKey? = nil,
         action: (() -> Void)? = nil
     ) {
         self.icon = icon
@@ -71,17 +71,17 @@ struct EmptyStateView: View {
 /// Компонент для отображения успешного состояния
 
 struct SuccessStateView: View {
-    let title: String
-    let description: String
-    let stats: [(title: String, value: String)]?
-    let buttonTitle: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+    let stats: [(title: LocalizedStringKey, value: String)]?
+    let buttonTitle: LocalizedStringKey
     let action: () -> Void
     
     init(
-        title: String = "All Done!",
-        description: String,
-        stats: [(title: String, value: String)]? = nil,
-        buttonTitle: String = "Continue",
+        title: LocalizedStringKey = "All Done!",
+        description: LocalizedStringKey,
+        stats: [(title: LocalizedStringKey, value: String)]? = nil,
+        buttonTitle: LocalizedStringKey = "Continue",
         action: @escaping () -> Void
     ) {
         self.title = title
@@ -148,13 +148,13 @@ struct SuccessStateView: View {
 /// Компонент для отображения загрузки
 
 struct LoadingStateView: View {
-    let title: String
-    let description: String?
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey?
     let progress: Double?
     
     init(
-        title: String = "Loading...",
-        description: String? = nil,
+        title: LocalizedStringKey = "Loading...",
+        description: LocalizedStringKey? = nil,
         progress: Double? = nil
     ) {
         self.title = title
@@ -201,15 +201,15 @@ struct LoadingStateView: View {
 /// Компонент для отображения ошибки
 
 struct ErrorStateView: View {
-    let title: String
-    let description: String
-    let retryTitle: String
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+    let retryTitle: LocalizedStringKey
     let retryAction: () -> Void
     
     init(
-        title: String = "Something went wrong",
-        description: String,
-        retryTitle: String = "Try Again",
+        title: LocalizedStringKey = "Something went wrong",
+        description: LocalizedStringKey,
+        retryTitle: LocalizedStringKey = "Try Again",
         retryAction: @escaping () -> Void
     ) {
         self.title = title

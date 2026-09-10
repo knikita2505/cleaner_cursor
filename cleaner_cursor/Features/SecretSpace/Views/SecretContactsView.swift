@@ -145,7 +145,7 @@ struct SecretContactsView: View {
                     .font(AppFonts.titleL)
                     .foregroundColor(AppColors.textPrimary)
                 
-                Text("Add contacts that only you can see.\nThey won't appear in your phone book.")
+                Text("Add contacts that only you can see. They won't appear in your phone book.")
                     .font(AppFonts.bodyL)
                     .foregroundColor(AppColors.textTertiary)
                     .multilineTextAlignment(.center)
@@ -498,7 +498,7 @@ struct AddContactView: View {
     
     private func formField(
         icon: String,
-        placeholder: String,
+        placeholder: LocalizedStringKey,
         text: Binding<String>,
         field: Field,
         keyboardType: UIKeyboardType = .default,
@@ -724,7 +724,7 @@ struct ContactDetailView: View {
                     .frame(width: 24)
                 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
+                    Text(LocalizedStringKey(title))
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.textTertiary)
                     
@@ -768,7 +768,7 @@ struct ContactDetailView: View {
         }
     }
     
-    private func editableRow(icon: String, placeholder: String, text: Binding<String>) -> some View {
+    private func editableRow(icon: String, placeholder: LocalizedStringKey, text: Binding<String>) -> some View {
         HStack(spacing: 14) {
             Image(systemName: icon)
                 .font(.system(size: 18))

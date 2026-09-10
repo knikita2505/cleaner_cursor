@@ -107,7 +107,7 @@ struct LivePhotosView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(PhotoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }
@@ -281,7 +281,7 @@ struct LivePhotosView: View {
         .background(AppColors.backgroundSecondary)
     }
     
-    private func actionBadge(count: Int, label: String, color: Color) -> some View {
+    private func actionBadge(count: Int, label: LocalizedStringKey, color: Color) -> some View {
         VStack(spacing: 2) {
             Text("\(count)")
                 .font(AppFonts.subtitleL)
@@ -290,6 +290,8 @@ struct LivePhotosView: View {
             Text(label)
                 .font(AppFonts.caption)
                 .foregroundColor(AppColors.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
@@ -686,7 +688,7 @@ struct LivePhotoCard: View {
         }
     }
     
-    private func actionButton(title: String, color: Color, isActive: Bool, action: @escaping () -> Void) -> some View {
+    private func actionButton(title: LocalizedStringKey, color: Color, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(AppFonts.subtitleM)

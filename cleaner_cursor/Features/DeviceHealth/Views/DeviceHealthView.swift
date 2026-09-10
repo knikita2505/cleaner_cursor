@@ -143,7 +143,7 @@ struct DeviceHealthView: View {
             categoryRow(
                 icon: "internaldrive.fill",
                 title: "Storage",
-                subtitle: "\(Int((storageService.storageInfo?.usagePercentage ?? 0) * 100))% used",
+                subtitle: String(localized: "\(Int((storageService.storageInfo?.usagePercentage ?? 0) * 100))% used"),
                 status: healthService.storageStatus,
                 score: healthService.storageScore,
                 showChevron: false
@@ -158,7 +158,7 @@ struct DeviceHealthView: View {
                 categoryRow(
                     icon: "battery.75",
                     title: "Battery",
-                    subtitle: "\(batteryService.batteryPercentage)% • \(batteryService.batteryStateDescription)",
+                    subtitle: String(localized: "\(batteryService.batteryPercentage)% • \(batteryService.batteryStateDescription)"),
                     status: healthService.batteryStatus,
                     score: healthService.batteryScore,
                     showChevron: true
@@ -174,7 +174,7 @@ struct DeviceHealthView: View {
             categoryRow(
                 icon: "speedometer",
                 title: "Performance",
-                subtitle: "Uptime: \(healthService.uptimeDescription)",
+                subtitle: String(localized: "Uptime: \(healthService.uptimeDescription)"),
                 status: healthService.performanceStatus,
                 score: healthService.performanceScore,
                 showChevron: false
@@ -200,7 +200,7 @@ struct DeviceHealthView: View {
     
     private func categoryRow(
         icon: String,
-        title: String,
+        title: LocalizedStringKey,
         subtitle: String,
         status: CategoryStatus,
         score: Int,

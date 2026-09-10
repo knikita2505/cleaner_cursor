@@ -116,7 +116,7 @@ struct ScreenshotsView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(PhotoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }
@@ -426,11 +426,11 @@ class ScreenshotsViewModel: ObservableObject {
             showLastItemsWarning = true
             return false
         case .limitReached:
-            limitWarningMessage = "You've reached your daily limit of \(SubscriptionManager.dailyFreeLimit) items."
+            limitWarningMessage = String(localized: "You've reached your daily limit of \(SubscriptionManager.dailyFreeLimit) items.")
             showLimitWarning = true
             return false
         case .insufficientLimit(let remaining, let requested):
-            limitWarningMessage = "You want to delete \(requested) items but only have \(remaining) left today."
+            limitWarningMessage = String(localized: "You want to delete \(requested) items but only have \(remaining) left today.")
             showLimitWarning = true
             return false
         }

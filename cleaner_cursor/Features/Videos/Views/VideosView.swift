@@ -7,6 +7,8 @@ enum VideoSortOption: String, CaseIterable {
     case recent = "Recent"
     case oldest = "Oldest"
     case largest = "Largest"
+    
+    var localizedTitle: LocalizedStringKey { LocalizedStringKey(rawValue) }
 }
 
 // MARK: - Videos View
@@ -132,7 +134,7 @@ struct VideosView: View {
         }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(VideoSortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
+                Button(option.localizedTitle) {
                     sortOption = option
                 }
             }
@@ -269,18 +271,20 @@ struct VideosView: View {
         VStack(spacing: 0) {
             Divider()
             
-            HStack(spacing: 12) {
+            HStack(spacing: 10) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(viewModel.selectedCount) selected")
                         .font(AppFonts.subtitleM)
                         .foregroundColor(AppColors.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
                     
                     Text(viewModel.formattedSelectedSize)
                         .font(AppFonts.caption)
                         .foregroundColor(AppColors.textSecondary)
+                        .lineLimit(1)
                 }
-                
-                Spacer()
+                .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
                 
                 // Compress button
                 Button {
@@ -289,10 +293,12 @@ struct VideosView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "arrow.down.right.and.arrow.up.left")
                         Text("Compress")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .font(AppFonts.subtitleM)
                     .foregroundColor(.white)
-                    .frame(width: 120)
+                    .frame(minWidth: 88, maxWidth: 120)
                     .padding(.vertical, 12)
                     .background(AppColors.accentBlue)
                     .cornerRadius(12)
@@ -305,10 +311,12 @@ struct VideosView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "trash.fill")
                         Text("Delete")
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
                     }
                     .font(AppFonts.subtitleM)
                     .foregroundColor(.white)
-                    .frame(width: 100)
+                    .frame(minWidth: 80, maxWidth: 100)
                     .padding(.vertical, 12)
                     .background(AppColors.statusError)
                     .cornerRadius(12)
@@ -905,7 +913,7 @@ class VideosViewModel: ObservableObject {
     
     private func performSingleDeletion(_ video: VideoAsset) async {
         isProcessing = true
-        processingMessage = "Deleting video..."
+        processingMessage = String(localized: "Deleting video...")
         
         do {
             try await videoService.deleteVideos([video.asset])
@@ -970,7 +978,7 @@ class VideosViewModel: ObservableObject {
         guard !assetsToDelete.isEmpty else { return }
         
         isProcessing = true
-        processingMessage = "Deleting \(assetsToDelete.count) videos..."
+        processingMessage = String(localized: "Deleting \(assetsToDelete.count) videos...")
         
         do {
             try await videoService.deleteVideos(assetsToDelete)
@@ -1001,7 +1009,7 @@ class VideosViewModel: ObservableObject {
     
     func compressVideo(_ video: VideoAsset, quality: VideoCompressionQuality) async {
         isProcessing = true
-        processingMessage = "Compressing video..."
+        processingMessage = String(localized: "Compressing video...")
         
         await withCheckedContinuation { continuation in
             videoService.compressVideo(asset: video.asset, quality: quality) { result in
@@ -1027,7 +1035,7 @@ class VideosViewModel: ObservableObject {
         isProcessing = true
         
         for (index, video) in videosToCompress.enumerated() {
-            processingMessage = "Compressing \(index + 1)/\(videosToCompress.count)..."
+            processingMessage = String(localized: "Compressing \(index + 1)/\(videosToCompress.count)...")
             
             await withCheckedContinuation { continuation in
                 videoService.compressVideo(asset: video.asset, quality: quality) { result in

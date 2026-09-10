@@ -210,15 +210,15 @@ final class DeviceHealthService: ObservableObject {
     var thermalStateDescription: String {
         switch thermalState {
         case .nominal:
-            return "Normal"
+            return String(localized: "Normal")
         case .fair:
-            return "Slightly Elevated"
+            return String(localized: "Slightly Elevated")
         case .serious:
-            return "High"
+            return String(localized: "High")
         case .critical:
-            return "Critical"
+            return String(localized: "Critical")
         @unknown default:
-            return "Unknown"
+            return String(localized: "Unknown")
         }
     }
     
@@ -227,9 +227,9 @@ final class DeviceHealthService: ObservableObject {
         let days = hours / 24
         
         if days > 0 {
-            return "\(days) day\(days == 1 ? "" : "s")"
+            return String(localized: "\(days) days")
         } else {
-            return "\(hours) hour\(hours == 1 ? "" : "s")"
+            return String(localized: "\(hours) hours")
         }
     }
 }
@@ -244,10 +244,10 @@ enum HealthStatus {
     
     var title: String {
         switch self {
-        case .excellent: return "Excellent"
-        case .good: return "Good"
-        case .needsAttention: return "Needs Attention"
-        case .critical: return "Critical"
+        case .excellent: return String(localized: "Excellent")
+        case .good: return String(localized: "Good")
+        case .needsAttention: return String(localized: "Needs Attention")
+        case .critical: return String(localized: "Critical")
         }
     }
     
@@ -279,9 +279,9 @@ enum CategoryStatus {
     
     var title: String {
         switch self {
-        case .good: return "Good"
-        case .fair: return "Fair"
-        case .needsAttention: return "Needs Attention"
+        case .good: return String(localized: "Good")
+        case .fair: return String(localized: "Fair")
+        case .needsAttention: return String(localized: "Needs Attention")
         }
     }
     

@@ -73,7 +73,7 @@ final class ContactsService: ObservableObject {
     
     func checkAuthorization() {
         let status = CNContactStore.authorizationStatus(for: .contacts)
-        let authorized = (status == .authorized)
+        let authorized = Self.isAccessGranted(status)
         DispatchQueue.main.async {
             self.isAuthorized = authorized
         }
@@ -85,11 +85,12 @@ final class ContactsService: ObservableObject {
         let currentStatus = CNContactStore.authorizationStatus(for: .contacts)
         print("📱 Current contacts status before request: \(statusDescription(currentStatus))")
         
-        if currentStatus == .authorized {
+        if currentStatus != .notDetermined {
+            let authorized = Self.isAccessGranted(currentStatus)
             await MainActor.run {
-                self.isAuthorized = true
+                self.isAuthorized = authorized
             }
-            return true
+            return authorized
         }
         
         do {
@@ -113,14 +114,25 @@ final class ContactsService: ObservableObject {
         }
     }
     
+    private static func isAccessGranted(_ status: CNAuthorizationStatus) -> Bool {
+        if status == .authorized { return true }
+        if #available(iOS 18.0, *) {
+            return status == .limited
+        }
+        return false
+    }
+
     private func statusDescription(_ status: CNAuthorizationStatus) -> String {
         switch status {
         case .notDetermined: return "notDetermined"
         case .restricted: return "restricted"
         case .denied: return "denied"
         case .authorized: return "authorized"
-        case .limited: return "limited"
-        @unknown default: return "unknown(\(status.rawValue))"
+        default:
+            if #available(iOS 18.0, *) {
+                if status == .limited { return "limited" }
+            }
+            return "unknown(\(status.rawValue))"
         }
     }
     
@@ -755,9 +767,9 @@ enum ContactRestoreError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .alreadyExists:
-            return "Contact already exists in your address book"
+            return String(localized: "Contact already exists in your address book")
         case .allAlreadyExist(let count):
-            return "All \(count) contacts already exist in your address book"
+            return String(localized: "All \(count) contacts already exist in your address book")
         }
     }
 }

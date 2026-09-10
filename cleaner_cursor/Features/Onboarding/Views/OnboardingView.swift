@@ -192,7 +192,7 @@ struct OnboardingView: View {
         }
     }
     
-    private func featurePill(icon: String, text: String) -> some View {
+    private func featurePill(icon: String, text: LocalizedStringKey) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .medium))
@@ -227,8 +227,8 @@ struct OnboardingView: View {
 struct OnboardingPageView: View {
     let icon: String
     let iconColor: Color
-    let title: String
-    let subtitle: String
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey
     
     var body: some View {
         VStack(spacing: 32) {

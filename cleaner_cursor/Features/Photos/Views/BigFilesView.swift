@@ -89,7 +89,7 @@ struct BigFilesView: View {
                     Button {
                         viewModel.typeFilter = filter
                     } label: {
-                        Text(filter.rawValue)
+                        Text(filter.localizedTitle)
                             .font(AppFonts.caption)
                             .foregroundColor(viewModel.typeFilter == filter ? .white : AppColors.textSecondary)
                             .padding(.horizontal, 16)
@@ -377,6 +377,8 @@ final class BigFilesViewModel: ObservableObject {
         case all = "All"
         case photos = "Photos"
         case videos = "Videos"
+        
+        var localizedTitle: LocalizedStringKey { LocalizedStringKey(rawValue) }
     }
     
     enum SortOption {

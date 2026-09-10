@@ -189,7 +189,7 @@ struct BatteryInsightsView: View {
         }
     }
     
-    private func statRow(icon: String, title: String, value: String, color: Color) -> some View {
+    private func statRow(icon: String, title: LocalizedStringKey, value: String, color: Color) -> some View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)

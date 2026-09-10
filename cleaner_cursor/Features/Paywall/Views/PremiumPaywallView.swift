@@ -96,6 +96,8 @@ struct PremiumPaywallView: View {
                 .fontDesign(.rounded)
                 .tracking(1.0)
                 .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
 
             PremiumPillTitle(text: "PREMIUM")
         }
@@ -148,14 +150,16 @@ struct PremiumPaywallView: View {
                     .font(.system(size: 18, weight: .bold))
                     .fontDesign(.rounded)
                     .foregroundStyle(progressColor)
-                    .contentTransition(.numericText())
-                    .animation(.linear(duration: 0.1), value: vm.percentageDisplay)
+                    .monospacedDigit()
 
                 Text("from 100% used")
                     .font(.system(size: 18, weight: .medium))
                     .fontDesign(.rounded)
                     .foregroundStyle(Color.white.opacity(0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
             }
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 12)
     }
@@ -278,9 +282,9 @@ struct PremiumPaywallView: View {
 
     private var planCardYearly: some View {
         PremiumPlanCard(
-            titleTop: "YEARLY ACCESS",
+            titleTop: String(localized: "YEARLY ACCESS"),
             mainPriceLine: vm.yearlyMainLine,
-            rightBadgeText: "BEST OFFER",
+            rightBadgeText: String(localized: "BEST OFFER"),
             rightSubBadgeText: vm.yearlyPerWeekLine,
             isSelected: vm.selectedPlan == .yearly,
             isDimmed: false,
@@ -463,12 +467,14 @@ private struct PremiumPaywallBackground: View {
 }
 
 private struct PremiumPillTitle: View {
-    let text: String
+    let text: LocalizedStringKey
     var body: some View {
         Text(text)
             .font(.system(size: 28, weight: .black))
             .fontDesign(.rounded)
             .tracking(1.0)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
             .foregroundStyle(Color(hex: "1A0A2E"))
             .padding(.horizontal, 18)
             .padding(.vertical, 8)
@@ -482,7 +488,7 @@ private struct PremiumPillTitle: View {
 
 private struct FeatureRow: View {
     let icon: String
-    let text: String
+    let text: LocalizedStringKey
     
     var body: some View {
         HStack(spacing: 12) {
@@ -495,6 +501,8 @@ private struct FeatureRow: View {
                 .font(.system(size: 15, weight: .medium))
                 .fontDesign(.rounded)
                 .foregroundStyle(.white.opacity(0.90))
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
             
             Spacer()
             
@@ -513,7 +521,7 @@ private struct FeatureRow: View {
 
 private struct PremiumAppIconBadgeAsset: View {
     let assetName: String
-    let title: String
+    let title: LocalizedStringKey
     let count: Int
 
     var body: some View {

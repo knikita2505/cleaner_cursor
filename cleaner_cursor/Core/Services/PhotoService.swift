@@ -50,7 +50,11 @@ final class PhotoService: ObservableObject {
     }
     
     func requestAuthorization() async -> Bool {
-        let status = await PHPhotoLibrary.requestAuthorization(for: .readWrite)
+        let status = await withCheckedContinuation { (continuation: CheckedContinuation<PHAuthorizationStatus, Never>) in
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { newStatus in
+                continuation.resume(returning: newStatus)
+            }
+        }
         authorizationStatus = status
         return status == .authorized || status == .limited
     }
@@ -920,15 +924,15 @@ enum PhotoServiceError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .notAuthorized:
-            return "Photo library access not authorized"
+            return String(localized: "Photo library access not authorized")
         case .fetchFailed:
-            return "Failed to fetch photos"
+            return String(localized: "Failed to fetch photos")
         case .deleteFailed:
-            return "Failed to delete photos"
+            return String(localized: "Failed to delete photos")
         case .conversionFailed:
-            return "Failed to convert Live Photo"
+            return String(localized: "Failed to convert Live Photo")
         case .albumCreationFailed:
-            return "Failed to create album"
+            return String(localized: "Failed to create album")
         }
     }
 }

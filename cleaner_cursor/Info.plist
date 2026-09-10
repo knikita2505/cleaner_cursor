@@ -2,6 +2,47 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_REGION)</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>es</string>
+		<string>ja</string>
+		<string>pt-BR</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>MagicSwipe</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.1</string>
+	<key>CFBundleVersion</key>
+	<string>4</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAdvertisingAttributionReportEndpoint</key>
+	<string>https://appsflyer-skadnetwork.com/</string>
+	<key>NSContactsUsageDescription</key>
+	<string>We need access to your contacts to find and merge duplicates, and remove empty contacts.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to unlock your Secret Folder.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need permission to save optimized or cleaned photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photos to find duplicates, similar photos, and help you free up storage space.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>We'll send you reminders about storage cleanup and important updates.</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>It will help us to provide you a more personalized experience, relevant content and promotions.</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>
@@ -37,40 +78,6 @@
 			<string>9t245vhmpl.skadnetwork</string>
 		</dict>
 	</array>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>$(DEVELOPMENT_REGION)</string>
-	<key>CFBundleExecutable</key>
-	<string>$(EXECUTABLE_NAME)</string>
-	<key>CFBundleIdentifier</key>
-	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundleName</key>
-	<string>MagicSwipe</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>LSRequiresIPhoneOS</key>
-	<true/>
-	<key>NSAdvertisingAttributionReportEndpoint</key>
-	<string>https://appsflyer-skadnetwork.com/</string>
-	<key>NSContactsUsageDescription</key>
-	<string>We need access to your contacts to find and merge duplicates, and remove empty contacts.</string>
-	<key>NSFaceIDUsageDescription</key>
-	<string>Use Face ID to unlock your Secret Folder.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>We need permission to save optimized or cleaned photos to your library.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to your photos to find duplicates, similar photos, and help you free up storage space.</string>
-	<key>NSUserNotificationsUsageDescription</key>
-	<string>We&apos;ll send you reminders about storage cleanup and important updates.</string>
-	<key>NSUserTrackingUsageDescription</key>
-	<string>It will help us to provide you a more personalized experience, relevant content and promotions.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

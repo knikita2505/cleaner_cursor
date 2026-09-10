@@ -85,12 +85,12 @@ struct FeatureTipView: View {
             }
             
             // Title
-            Text(page.title)
+            Text(LocalizedStringKey(page.title))
                 .font(.system(size: 28, weight: .bold))
                 .foregroundColor(AppColors.textPrimary)
             
             // Description
-            Text(page.description)
+            Text(LocalizedStringKey(page.description))
                 .font(AppFonts.bodyL)
                 .foregroundColor(AppColors.textSecondary)
                 .multilineTextAlignment(.center)

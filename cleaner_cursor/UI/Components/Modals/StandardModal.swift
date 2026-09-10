@@ -5,10 +5,10 @@ import SwiftUI
 /// Background: #0F1116, Radius: 32pt
 
 struct StandardModal<Content: View>: View {
-    let title: String
-    let subtitle: String?
-    let primaryButtonTitle: String
-    let secondaryButtonTitle: String?
+    let title: LocalizedStringKey
+    let subtitle: LocalizedStringKey?
+    let primaryButtonTitle: LocalizedStringKey
+    let secondaryButtonTitle: LocalizedStringKey?
     let primaryAction: () -> Void
     let secondaryAction: (() -> Void)?
     let content: () -> Content
@@ -16,10 +16,10 @@ struct StandardModal<Content: View>: View {
     @Environment(\.dismiss) private var dismiss
     
     init(
-        title: String,
-        subtitle: String? = nil,
-        primaryButtonTitle: String = "Continue",
-        secondaryButtonTitle: String? = nil,
+        title: LocalizedStringKey,
+        subtitle: LocalizedStringKey? = nil,
+        primaryButtonTitle: LocalizedStringKey = "Continue",
+        secondaryButtonTitle: LocalizedStringKey? = nil,
         primaryAction: @escaping () -> Void,
         secondaryAction: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content = { EmptyView() }
@@ -79,20 +79,20 @@ struct StandardModal<Content: View>: View {
 struct PermissionModal: View {
     let icon: String
     let iconColor: Color
-    let title: String
-    let description: String
-    let primaryButtonTitle: String
-    let secondaryButtonTitle: String?
+    let title: LocalizedStringKey
+    let description: LocalizedStringKey
+    let primaryButtonTitle: LocalizedStringKey
+    let secondaryButtonTitle: LocalizedStringKey?
     let primaryAction: () -> Void
     let secondaryAction: (() -> Void)?
     
     init(
         icon: String,
         iconColor: Color = AppColors.accentBlue,
-        title: String,
-        description: String,
-        primaryButtonTitle: String = "Continue",
-        secondaryButtonTitle: String? = nil,
+        title: LocalizedStringKey,
+        description: LocalizedStringKey,
+        primaryButtonTitle: LocalizedStringKey = "Continue",
+        secondaryButtonTitle: LocalizedStringKey? = nil,
         primaryAction: @escaping () -> Void,
         secondaryAction: (() -> Void)? = nil
     ) {
@@ -161,17 +161,17 @@ struct PermissionModal: View {
 struct AlertModal: View {
     let icon: String?
     let iconColor: Color
-    let title: String
-    let message: String
-    let buttonTitle: String
+    let title: LocalizedStringKey
+    let message: LocalizedStringKey
+    let buttonTitle: LocalizedStringKey
     let action: () -> Void
     
     init(
         icon: String? = nil,
         iconColor: Color = AppColors.accentBlue,
-        title: String,
-        message: String,
-        buttonTitle: String = "OK",
+        title: LocalizedStringKey,
+        message: LocalizedStringKey,
+        buttonTitle: LocalizedStringKey = "OK",
         action: @escaping () -> Void
     ) {
         self.icon = icon

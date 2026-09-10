@@ -14,6 +14,8 @@ final class NotificationService: ObservableObject {
     // MARK: - Constants
     
     private let notificationsEnabledKey = "notifications_enabled"
+    private let scheduleVersionKey = "notifications_schedule_version"
+    private let currentScheduleVersion = 2
     private let planningDays = 14
     private let minimumDaysThreshold = 5
     private let morningHour = 9
@@ -31,8 +33,10 @@ final class NotificationService: ObservableObject {
     }
     
     // MARK: - Notification Content Variants
+    /// Ключи из Localizable.xcstrings. iOS подставляет перевод в момент показа,
+    /// а не в момент планирования (иначе пуши остаются на языке, который был при schedule).
     
-    private let notificationVariants: [(title: String, body: String)] = [
+    private let notificationVariants: [(titleKey: String, bodyKey: String)] = [
         ("Duplicate Photos Found 📸", "You may have duplicate photos taking up space."),
         ("Time to Check Your Gallery 🖼️", "Review your photos and free up some storage."),
         ("Storage Reminder 📱", "Check if you have unnecessary files to remove."),
@@ -115,8 +119,9 @@ final class NotificationService: ObservableObject {
         }
         
         let remainingDays = await getRemainingScheduledDays()
+        let needsLocalizationRefresh = UserDefaults.standard.integer(forKey: scheduleVersionKey) < currentScheduleVersion
         
-        if remainingDays < minimumDaysThreshold {
+        if needsLocalizationRefresh || remainingDays < minimumDaysThreshold {
             print("📅 Remaining scheduled days: \(remainingDays). Rescheduling...")
             await scheduleNotifications()
         } else {
@@ -155,6 +160,7 @@ final class NotificationService: ObservableObject {
         }
         
         print("✅ Scheduled \(planningDays * 2) notifications for the next \(planningDays) days")
+        UserDefaults.standard.set(currentScheduleVersion, forKey: scheduleVersionKey)
     }
     
     /// Планирование одного уведомления
@@ -176,10 +182,11 @@ final class NotificationService: ObservableObject {
         // Выбираем случайный вариант контента
         let variant = notificationVariants.randomElement() ?? notificationVariants[0]
         
-        // Создаём контент
+        // Создаём контент. localizedUserNotificationString подставляет перевод
+        // в момент показа, по текущему языку приложения.
         let content = UNMutableNotificationContent()
-        content.title = variant.title
-        content.body = variant.body
+        content.title = NSString.localizedUserNotificationString(forKey: variant.titleKey, arguments: nil)
+        content.body = NSString.localizedUserNotificationString(forKey: variant.bodyKey, arguments: nil)
         content.sound = .default
         
         // Создаём триггер

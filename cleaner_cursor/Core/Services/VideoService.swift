@@ -250,9 +250,9 @@ enum VideoServiceError: LocalizedError {
     
     var errorDescription: String? {
         switch self {
-        case .assetNotFound: return "Video asset not found"
-        case .exportFailed: return "Video export failed"
-        case .compressionFailed: return "Video compression failed"
+        case .assetNotFound: return String(localized: "Video asset not found")
+        case .exportFailed: return String(localized: "Video export failed")
+        case .compressionFailed: return String(localized: "Video compression failed")
         }
     }
 }

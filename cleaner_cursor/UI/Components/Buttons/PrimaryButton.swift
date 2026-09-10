@@ -5,13 +5,13 @@ import SwiftUI
 /// Height: 56pt, Corner radius: 16pt, Background: CTA Gradient
 
 struct PrimaryButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String?
     let isLoading: Bool
     let action: () -> Void
     
     init(
-        title: String,
+        title: LocalizedStringKey,
         icon: String? = nil,
         isLoading: Bool = false,
         action: @escaping () -> Void
@@ -55,12 +55,12 @@ struct PrimaryButton: View {
 /// Кнопка с обводкой без заливки
 
 struct SecondaryButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String?
     let action: () -> Void
     
     init(
-        title: String,
+        title: LocalizedStringKey,
         icon: String? = nil,
         action: @escaping () -> Void
     ) {
@@ -97,12 +97,12 @@ struct SecondaryButton: View {
 /// Минимальная кнопка без фона
 
 struct GhostButton: View {
-    let title: String
+    let title: LocalizedStringKey
     let icon: String?
     let action: () -> Void
     
     init(
-        title: String,
+        title: LocalizedStringKey,
         icon: String? = nil,
         action: @escaping () -> Void
     ) {
