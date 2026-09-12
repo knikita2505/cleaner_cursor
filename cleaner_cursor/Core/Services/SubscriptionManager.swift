@@ -199,6 +199,7 @@ final class SubscriptionManager: ObservableObject {
     /// Handle successful purchase - called from PaywallView
     func handleSuccessfulPurchase() {
         checkSubscriptionStatus()
+        CleanupAccessCoordinator.shared.handlePurchaseSuccess()
         dismissPaywall()
         
         // Post notification for UI updates
@@ -213,6 +214,7 @@ final class SubscriptionManager: ObservableObject {
                     self.checkSubscriptionStatus()
                     
                     if self.isPremium {
+                        CleanupAccessCoordinator.shared.handlePurchaseSuccess()
                         self.dismissPaywall()
                         NotificationCenter.default.post(name: .subscriptionStatusChanged, object: nil)
                         continuation.resume(returning: true)

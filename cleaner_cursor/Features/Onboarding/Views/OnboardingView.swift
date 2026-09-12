@@ -218,6 +218,7 @@ struct OnboardingView: View {
             try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
             
             let _ = await appsFlyerService.requestATTPermission()
+            await ConsentService.shared.prepareAdsIfNeeded()
         }
     }
 }

@@ -113,27 +113,6 @@ struct LivePhotosView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    await viewModel.proceedWithDeletion()
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
     }
     
     // MARK: - Live Photo Preview
@@ -764,13 +743,7 @@ final class LivePhotosViewModel: ObservableObject {
     @Published var isMultiSelectMode: Bool = false
     @Published var selectedIndices: Set<Int> = []
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     private let photoService = PhotoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     var totalSavings: Int64 {
         livePhotos.reduce(Int64(0)) { result, photo in
@@ -833,35 +806,20 @@ final class LivePhotosViewModel: ObservableObject {
     }
     
     func applyChanges() async {
-        let toProcess = livePhotos.enumerated().filter { $0.element.action != .keepLive }
+        let toProcess = livePhotos.filter { $0.action != .keepLive }
         guard !toProcess.isEmpty else { return }
-        
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let count = toProcess.count
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
+
+        let items = toProcess.map { photo in
+            let size = photo.action == .delete ? photo.fileSize : photo.videoSize
+            return CleanupItem(id: photo.id, byteSize: size)
         }
-        
-        await performApplyChanges()
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            await self.performApplyChanges(ids: Set(ids))
+        }
     }
     
-    func proceedWithDeletion() async {
-        await performApplyChanges()
-    }
-    
-    private func performApplyChanges() async {
-        let toProcess = livePhotos.enumerated().filter { $0.element.action != .keepLive }
+    private func performApplyChanges(ids: Set<String>) async {
+        let toProcess = livePhotos.filter { ids.contains($0.id) && $0.action != .keepLive }
         guard !toProcess.isEmpty else { return }
         
         isProcessing = true
@@ -871,7 +829,7 @@ final class LivePhotosViewModel: ObservableObject {
         
         var successIds: Set<String> = []
         
-        for (_, photo) in toProcess {
+        for photo in toProcess {
             do {
                 switch photo.action {
                 case .delete:
@@ -898,11 +856,11 @@ final class LivePhotosViewModel: ObservableObject {
         }
         
         if !successIds.isEmpty {
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: successIds.count)
-            
-            // Calculate bytes freed (estimate ~2MB per Live Photo video component)
-            let bytesFreed = Int64(successIds.count) * 2_000_000
+            let bytesFreed = toProcess
+                .filter { successIds.contains($0.id) }
+                .reduce(Int64(0)) { total, photo in
+                    total + (photo.action == .delete ? photo.fileSize : photo.videoSize)
+                }
             
             // Record to history
             CleaningHistoryService.shared.recordCleaning(

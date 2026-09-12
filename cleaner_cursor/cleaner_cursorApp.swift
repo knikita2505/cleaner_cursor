@@ -36,6 +36,7 @@ struct RootView: View {
     
     @EnvironmentObject private var appState: AppState
     @StateObject private var subscriptionManager = SubscriptionManager.shared
+    @StateObject private var cleanupCoordinator = CleanupAccessCoordinator.shared
     @State private var showSplash: Bool = true
     @State private var showPermissions: Bool = false
     @State private var permissionsCompleted: Bool = false
@@ -102,13 +103,24 @@ struct RootView: View {
             
             // Check subscription status
             subscriptionManager.checkSubscriptionStatus()
+            Task {
+                await ConsentService.shared.prepareAdsAfterTrackingDecision()
+            }
         }
-        .fullScreenCover(isPresented: $subscriptionManager.showPaywall) {
+        .fullScreenCover(isPresented: $subscriptionManager.showPaywall, onDismiss: {
+            cleanupCoordinator.handlePaywallDismissed()
+        }) {
             // Use different paywall based on placement
             if subscriptionManager.currentPlacement == .onboarding {
                 PaywallView(placement: subscriptionManager.currentPlacement)
             } else {
                 PremiumPaywallView(placement: subscriptionManager.currentPlacement)
+            }
+        }
+        .overlay {
+            if cleanupCoordinator.showRewardSheet {
+                CleanupRewardSheet()
+                    .transition(.opacity)
             }
         }
     }

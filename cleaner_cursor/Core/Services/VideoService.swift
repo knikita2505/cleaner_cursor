@@ -239,6 +239,16 @@ enum VideoCompressionQuality: String, CaseIterable {
         case .high: return "Good quality, moderate compression"
         }
     }
+
+    func estimatedSavings(for fileSize: Int64) -> Int64 {
+        let ratio: Double
+        switch self {
+        case .high: ratio = 0.35
+        case .medium: ratio = 0.55
+        case .low: ratio = 0.70
+        }
+        return Int64(Double(fileSize) * ratio)
+    }
 }
 
 // MARK: - Video Service Errors

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1100C1E230555EA200054B1E /* GoogleMobileAds in Frameworks */ = {isa = PBXBuildFile; productRef = 1100C1E130555EA200054B1E /* GoogleMobileAds */; };
 		110E27032F0DA75200AFEA92 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 110E27002F0DA75200AFEA92 /* SplashView.swift */; };
 		110E2FFE2F47B5B0008AA143 /* AppsFlyerLib-Dynamic in Frameworks */ = {isa = PBXBuildFile; productRef = 110E2FFD2F47B5B0008AA143 /* AppsFlyerLib-Dynamic */; };
 		111038602EEDDAE90015FEE3 /* SimilarNamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1110385A2EEDDAE90015FEE3 /* SimilarNamesView.swift */; };
@@ -89,6 +90,11 @@
 		11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1032F2B000000000001 /* SubscriptionManager.swift */; };
 		11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1062F2B000000000002 /* PremiumPaywallView.swift */; };
 		11F0A1072F47C00000000001 /* AppsFlyerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F0A1082F47C00000000001 /* AppsFlyerService.swift */; };
+		11C1EA012F5C110100000002 /* AdMobConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C1EA012F5C110100000001 /* AdMobConfig.swift */; };
+		11C1EA012F5C110100000004 /* ConsentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C1EA012F5C110100000003 /* ConsentService.swift */; };
+		11C1EA012F5C110100000006 /* RewardedAdService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C1EA012F5C110100000005 /* RewardedAdService.swift */; };
+		11C1EA012F5C110100000008 /* CleanupAccessCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C1EA012F5C110100000007 /* CleanupAccessCoordinator.swift */; };
+		11C1EA012F5C11010000000A /* CleanupRewardSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11C1EA012F5C110100000009 /* CleanupRewardSheet.swift */; };
 		11F50A712EFD6BA40001F911 /* DeviceHealthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */; };
 		11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */; };
 		11F50A782EFD6BB30001F911 /* SystemTipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11F50A752EFD6BB30001F911 /* SystemTipsView.swift */; };
@@ -194,6 +200,11 @@
 		11F0A1032F2B000000000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
 		11F0A1062F2B000000000002 /* PremiumPaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PremiumPaywallView.swift; sourceTree = "<group>"; };
 		11F0A1082F47C00000000001 /* AppsFlyerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppsFlyerService.swift; sourceTree = "<group>"; };
+		11C1EA012F5C110100000001 /* AdMobConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMobConfig.swift; sourceTree = "<group>"; };
+		11C1EA012F5C110100000003 /* ConsentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConsentService.swift; sourceTree = "<group>"; };
+		11C1EA012F5C110100000005 /* RewardedAdService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RewardedAdService.swift; sourceTree = "<group>"; };
+		11C1EA012F5C110100000007 /* CleanupAccessCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupAccessCoordinator.swift; sourceTree = "<group>"; };
+		11C1EA012F5C110100000009 /* CleanupRewardSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanupRewardSheet.swift; sourceTree = "<group>"; };
 		11F50A702EFD6BA40001F911 /* DeviceHealthService.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DeviceHealthService.swift; sourceTree = "<group>"; };
 		11F50A742EFD6BB30001F911 /* BatteryInsightsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BatteryInsightsView.swift; sourceTree = "<group>"; };
 		11F50A752EFD6BB30001F911 /* SystemTipsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SystemTipsView.swift; sourceTree = "<group>"; };
@@ -205,6 +216,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				1100C1E230555EA200054B1E /* GoogleMobileAds in Frameworks */,
 				113AB5E92F2A90240006E945 /* ApphudSDK in Frameworks */,
 				115ECDB82FA00038003DDD32 /* AppMetricaAnalytics in Frameworks */,
 				115ECDBA2FA00038003DDD32 /* AppMetricaCore in Frameworks */,
@@ -408,6 +420,10 @@
 			children = (
 				115ECDBB2FA0177B003DDD32 /* AppMetricaService.swift */,
 				11F0A1082F47C00000000001 /* AppsFlyerService.swift */,
+				11C1EA012F5C110100000001 /* AdMobConfig.swift */,
+				11C1EA012F5C110100000003 /* ConsentService.swift */,
+				11C1EA012F5C110100000005 /* RewardedAdService.swift */,
+				11C1EA012F5C110100000007 /* CleanupAccessCoordinator.swift */,
 				11F0A1032F2B000000000001 /* SubscriptionManager.swift */,
 				11D645352F09971D00FA080C /* CleaningHistoryService.swift */,
 				11D6453F2F0B8A1000FA080C /* FeatureTipService.swift */,
@@ -483,6 +499,7 @@
 			children = (
 				11F0A1012F0B5A01003BBBBB /* PaywallView.swift */,
 				11F0A1062F2B000000000002 /* PremiumPaywallView.swift */,
+				11C1EA012F5C110100000009 /* CleanupRewardSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -768,6 +785,7 @@
 				113AB5E72F2A90240006E945 /* XCRemoteSwiftPackageReference "ApphudSDK" */,
 				110E2FFC2F47B5B0008AA143 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Dynamic" */,
 				115ECDB42FA00038003DDD32 /* XCRemoteSwiftPackageReference "appmetrica-sdk-ios" */,
+				1100C1E030555EA200054B1E /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */,
 			);
 			productRefGroup = 11205BE02ED4D7A2003AFFF9 /* Products */;
 			projectDirPath = "";
@@ -873,6 +891,11 @@
 				11F0A1052F2B000000000002 /* PremiumPaywallView.swift in Sources */,
 				11F0A1042F2B000000000001 /* SubscriptionManager.swift in Sources */,
 				11F0A1072F47C00000000001 /* AppsFlyerService.swift in Sources */,
+				11C1EA012F5C110100000002 /* AdMobConfig.swift in Sources */,
+				11C1EA012F5C110100000004 /* ConsentService.swift in Sources */,
+				11C1EA012F5C110100000006 /* RewardedAdService.swift in Sources */,
+				11C1EA012F5C110100000008 /* CleanupAccessCoordinator.swift in Sources */,
+				11C1EA012F5C11010000000A /* CleanupRewardSheet.swift in Sources */,
 				11205D4F2ED79C0D003AFFF9 /* SimilarPhotosView.swift in Sources */,
 				11F50A772EFD6BB30001F911 /* BatteryInsightsView.swift in Sources */,
 				11205D4C2ED79C0D003AFFF9 /* DuplicatesView.swift in Sources */,
@@ -1053,7 +1076,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"cleaner_cursor/Preview Content\"";
 				DEVELOPMENT_TEAM = 424XBTW2M9;
 				ENABLE_PREVIEWS = YES;
@@ -1071,7 +1094,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "nikita.ka.phone-cleaner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1090,7 +1113,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_ASSET_PATHS = "\"cleaner_cursor/Preview Content\"";
 				DEVELOPMENT_TEAM = 424XBTW2M9;
 				ENABLE_PREVIEWS = YES;
@@ -1108,7 +1131,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1;
+				MARKETING_VERSION = 2.2;
 				PRODUCT_BUNDLE_IDENTIFIER = "nikita.ka.phone-cleaner";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -1231,6 +1254,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		1100C1E030555EA200054B1E /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/googleads/swift-package-manager-google-mobile-ads.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 13.9.0;
+			};
+		};
 		110E2FFC2F47B5B0008AA143 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Dynamic" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework-Dynamic";
@@ -1258,6 +1289,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1100C1E130555EA200054B1E /* GoogleMobileAds */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1100C1E030555EA200054B1E /* XCRemoteSwiftPackageReference "swift-package-manager-google-mobile-ads" */;
+			productName = GoogleMobileAds;
+		};
 		110E2FFD2F47B5B0008AA143 /* AppsFlyerLib-Dynamic */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 110E2FFC2F47B5B0008AA143 /* XCRemoteSwiftPackageReference "AppsFlyerFramework-Dynamic" */;

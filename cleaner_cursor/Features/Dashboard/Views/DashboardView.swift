@@ -192,9 +192,6 @@ struct DashboardView: View {
             
             Spacer()
             
-            // Remaining items indicator (for free users)
-            RemainingItemsView()
-            
             // Settings button
             Button {
                 showSettings = true
