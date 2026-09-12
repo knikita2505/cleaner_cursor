@@ -687,9 +687,21 @@ class ShortVideosViewModel: ObservableObject {
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
+    private var listRevision = 0
+    private var hiddenIds: Set<String> = []
+
     func load() {
-        isLoading = true
-        
+        guard videos.isEmpty else { return }
+        reloadList()
+    }
+
+    private func reloadList() {
+        listRevision += 1
+        let revision = listRevision
+        if videos.isEmpty {
+            isLoading = true
+        }
+
         Task {
             let videoService = VideoService.shared
             let result = await Task.detached(priority: .userInitiated) {
@@ -700,9 +712,20 @@ class ShortVideosViewModel: ObservableObject {
                 }
                 return videos.sorted { $0.duration < $1.duration }
             }.value
-            
-            self.videos = result
+
+            guard revision == self.listRevision else { return }
+            self.videos = result.filter { !self.hiddenIds.contains($0.id) }
             self.isLoading = false
+        }
+    }
+
+    private func dropVideos(ids: Set<String>) {
+        hiddenIds.formUnion(ids)
+        listRevision += 1
+        videos.removeAll { ids.contains($0.id) }
+        selectedIds.subtract(ids)
+        if selectedIds.isEmpty {
+            isSelectionMode = false
         }
     }
     
@@ -752,9 +775,7 @@ class ShortVideosViewModel: ObservableObject {
                 bytesFreed: video.fileSize
             )
             
-            withAnimation {
-                videos.removeAll { $0.id == video.id }
-            }
+            dropVideos(ids: [video.id])
             HapticManager.success()
         } catch {
             print("Error deleting video: \(error)")
@@ -791,13 +812,7 @@ class ShortVideosViewModel: ObservableObject {
                 bytesFreed: bytesFreed
             )
             
-            withAnimation {
-                videos.removeAll { ids.contains($0.id) }
-            }
-            selectedIds.subtract(ids)
-            if selectedIds.isEmpty {
-                isSelectionMode = false
-            }
+            dropVideos(ids: ids)
             HapticManager.success()
         } catch {
             print("Error deleting videos: \(error)")

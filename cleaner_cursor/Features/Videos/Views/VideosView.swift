@@ -820,9 +820,21 @@ class VideosViewModel: ObservableObject {
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
+    private var listRevision = 0
+    private var hiddenIds: Set<String> = []
+
     func load() {
-        isLoading = true
-        
+        guard videos.isEmpty else { return }
+        reloadList()
+    }
+
+    private func reloadList() {
+        listRevision += 1
+        let revision = listRevision
+        if videos.isEmpty {
+            isLoading = true
+        }
+
         Task {
             let videoService = VideoService.shared
             let result = await Task.detached(priority: .userInitiated) {
@@ -833,9 +845,20 @@ class VideosViewModel: ObservableObject {
                 }
                 return videos.sorted { $0.fileSize > $1.fileSize }
             }.value
-            
-            self.videos = result
+
+            guard revision == self.listRevision else { return }
+            self.videos = result.filter { !self.hiddenIds.contains($0.id) }
             self.isLoading = false
+        }
+    }
+
+    private func dropVideos(ids: Set<String>) {
+        hiddenIds.formUnion(ids)
+        listRevision += 1
+        videos.removeAll { ids.contains($0.id) }
+        selectedIds.subtract(ids)
+        if selectedIds.isEmpty {
+            isSelectionMode = false
         }
     }
     
@@ -886,9 +909,7 @@ class VideosViewModel: ObservableObject {
                 bytesFreed: video.fileSize
             )
             
-            withAnimation {
-                videos.removeAll { $0.id == video.id }
-            }
+            dropVideos(ids: [video.id])
             HapticManager.success()
         } catch {
             print("Error deleting video: \(error)")
@@ -926,13 +947,7 @@ class VideosViewModel: ObservableObject {
                 bytesFreed: bytesFreed
             )
             
-            withAnimation {
-                videos.removeAll { ids.contains($0.id) }
-            }
-            selectedIds.subtract(ids)
-            if selectedIds.isEmpty {
-                isSelectionMode = false
-            }
+            dropVideos(ids: ids)
             HapticManager.success()
         } catch {
             print("Error deleting videos: \(error)")
@@ -966,60 +981,39 @@ class VideosViewModel: ObservableObject {
     }
 
     private func performCompression(videos videosToCompress: [VideoAsset], quality: VideoCompressionQuality) async {
-        
         isProcessing = true
-        
+
+        var compressed: [(url: URL, original: PHAsset)] = []
         for (index, video) in videosToCompress.enumerated() {
             processingMessage = String(localized: "Compressing \(index + 1)/\(videosToCompress.count)...")
-            
-            await withCheckedContinuation { continuation in
-                videoService.compressVideo(asset: video.asset, quality: quality) { result in
-                    Task { @MainActor in
-                        switch result {
-                        case .success(let url):
-                            self.saveCompressedVideo(url: url, originalAsset: video.asset)
-                        case .failure(let error):
-                            print("Compression failed: \(error)")
-                        }
-                        continuation.resume()
-                    }
-                }
+            do {
+                let url = try await videoService.compressVideo(asset: video.asset, quality: quality)
+                compressed.append((url, video.asset))
+            } catch {
+                print("Compression failed: \(error)")
             }
         }
-        
-        if selectedIds.isEmpty {
-            isSelectionMode = false
+
+        guard !compressed.isEmpty else {
+            HapticManager.error()
+            isProcessing = false
+            return
         }
+
+        processingMessage = String(localized: "Saving compressed videos...")
+        do {
+            try await videoService.replaceVideosWithCompressed(compressed)
+            dropVideos(ids: Set(compressed.map(\.original.localIdentifier)))
+            HapticManager.success()
+            reloadList()
+        } catch {
+            print("Failed to save compressed videos: \(error)")
+            for item in compressed {
+                try? FileManager.default.removeItem(at: item.url)
+            }
+            HapticManager.error()
+        }
+
         isProcessing = false
-        load()
-    }
-    
-    private func saveCompressedVideo(url: URL, originalAsset: PHAsset) {
-        PHPhotoLibrary.shared().performChanges {
-            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
-        } completionHandler: { success, error in
-            if success {
-                // Delete original
-                PHPhotoLibrary.shared().performChanges {
-                    PHAssetChangeRequest.deleteAssets([originalAsset] as NSFastEnumeration)
-                } completionHandler: { deleteSuccess, deleteError in
-                    // Clean up temp file
-                    try? FileManager.default.removeItem(at: url)
-                    
-                    Task { @MainActor in
-                        if deleteSuccess {
-                            self.videos.removeAll { $0.id == originalAsset.localIdentifier }
-                            HapticManager.success()
-                        }
-                        self.isProcessing = false
-                    }
-                }
-            } else {
-                try? FileManager.default.removeItem(at: url)
-                Task { @MainActor in
-                    self.isProcessing = false
-                }
-            }
-        }
     }
 }

@@ -136,6 +136,35 @@ final class VideoService: ObservableObject {
             PHAssetChangeRequest.deleteAssets(assets as NSFastEnumeration)
         }
     }
+
+    func compressVideo(asset: PHAsset, quality: VideoCompressionQuality) async throws -> URL {
+        try await withCheckedThrowingContinuation { continuation in
+            compressVideo(asset: asset, quality: quality) { result in
+                switch result {
+                case .success(let url):
+                    continuation.resume(returning: url)
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
+    /// Adds compressed copies and deletes originals in one Photos change.
+    func replaceVideosWithCompressed(_ items: [(url: URL, original: PHAsset)]) async throws {
+        guard !items.isEmpty else { return }
+
+        try await PHPhotoLibrary.shared().performChanges {
+            for item in items {
+                PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: item.url)
+            }
+            PHAssetChangeRequest.deleteAssets(items.map(\.original) as NSArray)
+        }
+
+        for item in items {
+            try? FileManager.default.removeItem(at: item.url)
+        }
+    }
     
     // MARK: - Statistics
     

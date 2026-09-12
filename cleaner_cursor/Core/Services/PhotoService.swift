@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Photos
 import UIKit
@@ -593,36 +594,104 @@ final class PhotoService: ObservableObject {
     // MARK: - Convert Live Photo to Still
     
     func convertLivePhotoToStill(_ asset: PHAsset) async throws {
-        guard asset.mediaSubtypes.contains(.photoLive) else { return }
-        
-        let options = PHImageRequestOptions()
-        options.deliveryMode = .highQualityFormat
-        options.isNetworkAccessAllowed = true
-        options.isSynchronous = true
-        
-        var stillImage: UIImage?
-        
-        imageManager.requestImage(
-            for: asset,
-            targetSize: PHImageManagerMaximumSize,
-            contentMode: .aspectFit,
-            options: options
-        ) { image, _ in
-            stillImage = image
+        try await applyLivePhotoActions(convert: [asset], delete: [])
+    }
+
+    /// Creates stills and deletes Live Photos in one Photos change, so iOS asks once.
+    func applyLivePhotoActions(convert convertAssets: [PHAsset], delete deleteAssets: [PHAsset]) async throws {
+        var stills: [(data: Data, creationDate: Date?, location: CLLocation?)] = []
+        var convertedAssets: [PHAsset] = []
+
+        for asset in convertAssets {
+            do {
+                let data = try await stillImageData(for: asset)
+                stills.append((data, asset.creationDate, asset.location))
+                convertedAssets.append(asset)
+            } catch {
+                print("Failed to extract still from Live Photo: \(error.localizedDescription)")
+            }
         }
-        
-        guard let image = stillImage, let imageData = image.jpegData(compressionQuality: 0.9) else {
+
+        let assetsToDelete = convertedAssets + deleteAssets
+        guard !stills.isEmpty || !assetsToDelete.isEmpty else {
             throw PhotoServiceError.conversionFailed
         }
-        
+
         try await PHPhotoLibrary.shared().performChanges {
-            let request = PHAssetCreationRequest.forAsset()
-            request.addResource(with: .photo, data: imageData, options: nil)
-            request.creationDate = asset.creationDate
-            request.location = asset.location
+            for still in stills {
+                let request = PHAssetCreationRequest.forAsset()
+                request.addResource(with: .photo, data: still.data, options: nil)
+                request.creationDate = still.creationDate
+                request.location = still.location
+            }
+            if !assetsToDelete.isEmpty {
+                PHAssetChangeRequest.deleteAssets(assetsToDelete as NSArray)
+            }
         }
-        
-        try await deletePhotos([asset])
+        invalidateCache()
+    }
+
+    private func stillImageData(for asset: PHAsset) async throws -> Data {
+        let resources = PHAssetResource.assetResources(for: asset)
+        if let photoResource = resources.first(where: { $0.type == .fullSizePhoto })
+            ?? resources.first(where: { $0.type == .photo }) {
+            return try await requestResourceData(photoResource)
+        }
+        return try await requestImageData(for: asset)
+    }
+
+    private func requestResourceData(_ resource: PHAssetResource) async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            var data = Data()
+            var resumed = false
+            let options = PHAssetResourceRequestOptions()
+            options.isNetworkAccessAllowed = true
+            PHAssetResourceManager.default().requestData(for: resource, options: options) { chunk in
+                data.append(chunk)
+            } completionHandler: { error in
+                guard !resumed else { return }
+                resumed = true
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if data.isEmpty {
+                    continuation.resume(throwing: PhotoServiceError.conversionFailed)
+                } else {
+                    continuation.resume(returning: data)
+                }
+            }
+        }
+    }
+
+    private func requestImageData(for asset: PHAsset) async throws -> Data {
+        try await withCheckedThrowingContinuation { continuation in
+            let options = PHImageRequestOptions()
+            options.deliveryMode = .highQualityFormat
+            options.isNetworkAccessAllowed = true
+            options.isSynchronous = false
+            options.version = .current
+
+            var resumed = false
+            imageManager.requestImageDataAndOrientation(for: asset, options: options) { data, _, _, info in
+                if info?[PHImageResultIsDegradedKey] as? Bool == true {
+                    return
+                }
+                guard !resumed else { return }
+                resumed = true
+                if let error = info?[PHImageErrorKey] as? Error {
+                    continuation.resume(throwing: error)
+                    return
+                }
+                if info?[PHImageCancelledKey] as? Bool == true {
+                    continuation.resume(throwing: PhotoServiceError.conversionFailed)
+                    return
+                }
+                guard let data, !data.isEmpty else {
+                    continuation.resume(throwing: PhotoServiceError.conversionFailed)
+                    return
+                }
+                continuation.resume(returning: data)
+            }
+        }
     }
     
     // MARK: - Fetch Live Photos as Models

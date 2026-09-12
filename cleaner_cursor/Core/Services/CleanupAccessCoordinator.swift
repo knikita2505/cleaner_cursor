@@ -147,6 +147,8 @@ final class CleanupAccessCoordinator: ObservableObject {
             let perform = pendingPerform
             showRewardSheet = false
             clearPending()
+            // Let the ad and reward sheet finish dismissing so Photos can present its dialog.
+            try? await Task.sleep(nanoseconds: 450_000_000)
             await perform?(ids)
             resumeFlow()
         case .notReady:

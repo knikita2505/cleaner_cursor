@@ -773,6 +773,7 @@ final class LivePhotosViewModel: ObservableObject {
     }
     
     func loadLivePhotos() async {
+        guard livePhotos.isEmpty else { return }
         isLoading = true
         livePhotos = photoService.fetchLivePhotosAsModels()
         isLoading = false
@@ -814,12 +815,11 @@ final class LivePhotosViewModel: ObservableObject {
             return CleanupItem(id: photo.id, byteSize: size)
         }
         await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
-            await self.performApplyChanges(ids: Set(ids))
+            await self.performApplyChanges(photos: toProcess.filter { ids.contains($0.id) })
         }
     }
     
-    private func performApplyChanges(ids: Set<String>) async {
-        let toProcess = livePhotos.filter { ids.contains($0.id) && $0.action != .keepLive }
+    private func performApplyChanges(photos toProcess: [LivePhotoAsset]) async {
         guard !toProcess.isEmpty else { return }
         
         isProcessing = true
@@ -827,49 +827,32 @@ final class LivePhotosViewModel: ObservableObject {
         processedCount = 0
         processingProgress = 0
         
-        var successIds: Set<String> = []
+        let toConvert = toProcess.filter { $0.action == .convert }.map(\.asset)
+        let toDelete = toProcess.filter { $0.action == .delete }.map(\.asset)
         
-        for photo in toProcess {
-            do {
-                switch photo.action {
-                case .delete:
-                    try await photoService.deletePhotos([photo.asset])
-                    successIds.insert(photo.id)
-                    
-                case .convert:
-                    try await photoService.convertLivePhotoToStill(photo.asset)
-                    successIds.insert(photo.id)
-                    
-                case .keepLive:
-                    break
-                }
-            } catch {
-                print("Failed to process Live Photo: \(error)")
+        do {
+            try await photoService.applyLivePhotoActions(convert: toConvert, delete: toDelete)
+            
+            let successIds = Set(toProcess.map(\.id))
+            processedCount = toProcess.count
+            processingProgress = 1
+            
+            withAnimation(.easeInOut(duration: 0.3)) {
+                livePhotos.removeAll { successIds.contains($0.id) }
             }
             
-            processedCount += 1
-            processingProgress = Double(processedCount) / Double(totalToProcess)
-        }
-        
-        withAnimation(.easeInOut(duration: 0.3)) {
-            livePhotos.removeAll { successIds.contains($0.id) }
-        }
-        
-        if !successIds.isEmpty {
-            let bytesFreed = toProcess
-                .filter { successIds.contains($0.id) }
-                .reduce(Int64(0)) { total, photo in
-                    total + (photo.action == .delete ? photo.fileSize : photo.videoSize)
-                }
-            
-            // Record to history
+            let bytesFreed = toProcess.reduce(Int64(0)) { total, photo in
+                total + (photo.action == .delete ? photo.fileSize : photo.videoSize)
+            }
             CleaningHistoryService.shared.recordCleaning(
                 type: .livePhotos,
                 itemsCount: successIds.count,
                 bytesFreed: bytesFreed
             )
-            
             HapticManager.success()
+        } catch {
+            print("Failed to process Live Photos: \(error)")
+            HapticManager.error()
         }
         
         isProcessing = false
