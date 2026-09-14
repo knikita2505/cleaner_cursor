@@ -100,27 +100,6 @@ struct VideosView: View {
         } message: {
             Text("Delete \(viewModel.selectedCount) videos? This action cannot be undone.")
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    await viewModel.proceedWithDeletion()
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
         .confirmationDialog("Compress Quality", isPresented: $showCompressSheet) {
             Button("High Quality (30-40% savings)") {
                 Task { await viewModel.compressSelected(quality: .high) }
@@ -820,13 +799,7 @@ class VideosViewModel: ObservableObject {
     @Published var isProcessing = false
     @Published var processingMessage = ""
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     private let videoService = VideoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     var selectedCount: Int {
         selectedIds.count
@@ -847,9 +820,21 @@ class VideosViewModel: ObservableObject {
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
+    private var listRevision = 0
+    private var hiddenIds: Set<String> = []
+
     func load() {
-        isLoading = true
-        
+        guard videos.isEmpty else { return }
+        reloadList()
+    }
+
+    private func reloadList() {
+        listRevision += 1
+        let revision = listRevision
+        if videos.isEmpty {
+            isLoading = true
+        }
+
         Task {
             let videoService = VideoService.shared
             let result = await Task.detached(priority: .userInitiated) {
@@ -860,9 +845,20 @@ class VideosViewModel: ObservableObject {
                 }
                 return videos.sorted { $0.fileSize > $1.fileSize }
             }.value
-            
-            self.videos = result
+
+            guard revision == self.listRevision else { return }
+            self.videos = result.filter { !self.hiddenIds.contains($0.id) }
             self.isLoading = false
+        }
+    }
+
+    private func dropVideos(ids: Set<String>) {
+        hiddenIds.formUnion(ids)
+        listRevision += 1
+        videos.removeAll { ids.contains($0.id) }
+        selectedIds.subtract(ids)
+        if selectedIds.isEmpty {
+            isSelectionMode = false
         }
     }
     
@@ -892,23 +888,12 @@ class VideosViewModel: ObservableObject {
     }
     
     func deleteVideo(_ video: VideoAsset) async {
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let permission = subscriptionManager.handleCleaningAttempt(count: 1)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
+        await CleanupAccessCoordinator.shared.requestCleanup(
+            items: [CleanupItem(id: video.id, byteSize: video.fileSize)]
+        ) { ids in
+            guard ids.contains(video.id) else { return }
+            await self.performSingleDeletion(video)
         }
-        
-        await performSingleDeletion(video)
     }
     
     private func performSingleDeletion(_ video: VideoAsset) async {
@@ -918,19 +903,13 @@ class VideosViewModel: ObservableObject {
         do {
             try await videoService.deleteVideos([video.asset])
             
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: 1)
-            
-            // Record to history
             CleaningHistoryService.shared.recordCleaning(
                 type: .videos,
                 itemsCount: 1,
                 bytesFreed: video.fileSize
             )
             
-            withAnimation {
-                videos.removeAll { $0.id == video.id }
-            }
+            dropVideos(ids: [video.id])
             HapticManager.success()
         } catch {
             print("Error deleting video: \(error)")
@@ -942,39 +921,18 @@ class VideosViewModel: ObservableObject {
     
     func deleteSelected() async {
         let videosToDelete = videos.filter { selectedIds.contains($0.id) }
-        let assetsToDelete = videosToDelete.map { $0.asset }
-        let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
-        
-        guard !assetsToDelete.isEmpty else { return }
-        
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let count = assetsToDelete.count
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
+        guard !videosToDelete.isEmpty else { return }
+
+        let items = videosToDelete.map { CleanupItem(id: $0.id, byteSize: $0.fileSize) }
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            await self.performBulkDeletion(ids: Set(ids))
         }
-        
-        await performBulkDeletion(assets: assetsToDelete, bytesFreed: bytesFreed)
     }
     
-    func proceedWithDeletion() async {
-        let videosToDelete = videos.filter { selectedIds.contains($0.id) }
-        let assetsToDelete = videosToDelete.map { $0.asset }
+    private func performBulkDeletion(ids: Set<String>) async {
+        let videosToDelete = videos.filter { ids.contains($0.id) }
+        let assetsToDelete = videosToDelete.map(\.asset)
         let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
-        await performBulkDeletion(assets: assetsToDelete, bytesFreed: bytesFreed)
-    }
-    
-    private func performBulkDeletion(assets assetsToDelete: [PHAsset], bytesFreed: Int64) async {
         guard !assetsToDelete.isEmpty else { return }
         
         isProcessing = true
@@ -983,21 +941,13 @@ class VideosViewModel: ObservableObject {
         do {
             try await videoService.deleteVideos(assetsToDelete)
             
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: assetsToDelete.count)
-            
-            // Record to history
             CleaningHistoryService.shared.recordCleaning(
                 type: .videos,
                 itemsCount: assetsToDelete.count,
                 bytesFreed: bytesFreed
             )
             
-            withAnimation {
-                videos.removeAll { selectedIds.contains($0.id) }
-            }
-            selectedIds.removeAll()
-            isSelectionMode = false
+            dropVideos(ids: ids)
             HapticManager.success()
         } catch {
             print("Error deleting videos: \(error)")
@@ -1008,82 +958,62 @@ class VideosViewModel: ObservableObject {
     }
     
     func compressVideo(_ video: VideoAsset, quality: VideoCompressionQuality) async {
-        isProcessing = true
-        processingMessage = String(localized: "Compressing video...")
-        
-        await withCheckedContinuation { continuation in
-            videoService.compressVideo(asset: video.asset, quality: quality) { result in
-                Task { @MainActor in
-                    switch result {
-                    case .success(let url):
-                        // Save compressed video to library
-                        self.saveCompressedVideo(url: url, originalAsset: video.asset)
-                    case .failure(let error):
-                        print("Compression failed: \(error)")
-                        HapticManager.error()
-                        self.isProcessing = false
-                    }
-                    continuation.resume()
-                }
-            }
+        await CleanupAccessCoordinator.shared.requestCleanup(
+            items: [CleanupItem(id: video.id, byteSize: quality.estimatedSavings(for: video.fileSize))]
+        ) { ids in
+            guard ids.contains(video.id) else { return }
+            await self.performCompression(videos: [video], quality: quality)
         }
     }
     
     func compressSelected(quality: VideoCompressionQuality) async {
         let videosToCompress = videos.filter { selectedIds.contains($0.id) }
-        
+        guard !videosToCompress.isEmpty else { return }
+
+        let items = videosToCompress.map {
+            CleanupItem(id: $0.id, byteSize: quality.estimatedSavings(for: $0.fileSize))
+        }
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            let slice = videosToCompress.filter { ids.contains($0.id) }
+            await self.performCompression(videos: slice, quality: quality)
+            self.selectedIds.subtract(ids)
+        }
+    }
+
+    private func performCompression(videos videosToCompress: [VideoAsset], quality: VideoCompressionQuality) async {
         isProcessing = true
-        
+
+        var compressed: [(url: URL, original: PHAsset)] = []
         for (index, video) in videosToCompress.enumerated() {
             processingMessage = String(localized: "Compressing \(index + 1)/\(videosToCompress.count)...")
-            
-            await withCheckedContinuation { continuation in
-                videoService.compressVideo(asset: video.asset, quality: quality) { result in
-                    Task { @MainActor in
-                        switch result {
-                        case .success(let url):
-                            self.saveCompressedVideo(url: url, originalAsset: video.asset)
-                        case .failure(let error):
-                            print("Compression failed: \(error)")
-                        }
-                        continuation.resume()
-                    }
-                }
+            do {
+                let url = try await videoService.compressVideo(asset: video.asset, quality: quality)
+                compressed.append((url, video.asset))
+            } catch {
+                print("Compression failed: \(error)")
             }
         }
-        
-        selectedIds.removeAll()
-        isSelectionMode = false
+
+        guard !compressed.isEmpty else {
+            HapticManager.error()
+            isProcessing = false
+            return
+        }
+
+        processingMessage = String(localized: "Saving compressed videos...")
+        do {
+            try await videoService.replaceVideosWithCompressed(compressed)
+            dropVideos(ids: Set(compressed.map(\.original.localIdentifier)))
+            HapticManager.success()
+            reloadList()
+        } catch {
+            print("Failed to save compressed videos: \(error)")
+            for item in compressed {
+                try? FileManager.default.removeItem(at: item.url)
+            }
+            HapticManager.error()
+        }
+
         isProcessing = false
-        load() // Reload to show updated videos
-    }
-    
-    private func saveCompressedVideo(url: URL, originalAsset: PHAsset) {
-        PHPhotoLibrary.shared().performChanges {
-            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: url)
-        } completionHandler: { success, error in
-            if success {
-                // Delete original
-                PHPhotoLibrary.shared().performChanges {
-                    PHAssetChangeRequest.deleteAssets([originalAsset] as NSFastEnumeration)
-                } completionHandler: { deleteSuccess, deleteError in
-                    // Clean up temp file
-                    try? FileManager.default.removeItem(at: url)
-                    
-                    Task { @MainActor in
-                        if deleteSuccess {
-                            self.videos.removeAll { $0.id == originalAsset.localIdentifier }
-                            HapticManager.success()
-                        }
-                        self.isProcessing = false
-                    }
-                }
-            } else {
-                try? FileManager.default.removeItem(at: url)
-                Task { @MainActor in
-                    self.isProcessing = false
-                }
-            }
-        }
     }
 }

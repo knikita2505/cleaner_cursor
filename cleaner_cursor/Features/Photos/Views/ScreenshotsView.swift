@@ -93,27 +93,6 @@ struct ScreenshotsView: View {
         } message: {
             Text("Delete \(viewModel.selectedIndices.count) screenshots? This cannot be undone.")
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    await viewModel.proceedWithDeletion()
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(PhotoSortOption.allCases, id: \.self) { option in
                 Button(option.localizedTitle) {
@@ -348,13 +327,7 @@ class ScreenshotsViewModel: ObservableObject {
     @Published var isDeleting: Bool = false
     @Published var isSelectionMode: Bool = true
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     private let photoService = PhotoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     var isAllSelected: Bool {
         let nonFavoriteCount = screenshots.filter { !$0.isFavorite }.count
@@ -413,75 +386,30 @@ class ScreenshotsViewModel: ObservableObject {
         }
     }
     
-    /// Check if deletion is allowed based on subscription limits
-    /// Returns true if can proceed, false if need to show paywall
-    func checkDeletionPermission() -> Bool {
-        let count = selectedIndices.count
-        let permission = subscriptionManager.handleCleaningAttempt(count: count)
-        
-        switch permission {
-        case .allowed:
-            return true
-        case .lastItems:
-            showLastItemsWarning = true
-            return false
-        case .limitReached:
-            limitWarningMessage = String(localized: "You've reached your daily limit of \(SubscriptionManager.dailyFreeLimit) items.")
-            showLimitWarning = true
-            return false
-        case .insufficientLimit(let remaining, let requested):
-            limitWarningMessage = String(localized: "You want to delete \(requested) items but only have \(remaining) left today.")
-            showLimitWarning = true
-            return false
-        }
-    }
-    
-    /// Proceed with deletion after limit warning confirmation
-    func proceedWithDeletion() async {
-        await performDeletion()
-    }
-    
     func deleteSelected() async {
-        guard !selectedIndices.isEmpty else { return }
-        
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let count = selectedIndices.count
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break // proceed
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
-        }
-        
-        await performDeletion()
-    }
-    
-    private func performDeletion() async {
-        guard !selectedIndices.isEmpty else { return }
-        
-        isDeleting = true
-        
-        let assetsToDelete = selectedIndices.compactMap { index -> PhotoAsset? in
+        let assets = selectedIndices.compactMap { index -> PhotoAsset? in
             guard index < screenshots.count else { return nil }
             return screenshots[index]
         }
+        guard !assets.isEmpty else { return }
+
+        let items = assets.map { CleanupItem(id: $0.id, byteSize: $0.fileSize) }
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            await self.performDeletion(ids: Set(ids))
+        }
+    }
+    
+    private func performDeletion(ids: Set<String>) async {
+        let assetsToDelete = screenshots.filter { ids.contains($0.id) }
+        guard !assetsToDelete.isEmpty else { return }
+        
+        isDeleting = true
         
         do {
             // Calculate bytes before deletion
             let bytesFreed = assetsToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
             
             try await photoService.deletePhotoAssets(assetsToDelete)
-            
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: assetsToDelete.count)
             
             // Record to history
             CleaningHistoryService.shared.recordCleaning(
@@ -490,12 +418,17 @@ class ScreenshotsViewModel: ObservableObject {
                 bytesFreed: bytesFreed
             )
             
-            // Remove deleted items
-            screenshots = screenshots.enumerated().compactMap { index, asset in
-                selectedIndices.contains(index) ? nil : asset
-            }
-            
-            selectedIndices.removeAll()
+            let remainingSelectedIds = Set(
+                selectedIndices.compactMap { index -> String? in
+                    guard index < screenshots.count else { return nil }
+                    let id = screenshots[index].id
+                    return ids.contains(id) ? nil : id
+                }
+            )
+            screenshots.removeAll { ids.contains($0.id) }
+            selectedIndices = Set(screenshots.enumerated().compactMap { index, asset in
+                remainingSelectedIds.contains(asset.id) ? index : nil
+            })
             
             HapticManager.success()
         } catch {

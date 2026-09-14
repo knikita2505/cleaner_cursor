@@ -85,27 +85,6 @@ struct ShortVideosView: View {
         } message: {
             Text("Delete \(viewModel.selectedCount) short videos? This action cannot be undone.")
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    await viewModel.proceedWithDeletion()
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
         .confirmationDialog("Sort by", isPresented: $showSortPicker, titleVisibility: .visible) {
             ForEach(VideoSortOption.allCases, id: \.self) { option in
                 Button(option.localizedTitle) {
@@ -687,13 +666,7 @@ class ShortVideosViewModel: ObservableObject {
     @Published var selectedIds: Set<String> = []
     @Published var isProcessing = false
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     private let videoService = VideoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     var selectedCount: Int {
         selectedIds.count
@@ -714,9 +687,21 @@ class ShortVideosViewModel: ObservableObject {
         return ByteCountFormatter.string(fromByteCount: selectedSize, countStyle: .file)
     }
     
+    private var listRevision = 0
+    private var hiddenIds: Set<String> = []
+
     func load() {
-        isLoading = true
-        
+        guard videos.isEmpty else { return }
+        reloadList()
+    }
+
+    private func reloadList() {
+        listRevision += 1
+        let revision = listRevision
+        if videos.isEmpty {
+            isLoading = true
+        }
+
         Task {
             let videoService = VideoService.shared
             let result = await Task.detached(priority: .userInitiated) {
@@ -727,9 +712,20 @@ class ShortVideosViewModel: ObservableObject {
                 }
                 return videos.sorted { $0.duration < $1.duration }
             }.value
-            
-            self.videos = result
+
+            guard revision == self.listRevision else { return }
+            self.videos = result.filter { !self.hiddenIds.contains($0.id) }
             self.isLoading = false
+        }
+    }
+
+    private func dropVideos(ids: Set<String>) {
+        hiddenIds.formUnion(ids)
+        listRevision += 1
+        videos.removeAll { ids.contains($0.id) }
+        selectedIds.subtract(ids)
+        if selectedIds.isEmpty {
+            isSelectionMode = false
         }
     }
     
@@ -759,23 +755,12 @@ class ShortVideosViewModel: ObservableObject {
     }
     
     func deleteVideo(_ video: VideoAsset) async {
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let permission = subscriptionManager.handleCleaningAttempt(count: 1)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
+        await CleanupAccessCoordinator.shared.requestCleanup(
+            items: [CleanupItem(id: video.id, byteSize: video.fileSize)]
+        ) { ids in
+            guard ids.contains(video.id) else { return }
+            await self.performSingleDeletion(video)
         }
-        
-        await performSingleDeletion(video)
     }
     
     private func performSingleDeletion(_ video: VideoAsset) async {
@@ -784,19 +769,13 @@ class ShortVideosViewModel: ObservableObject {
         do {
             try await videoService.deleteVideos([video.asset])
             
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: 1)
-            
-            // Record to history
             CleaningHistoryService.shared.recordCleaning(
                 type: .shortVideos,
                 itemsCount: 1,
                 bytesFreed: video.fileSize
             )
             
-            withAnimation {
-                videos.removeAll { $0.id == video.id }
-            }
+            dropVideos(ids: [video.id])
             HapticManager.success()
         } catch {
             print("Error deleting video: \(error)")
@@ -808,39 +787,18 @@ class ShortVideosViewModel: ObservableObject {
     
     func deleteSelected() async {
         let videosToDelete = videos.filter { selectedIds.contains($0.id) }
-        let assetsToDelete = videosToDelete.map { $0.asset }
-        let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
-        
-        guard !assetsToDelete.isEmpty else { return }
-        
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let count = assetsToDelete.count
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
+        guard !videosToDelete.isEmpty else { return }
+
+        let items = videosToDelete.map { CleanupItem(id: $0.id, byteSize: $0.fileSize) }
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            await self.performBulkDeletion(ids: Set(ids))
         }
-        
-        await performBulkDeletion(assets: assetsToDelete, bytesFreed: bytesFreed)
     }
     
-    func proceedWithDeletion() async {
-        let videosToDelete = videos.filter { selectedIds.contains($0.id) }
-        let assetsToDelete = videosToDelete.map { $0.asset }
+    private func performBulkDeletion(ids: Set<String>) async {
+        let videosToDelete = videos.filter { ids.contains($0.id) }
+        let assetsToDelete = videosToDelete.map(\.asset)
         let bytesFreed = videosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
-        await performBulkDeletion(assets: assetsToDelete, bytesFreed: bytesFreed)
-    }
-    
-    private func performBulkDeletion(assets assetsToDelete: [PHAsset], bytesFreed: Int64) async {
         guard !assetsToDelete.isEmpty else { return }
         
         isProcessing = true
@@ -848,21 +806,13 @@ class ShortVideosViewModel: ObservableObject {
         do {
             try await videoService.deleteVideos(assetsToDelete)
             
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: assetsToDelete.count)
-            
-            // Record to history
             CleaningHistoryService.shared.recordCleaning(
                 type: .shortVideos,
                 itemsCount: assetsToDelete.count,
                 bytesFreed: bytesFreed
             )
             
-            withAnimation {
-                videos.removeAll { selectedIds.contains($0.id) }
-            }
-            selectedIds.removeAll()
-            isSelectionMode = false
+            dropVideos(ids: ids)
             HapticManager.success()
         } catch {
             print("Error deleting videos: \(error)")

@@ -96,30 +96,6 @@ struct SwipeSessionView: View {
         } message: {
             Text(viewModel.deleteErrorMessage)
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    let success = await viewModel.proceedWithSession()
-                    if success {
-                        dismiss()
-                    }
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
         .onAppear {
             viewModel.loadPhotos()
         }
@@ -624,12 +600,9 @@ struct PhotoSwipeCard2: View {
     }
     
     private func loadFileSize() {
+        let phAsset = asset.asset
         Task.detached(priority: .utility) {
-            let resources = PHAssetResource.assetResources(for: asset.asset)
-            let size = resources.first.flatMap { resource in
-                (resource.value(forKey: "fileSize") as? Int64)
-            } ?? 0
-            
+            let size = phAsset.libraryFileSize
             await MainActor.run {
                 self.fileSize = size
                 self.fileSizeLoaded = true
@@ -698,17 +671,11 @@ class SwipeSessionViewModel: ObservableObject {
     @Published var showDeleteError = false
     @Published var deleteErrorMessage = ""
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     // MARK: - Properties
     
     let monthGroup: PhotoMonthGroup
     private let progressService = SwipeProgressService.shared
     private let photoService = PhotoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     // MARK: - Computed
     
@@ -789,32 +756,23 @@ class SwipeSessionViewModel: ObservableObject {
     
     /// Apply session - save progress and optionally delete photos
     func applySession() async -> Bool {
-        // Check subscription limits if there are photos to delete
-        if toDeleteCount > 0 && !subscriptionManager.isPremium {
-            let count = toDeleteCount
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return false
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return false
-            }
+        let idsToDelete = sessionDecisions.filter { $0.decision == .delete }.map(\.photoId)
+        let photosToDelete = monthGroup.photos.filter { idsToDelete.contains($0.id) }
+
+        if photosToDelete.isEmpty {
+            return await performApplySession(deleteIds: [])
         }
-        
-        return await performApplySession()
+
+        let items = photosToDelete.map { CleanupItem(id: $0.id, byteSize: $0.resolvedFileSize) }
+        var finishedAll = false
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            let ok = await self.performApplySession(deleteIds: Set(ids))
+            finishedAll = ok && Set(ids) == Set(items.map(\.id))
+        }
+        return finishedAll
     }
     
-    /// Proceed with session after limit warning confirmation
-    func proceedWithSession() async -> Bool {
-        return await performApplySession()
-    }
-    
-    private func performApplySession() async -> Bool {
+    private func performApplySession(deleteIds: Set<String>) async -> Bool {
         isDeleting = true
         
         // 1. Save only "keep" decisions first (these are safe)
@@ -828,21 +786,17 @@ class SwipeSessionViewModel: ObservableObject {
         }
         
         // 2. Delete photos marked for deletion
-        if toDeleteCount > 0 {
-            let idsToDelete = Set(sessionDecisions.filter { $0.decision == .delete }.map { $0.photoId })
-            let photosToDelete = monthGroup.photos.filter { idsToDelete.contains($0.id) }
+        if !deleteIds.isEmpty {
+            let photosToDelete = monthGroup.photos.filter { deleteIds.contains($0.id) }
             
             do {
                 // Calculate bytes before deletion
-                let bytesFreed = photosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
+                let bytesFreed = photosToDelete.reduce(Int64(0)) { $0 + $1.resolvedFileSize }
                 
                 try await photoService.deletePhotoAssets(photosToDelete)
                 
-                // Record to subscription manager
-                subscriptionManager.recordCleanedItems(count: photosToDelete.count)
-                
                 // Success - now save delete decisions to progress
-                for decision in sessionDecisions.filter({ $0.decision == .delete }) {
+                for decision in sessionDecisions.filter({ $0.decision == .delete && deleteIds.contains($0.photoId) }) {
                     progressService.updateProgress(
                         monthKey: monthGroup.monthKey,
                         photoId: decision.photoId,
@@ -862,6 +816,8 @@ class SwipeSessionViewModel: ObservableObject {
                 
                 // Invalidate hub cache since photos were deleted
                 SwipeHubViewModel.invalidateCache()
+                
+                sessionDecisions.removeAll { $0.decision == .delete && deleteIds.contains($0.photoId) }
                 
                 HapticManager.success()
                 isDeleting = false

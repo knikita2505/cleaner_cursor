@@ -88,27 +88,6 @@ struct BurstPhotosView: View {
         } message: {
             Text("Delete \(viewModel.totalToDelete) photos from burst series? This cannot be undone.")
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    await viewModel.proceedWithDeletion()
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
         .task {
             await viewModel.load()
         }
@@ -625,13 +604,7 @@ final class BurstPhotosViewModel: ObservableObject {
     @Published var isProcessing: Bool = false
     @Published var processingProgress: Double = 0
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     private let photoService = PhotoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     var totalPhotos: Int {
         groups.reduce(0) { $0 + $1.assets.count }
@@ -697,49 +670,25 @@ final class BurstPhotosViewModel: ObservableObject {
     }
     
     func deleteUnselected() async {
+        let items = groups.flatMap { group in
+            group.assets
+                .filter { !$0.isSelected }
+                .map { CleanupItem(id: $0.id, byteSize: $0.photoAsset.fileSize) }
+        }
+        guard !items.isEmpty else { return }
+
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            await self.performDeletion(ids: Set(ids))
+        }
+    }
+    
+    private func performDeletion(ids: Set<String>) async {
         var assetsToDelete: [PHAsset] = []
-        
         for group in groups {
-            for item in group.assets where !item.isSelected {
+            for item in group.assets where ids.contains(item.id) {
                 assetsToDelete.append(item.photoAsset.asset)
             }
         }
-        
-        guard !assetsToDelete.isEmpty else { return }
-        
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let count = assetsToDelete.count
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
-        }
-        
-        await performDeletion(assets: assetsToDelete)
-    }
-    
-    func proceedWithDeletion() async {
-        var assetsToDelete: [PHAsset] = []
-        
-        for group in groups {
-            for item in group.assets where !item.isSelected {
-                assetsToDelete.append(item.photoAsset.asset)
-            }
-        }
-        
-        await performDeletion(assets: assetsToDelete)
-    }
-    
-    private func performDeletion(assets assetsToDelete: [PHAsset]) async {
         guard !assetsToDelete.isEmpty else { return }
         
         isProcessing = true
@@ -754,9 +703,6 @@ final class BurstPhotosViewModel: ObservableObject {
             
             try await photoService.deletePhotos(assetsToDelete)
             processingProgress = 1.0
-            
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: assetsToDelete.count)
             
             // Record to history
             CleaningHistoryService.shared.recordCleaning(

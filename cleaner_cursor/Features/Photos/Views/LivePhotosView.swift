@@ -113,27 +113,6 @@ struct LivePhotosView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .alert("Last Free Items", isPresented: $viewModel.showLastItemsWarning) {
-            Button("Cancel", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-            Button("Continue", role: .destructive) {
-                Task {
-                    await viewModel.proceedWithDeletion()
-                }
-            }
-        } message: {
-            Text("This will use your remaining free items for today. Upgrade to Premium for unlimited cleaning.")
-        }
-        .alert("Daily Limit", isPresented: $viewModel.showLimitWarning) {
-            Button("OK", role: .cancel) { }
-            Button("Get Premium") {
-                SubscriptionManager.shared.showPaywall(for: .reachedLimits)
-            }
-        } message: {
-            Text(viewModel.limitWarningMessage)
-        }
     }
     
     // MARK: - Live Photo Preview
@@ -764,13 +743,7 @@ final class LivePhotosViewModel: ObservableObject {
     @Published var isMultiSelectMode: Bool = false
     @Published var selectedIndices: Set<Int> = []
     
-    // Subscription limit states
-    @Published var showLimitWarning: Bool = false
-    @Published var showLastItemsWarning: Bool = false
-    @Published var limitWarningMessage: String = ""
-    
     private let photoService = PhotoService.shared
-    private let subscriptionManager = SubscriptionManager.shared
     
     var totalSavings: Int64 {
         livePhotos.reduce(Int64(0)) { result, photo in
@@ -800,6 +773,7 @@ final class LivePhotosViewModel: ObservableObject {
     }
     
     func loadLivePhotos() async {
+        guard livePhotos.isEmpty else { return }
         isLoading = true
         livePhotos = photoService.fetchLivePhotosAsModels()
         isLoading = false
@@ -833,35 +807,19 @@ final class LivePhotosViewModel: ObservableObject {
     }
     
     func applyChanges() async {
-        let toProcess = livePhotos.enumerated().filter { $0.element.action != .keepLive }
+        let toProcess = livePhotos.filter { $0.action != .keepLive }
         guard !toProcess.isEmpty else { return }
-        
-        // Check subscription limits
-        if !subscriptionManager.isPremium {
-            let count = toProcess.count
-            let permission = subscriptionManager.handleCleaningAttempt(count: count)
-            
-            switch permission {
-            case .allowed:
-                break
-            case .lastItems:
-                showLastItemsWarning = true
-                return
-            case .limitReached, .insufficientLimit:
-                subscriptionManager.showPaywall(for: .reachedLimits)
-                return
-            }
+
+        let items = toProcess.map { photo in
+            let size = photo.action == .delete ? photo.fileSize : photo.videoSize
+            return CleanupItem(id: photo.id, byteSize: size)
         }
-        
-        await performApplyChanges()
+        await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
+            await self.performApplyChanges(photos: toProcess.filter { ids.contains($0.id) })
+        }
     }
     
-    func proceedWithDeletion() async {
-        await performApplyChanges()
-    }
-    
-    private func performApplyChanges() async {
-        let toProcess = livePhotos.enumerated().filter { $0.element.action != .keepLive }
+    private func performApplyChanges(photos toProcess: [LivePhotoAsset]) async {
         guard !toProcess.isEmpty else { return }
         
         isProcessing = true
@@ -869,49 +827,32 @@ final class LivePhotosViewModel: ObservableObject {
         processedCount = 0
         processingProgress = 0
         
-        var successIds: Set<String> = []
+        let toConvert = toProcess.filter { $0.action == .convert }.map(\.asset)
+        let toDelete = toProcess.filter { $0.action == .delete }.map(\.asset)
         
-        for (_, photo) in toProcess {
-            do {
-                switch photo.action {
-                case .delete:
-                    try await photoService.deletePhotos([photo.asset])
-                    successIds.insert(photo.id)
-                    
-                case .convert:
-                    try await photoService.convertLivePhotoToStill(photo.asset)
-                    successIds.insert(photo.id)
-                    
-                case .keepLive:
-                    break
-                }
-            } catch {
-                print("Failed to process Live Photo: \(error)")
+        do {
+            try await photoService.applyLivePhotoActions(convert: toConvert, delete: toDelete)
+            
+            let successIds = Set(toProcess.map(\.id))
+            processedCount = toProcess.count
+            processingProgress = 1
+            
+            withAnimation(.easeInOut(duration: 0.3)) {
+                livePhotos.removeAll { successIds.contains($0.id) }
             }
             
-            processedCount += 1
-            processingProgress = Double(processedCount) / Double(totalToProcess)
-        }
-        
-        withAnimation(.easeInOut(duration: 0.3)) {
-            livePhotos.removeAll { successIds.contains($0.id) }
-        }
-        
-        if !successIds.isEmpty {
-            // Record to subscription manager
-            subscriptionManager.recordCleanedItems(count: successIds.count)
-            
-            // Calculate bytes freed (estimate ~2MB per Live Photo video component)
-            let bytesFreed = Int64(successIds.count) * 2_000_000
-            
-            // Record to history
+            let bytesFreed = toProcess.reduce(Int64(0)) { total, photo in
+                total + (photo.action == .delete ? photo.fileSize : photo.videoSize)
+            }
             CleaningHistoryService.shared.recordCleaning(
                 type: .livePhotos,
                 itemsCount: successIds.count,
                 bytesFreed: bytesFreed
             )
-            
             HapticManager.success()
+        } catch {
+            print("Failed to process Live Photos: \(error)")
+            HapticManager.error()
         }
         
         isProcessing = false
