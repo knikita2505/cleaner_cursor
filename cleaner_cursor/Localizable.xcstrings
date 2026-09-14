@@ -14237,7 +14237,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "これらのファイルは500 MBを超えています。クリーンアップするにはPremiumに登録してください。"
+            "value": "これらのファイルは500 MBを超えています。クリーンアップするにはプレミアムに登録してください。"
           }
         },
         "pt-BR": {
@@ -14676,13 +14676,13 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Para eliminar %@, pasa a Premium o mira un anuncio."
+            "value": "Para eliminar %@, pásate a Premium o mira un anuncio."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@を削除するには、Premiumにアップグレードするか、広告を視聴してください。"
+            "value": "%@を削除するには、プレミアムにアップグレードするか、広告を視聴してください。"
           }
         },
         "pt-BR": {
@@ -15327,7 +15327,7 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premiumにアップグレード"
+            "value": "プレミアムにアップグレード"
           }
         },
         "pt-BR": {

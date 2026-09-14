@@ -41,7 +41,7 @@ struct CleanupRewardSheet: View {
                     .font(AppFonts.subtitleL)
                     .foregroundColor(AppColors.textPrimary)
 
-                Text("To delete \(coordinator.formattedSelectedSize), upgrade to Premium or watch an ad.")
+                Text(String(localized: "To delete \(coordinator.formattedSelectedSize), upgrade to Premium or watch an ad."))
                     .font(AppFonts.bodyM)
                     .foregroundColor(AppColors.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

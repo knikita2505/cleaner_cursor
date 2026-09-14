@@ -802,11 +802,8 @@ struct PhotoAsset: Identifiable, Hashable {
         self.creationDate = asset.creationDate
         self.isFavorite = asset.isFavorite
         
-        // Медленная операция - вычисляем fileSize
         let resources = PHAssetResource.assetResources(for: asset)
-        self.fileSize = resources.first.flatMap { resource in
-            (resource.value(forKey: "fileSize") as? Int64)
-        } ?? 0
+        self.fileSize = resources.reduce(Int64(0)) { $0 + $1.libraryFileSize }
     }
     
     /// Быстрый init с кэшированным fileSize (не вызывает PHAssetResource)
@@ -816,6 +813,11 @@ struct PhotoAsset: Identifiable, Hashable {
         self.creationDate = asset.creationDate
         self.isFavorite = asset.isFavorite
         self.fileSize = cachedFileSize
+    }
+    
+    var resolvedFileSize: Int64 {
+        if fileSize > 0 { return fileSize }
+        return asset.libraryFileSize
     }
     
     var formattedSize: String {
@@ -844,6 +846,27 @@ struct PhotoAsset: Identifiable, Hashable {
     
     static func == (lhs: PhotoAsset, rhs: PhotoAsset) -> Bool {
         lhs.id == rhs.id
+    }
+}
+
+extension PHAssetResource {
+    nonisolated var libraryFileSize: Int64 {
+        (value(forKey: "fileSize") as? NSNumber)?.int64Value ?? 0
+    }
+}
+
+extension PHAsset {
+    nonisolated var libraryFileSize: Int64 {
+        let total = PHAssetResource.assetResources(for: self).reduce(Int64(0)) { $0 + $1.libraryFileSize }
+        if total > 0 { return total }
+
+        let pixels = Int64(pixelWidth) * Int64(pixelHeight)
+        switch mediaType {
+        case .video:
+            return Int64(max(duration, 1) * 400_000)
+        default:
+            return pixels > 0 ? max(pixels / 5, 50_000) : 0
+        }
     }
 }
 

@@ -600,12 +600,9 @@ struct PhotoSwipeCard2: View {
     }
     
     private func loadFileSize() {
+        let phAsset = asset.asset
         Task.detached(priority: .utility) {
-            let resources = PHAssetResource.assetResources(for: asset.asset)
-            let size = resources.first.flatMap { resource in
-                (resource.value(forKey: "fileSize") as? Int64)
-            } ?? 0
-            
+            let size = phAsset.libraryFileSize
             await MainActor.run {
                 self.fileSize = size
                 self.fileSizeLoaded = true
@@ -766,7 +763,7 @@ class SwipeSessionViewModel: ObservableObject {
             return await performApplySession(deleteIds: [])
         }
 
-        let items = photosToDelete.map { CleanupItem(id: $0.id, byteSize: $0.fileSize) }
+        let items = photosToDelete.map { CleanupItem(id: $0.id, byteSize: $0.resolvedFileSize) }
         var finishedAll = false
         await CleanupAccessCoordinator.shared.requestCleanup(items: items) { ids in
             let ok = await self.performApplySession(deleteIds: Set(ids))
@@ -794,7 +791,7 @@ class SwipeSessionViewModel: ObservableObject {
             
             do {
                 // Calculate bytes before deletion
-                let bytesFreed = photosToDelete.reduce(Int64(0)) { $0 + $1.fileSize }
+                let bytesFreed = photosToDelete.reduce(Int64(0)) { $0 + $1.resolvedFileSize }
                 
                 try await photoService.deletePhotoAssets(photosToDelete)
                 
